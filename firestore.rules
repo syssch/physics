@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Signed in with a verified school Google account (students @syss.edu.hk, staff @singyin.edu.hk)
+    function isSchool() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@(syss|singyin)[.]edu[.]hk$');
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isTeacher() {
+      return isSchool() && exists(/databases/$(database)/documents/teachers/$(myEmail()));
+    }
+    function inClass(classId) {
+      return isSchool()
+        && myEmail() in get(/databases/$(database)/documents/classes/$(classId)).data.studentEmails;
+    }
+
+    // Teacher list. Anyone at school may check whether *they* are a teacher.
+    match /teachers/{email} {
+      allow get: if isSchool() && (email == myEmail() || isTeacher());
+      allow list, write: if isTeacher();
+    }
+
+    // Each user may keep a small profile (name shown to teachers).
+    match /users/{uid} {
+      allow read: if isSchool() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSchool() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'lastLogin'])
+        && request.resource.data.email == myEmail();
+    }
+
+    // Questions are visible to everyone at school; answer keys only to teachers.
+    match /questions/{qid} {
+      allow read: if isSchool();
+      allow write: if isTeacher();
+    }
+    match /answerKeys/{qid} {
+      allow read, write: if isTeacher();
+    }
+    match /meta/{doc} {
+      allow read: if isSchool();
+      allow write: if isTeacher();
+    }
+
+    match /classes/{classId} {
+      allow read: if isTeacher()
+        || (isSchool() && myEmail() in resource.data.studentEmails);
+      allow write: if isTeacher();
+
+      match /assignments/{assignmentId} {
+        allow read: if isTeacher() || inClass(classId);
+        allow write: if isTeacher();
+      }
+    }
+
+    // Written only by Cloud Functions (which bypass these rules), so marks cannot be forged.
+    match /attempts/{attemptId} {
+      allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+    match /sessions/{sessionId} {
+      allow read: if isSchool() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

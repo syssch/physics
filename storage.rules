@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSchool() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@(syss|singyin)[.]edu[.]hk$');
+    }
+    function isTeacher() {
+      return isSchool()
+        && firestore.exists(/databases/(default)/documents/teachers/$(request.auth.token.email.lower()));
+    }
+    match /figures/{file} {
+      allow read: if isSchool();
+      allow write: if isTeacher() && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
