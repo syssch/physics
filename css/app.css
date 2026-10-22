@@ -76,3 +76,19 @@ table.opttable tr.selected td { background:var(--accent-soft); } table.opttable 
 #toast.show { opacity:1; } #toast.error { background:var(--bad); }
 @media (max-width: 760px) { .builder { grid-template-columns: 1fr; } .sticky { position:static; } main { padding:.8rem; } .qhead { flex-direction:column; gap:0; } }
 table.results td:nth-child(3) { white-space: nowrap; }
+
+/* Explain cards */
+.chips { display:flex; flex-wrap:wrap; gap:.5rem; margin:.4rem 0 1rem; }
+.chip { display:inline-flex; align-items:center; gap:.35rem; margin:0; padding:.35rem .7rem; border:1px solid var(--line); border-radius:999px; background:#fff; font-weight:500; cursor:pointer; }
+.chip input { width:auto; margin:0; } .chip.on { border-color:var(--accent); background:var(--accent-soft); }
+h3.pattern { font-size:.9rem; color:var(--muted); margin:.9rem 0 .3rem; text-transform:uppercase; letter-spacing:.03em; }
+.cardrow { display:flex; gap:.7rem; align-items:baseline; padding:.45rem .3rem; border-bottom:1px solid var(--line); color:inherit; text-decoration:none; }
+.cardrow:hover { background:var(--accent-soft); } .cardrow .tick { width:1.1rem; color:var(--good); font-weight:700; }
+.cardrow .ref { min-width:7.5rem; font-weight:600; } .cardrow .snip { color:var(--muted); font-size:.92rem; }
+.cardrow.done .ref { color:var(--good); }
+.panel.today { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; }
+.xcard { max-width:780px; } .xsec { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:.8rem 1.1rem; margin:0 0 .8rem; }
+.xsec h3 { margin:0 0 .4rem; font-size:.95rem; color:var(--muted); } .xsec p { margin:.3rem 0; }
+.xsec.q { border-left:4px solid var(--accent); } .xsec.ans { border-left:4px solid var(--good); background:#f6fbf8; }
+.xsec.exam { border-left:4px solid var(--warn); }
+.btn.done { background:var(--good-soft); border-color:var(--good); color:var(--good); }
