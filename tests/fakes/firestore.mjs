@@ -35,13 +35,14 @@ export async function getDocs(q) {
   const out = docs.map((d) => ({ id: d.id, data: () => clone(d.data), ref: { path: d.path, id: d.id } }));
   return { docs: out, size: out.length, empty: !out.length, forEach: (fn) => out.forEach(fn) };
 }
-export async function setDoc(ref, data) { const r = resolve(data); checkWrite(ref.path, r); fake.store.set(ref.path, r); }
+async function after(path, before) { if (fake.afterWrite) await fake.afterWrite(path, before, fake.store.get(path)); }
+export async function setDoc(ref, data) { const r = resolve(data); checkWrite(ref.path, r); const b = fake.store.get(ref.path); fake.store.set(ref.path, r); await after(ref.path, b); }
 export async function addDoc(coll, data) { const ref = doc(coll); await setDoc(ref, data); return ref; }
 export async function updateDoc(ref, data) {
   const cur = fake.store.get(ref.path); if (!cur) throw new Error("not-found " + ref.path);
-  const r = { ...cur, ...resolve(data) }; checkWrite(ref.path, r); fake.store.set(ref.path, r);
+  const r = { ...cur, ...resolve(data) }; checkWrite(ref.path, r); fake.store.set(ref.path, r); await after(ref.path, cur);
 }
-export async function deleteDoc(ref) { checkWrite(ref.path, fake.store.get(ref.path)); fake.store.delete(ref.path); }
+export async function deleteDoc(ref) { const b = fake.store.get(ref.path); checkWrite(ref.path, b); fake.store.delete(ref.path); await after(ref.path, b); }
 export function writeBatch() {
   const ops = [];
   return { set: (r, d) => ops.push(() => setDoc(r, d)), update: (r, d) => ops.push(() => updateDoc(r, d)),

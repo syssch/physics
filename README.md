@@ -101,6 +101,11 @@ Until this is done, test with teacher accounts or a few adult accounts.
 
 ## Using it
 
+**Who can use it:** teachers on the teacher list, and students whose email is on at least one class list.
+Any other school account sees "this site is only for SYSS Physics students" and can't read anything. This is
+enforced by the security rules and Cloud Functions, not just hidden on screen. The access list (`members`)
+updates itself whenever a class is saved or deleted.
+
 **Teachers** (*Teacher* tab):
 - *New class*: give the class a name and paste the students' school emails, one per line.
 - *New assignment*: pick the class, title, due date, and whether answers are shown right after
@@ -109,7 +114,12 @@ Until this is done, test with teacher accounts or a few adult accounts.
 - *Results*: shows each student's answer to each question (green is right, red is wrong), the
   percentage correct per question, and how many students chose each option. You can download a
   CSV.
-- *Admin*: add or remove teachers, and import questions and Explain cards.
+- *Admin → Classes & students*: see all classes, edit or delete them, and **paste class lists** straight from
+  Excel or Google Sheets (two columns: class name, school email; one student per row). Choose whether the paste
+  replaces each named class's list or adds to it; *Check* shows what will change before you *Apply*.
+  *Check access* tells you whether a given student can sign in. At the start of a new school year, paste the
+  new lists with "Replace" (and delete classes that no longer exist) so leavers lose access.
+- *Admin*: also add or remove teachers, and import questions and Explain cards.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date).
 
 **Students**:
@@ -133,6 +143,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `answerKeys/{id}` | `answer` | teachers |
 | `teachers/{email}` | teacher list | teachers (and each person checking themselves) |
 | `users/{uid}` | name, email, last login | the user, teachers |
+| `members/{email}` | access list: which classes a student is in (written only by Cloud Functions) | the student, teachers |
 | `classes/{id}` | name, `studentEmails` | teachers, students in the class |
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |

@@ -10,8 +10,12 @@ service firebase.storage {
       return isSchool()
         && firestore.exists(/databases/(default)/documents/teachers/$(request.auth.token.email.lower()));
     }
+    function isMember() {
+      return isSchool() && (isTeacher()
+        || firestore.exists(/databases/(default)/documents/members/$(request.auth.token.email.lower())));
+    }
     match /figures/{file} {
-      allow read: if isSchool();
+      allow read: if isMember();
       allow write: if isTeacher() && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

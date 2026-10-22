@@ -39,6 +39,12 @@ const fakesAdmin = require("./fakes/admin.cjs");
 const origLoad = Module._load;
 Module._load = function (req, ...rest) { return fakesAdmin[req] || origLoad.call(this, req, ...rest); };
 fake.handlers = require(`${ROOT}/learning-platform/functions/index.js`);
+fake.afterWrite = async (path, before, after) => {
+  const m = path.match(/^classes\/([^/]+)$/);
+  if (!m) return;
+  const snap = (d) => ({ exists: d !== undefined, data: () => d });
+  await fake.handlers.syncMembers.run({ params: { classId: m[1] }, data: { before: snap(before), after: snap(after) } });
+};
 
 // helpers
 const $ = (s) => w.document.querySelector(s);
@@ -82,6 +88,7 @@ await waitFor(() => byText("h1", "Teacher dashboard"), "back to dashboard");
 const cls = [...fake.store.entries()].find(([p]) => /^classes\/[^/]+$/.test(p));
 const classId = cls[0].split("/")[1];
 ok(JSON.stringify(cls[1].studentEmails) === JSON.stringify(["s001@syss.edu.hk", "s002@syss.edu.hk", "s003@syss.edu.hk"]), "class saved with lower-cased emails");
+ok(fake.store.has("members/s001@syss.edu.hk") && fake.store.has("members/s003@syss.edu.hk"), "saving a class puts its students on the access list");
 
 console.log("3. teacher builds two assignments");
 await go("#/t/assign");
@@ -158,7 +165,7 @@ let again = ""; try { await api.submitAnswers({ classId, assignmentId: a1, respo
 ok(/already submitted/.test(again), "cannot submit twice");
 let notIn = ""; fake.user = { uid: "s9", email: "s009@syss.edu.hk", name: "x" };
 try { await api.submitAnswers({ classId, assignmentId: a1, responses: {} }); } catch (e) { notIn = e.message; }
-ok(/not in this class/.test(notIn), "non-member cannot submit");
+ok(/not in this class|only for SYSS Physics students|Ask your physics teacher/.test(notIn), "non-member cannot submit");
 fake.user = S1;
 
 console.log("6. hidden-answer assignment");
@@ -229,7 +236,7 @@ byText("button", "Download CSV").click();
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");
-set($("input[type=email]"), "newteacher@singyin.edu.hk");
+set($("input[placeholder='teacher@singyin.edu.hk']"), "newteacher@singyin.edu.hk");
 byText("button", "Add teacher").click(); await sleep(50);
 ok(fake.store.has("teachers/newteacher@singyin.edu.hk"), "teacher added");
 await waitFor(() => byText("h2", "Import questions"), "admin reloaded");
@@ -302,6 +309,40 @@ fake.setUser(T); await sleep(50); await go("#/t/explain");
 await waitFor(() => byText("h1", "reading progress"), "teacher progress");
 const row = byText("table.grid tr", "s001");
 ok(row && row.children[1].textContent === "2", "teacher sees cards read per student");
+
+console.log("13. Class lists control access");
+const S9 = { uid: "s9", email: "s009@syss.edu.hk", name: "Not Physics" };
+fake.setUser(S9); await sleep(80);
+await waitFor(() => byText("p", "only for SYSS Physics students"), "not-on-list page");
+ok(!fake.store.has("users/s9"), "non-physics student is stopped and no profile is stored");
+denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "meta", "explainCards")); } catch (e) { denied = /permission/.test(e.message); }
+ok(denied, "non-physics student cannot read content directly");
+let blocked = ""; try { await api.startPractice({ count: 5 }); } catch (e) { blocked = e.message; }
+ok(/Ask your physics teacher/.test(blocked), "non-physics student cannot start practice");
+// teacher pastes class lists on the Admin page
+fake.setUser(T); await sleep(50); await go("#/t/admin");
+await waitFor(() => byText("h2", "Classes & students"), "classes panel");
+ok(byText("table.grid tr", "4A Physics"), "admin lists existing classes");
+const area = $$("textarea").find((t) => /4A Physics/.test(t.getAttribute("placeholder") || ""));
+set(area, "Class\tEmail\n5B Physics\ts009@syss.edu.hk\n5B Physics\tS010@syss.edu.hk\n4A Physics\ts001@syss.edu.hk\n4A Physics\ts002@syss.edu.hk\n5B Physics\tsomeone@gmail.com");
+byText("button", "Check").click(); await sleep(20);
+ok(/5B Physics: 2 students — new class/.test(w.document.body.textContent) && /4A Physics: 2 students — replaces 3/.test(w.document.body.textContent), "paste preview explains the changes");
+ok(/1 row\(s\) skipped/.test(w.document.body.textContent), "non-school email row is skipped");
+byText("button", "Apply").click();
+await waitFor(() => /Saved 2 class/.test($("#toast").textContent), "apply");
+await sleep(50);
+ok(fake.store.has("members/s009@syss.edu.hk") && fake.store.has("members/s010@syss.edu.hk"), "pasted students get access");
+ok(!fake.store.has("members/s003@syss.edu.hk"), "student removed from 4A (and in no other class) loses access");
+await waitFor(() => byText("h2", "Classes & students"), "admin reloaded");
+set($("input[placeholder='s123456@syss.edu.hk']"), "s003@syss.edu.hk"); byText("button", "Check access").click(); await sleep(30);
+ok(/No access/.test(w.document.body.textContent), "access check shows removed student has no access");
+fake.setUser(S9); await sleep(50); await go("#/history"); await go("#/");
+await waitFor(() => byText("h1", "Hello"), "s009 now allowed");
+ok(true, "student added by paste can now sign in");
+fake.setUser(T); await sleep(50);
+fake.store.delete("members/s009@syss.edu.hk");
+const r = await api.rebuildMembers({});
+ok(r.members === 4 && fake.store.has("members/s009@syss.edu.hk"), "rebuild restores the access list from class lists");
 
 console.log(`\n${passed} checks passed.`);
 const real = errors.filter((e) => !/Not implemented: navigation/.test(e));

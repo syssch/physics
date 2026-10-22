@@ -4,6 +4,7 @@
  * marking happens here, using the teacher-only `answerKeys` collection.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
@@ -27,6 +28,51 @@ function requireSchoolUser(request) {
 async function isTeacher(email) {
   return (await db.doc(`teachers/${email}`).get()).exists;
 }
+
+/** Only teachers and students who are on at least one class list may use the platform. */
+async function requireMember(request) {
+  const user = requireSchoolUser(request);
+  if ((await db.doc(`members/${user.email}`).get()).exists || (await isTeacher(user.email))) return user;
+  throw new HttpsError("permission-denied", "This site is for SYSS Physics students. Ask your physics teacher to add you to a class.");
+}
+
+const cleanEmails = (list) => [...new Set((list || []).map((e) => String(e).trim().toLowerCase()).filter(Boolean))];
+
+/** Keep `members/{email}` (the access list) in step with every class's student list. */
+exports.syncMembers = onDocumentWritten("classes/{classId}", async (event) => {
+  const classId = event.params.classId;
+  const before = new Set(cleanEmails(event.data && event.data.before && event.data.before.exists ? event.data.before.data().studentEmails : []));
+  const after = new Set(cleanEmails(event.data && event.data.after && event.data.after.exists ? event.data.after.data().studentEmails : []));
+  for (const email of after) {
+    if (!before.has(email)) {
+      await db.doc(`members/${email}`).set({ classIds: FieldValue.arrayUnion(classId), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    }
+  }
+  for (const email of before) {
+    if (after.has(email)) continue;
+    const ref = db.doc(`members/${email}`);
+    const snap = await ref.get();
+    const left = (snap.exists ? snap.get("classIds") || [] : []).filter((c) => c !== classId);
+    if (left.length) await ref.set({ classIds: left, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    else if (snap.exists) await ref.delete();
+  }
+});
+
+/** Teachers: rebuild the whole access list from the class lists (e.g. after a big change). */
+exports.rebuildMembers = onCall(async (request) => {
+  const user = requireSchoolUser(request);
+  if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
+  const want = new Map();
+  (await db.collection("classes").get()).forEach((c) => cleanEmails(c.get("studentEmails")).forEach((e) => {
+    if (!want.has(e)) want.set(e, []);
+    want.get(e).push(c.id);
+  }));
+  const existing = await db.collection("members").get();
+  let removed = 0;
+  for (const m of existing.docs) if (!want.has(m.id)) { await m.ref.delete(); removed++; }
+  for (const [email, classIds] of want) await db.doc(`members/${email}`).set({ classIds, updatedAt: FieldValue.serverTimestamp() });
+  return { members: want.size, removed };
+});
 
 /** Question ids in assignments that are still open for this student (kept out of practice). */
 async function openAssignmentQuestionIds(email) {
@@ -78,7 +124,7 @@ function cleanResponses(questionIds, raw) {
 
 /** Start a practice set: random questions, optionally limited to one topic / subtopic. */
 exports.startPractice = onCall(async (request) => {
-  const user = requireSchoolUser(request);
+  const user = await requireMember(request);
   const { topic, subtopic } = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt((request.data || {}).count, 10) || 10));
 
@@ -108,7 +154,7 @@ exports.startPractice = onCall(async (request) => {
  * Returns the score, plus answers/correctness when the student is allowed to see them.
  */
 exports.submitAnswers = onCall(async (request) => {
-  const user = requireSchoolUser(request);
+  const user = await requireMember(request);
   const data = request.data || {};
   let questionIds, attemptRef, meta, reveal;
 

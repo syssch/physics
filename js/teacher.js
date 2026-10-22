@@ -1,4 +1,4 @@
-import { db, storage } from "./fb.js";
+import { db, storage, api } from "./fb.js";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
@@ -300,6 +300,97 @@ export async function resultsView(user, classId, assignmentId) {
   ]));
 }
 
+// ---------------------------------------------------------------- admin: classes & access
+/** Parse pasted rows "class, email" (from Excel/Sheets: tab-separated) into { className: [emails] }. */
+export function parseRoster(text) {
+  const classes = new Map(), bad = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const cells = raw.split(/\t|,|;/).map((c) => c.trim()).filter(Boolean);
+    if (!cells.length) continue;
+    const email = cells.find((c) => c.includes("@"));
+    const name = cells.find((c) => !c.includes("@"));
+    if (!email) continue;                       // header or blank row
+    if (!name || !emailRe.test(email)) { bad.push(raw.trim()); continue; }
+    const key = name.replace(/\s+/g, " ");
+    if (!classes.has(key)) classes.set(key, new Set());
+    classes.get(key).add(email.toLowerCase());
+  }
+  return { classes: new Map([...classes].map(([k, v]) => [k, [...v]])), bad };
+}
+
+async function classesPanel(user) {
+  const classes = await listClasses();
+  const box = el("div", { class: "panel" }, [el("h2", {}, "Classes & students")]);
+  box.append(el("p", { class: "muted" }, "Only students on a class list can use the platform. Teachers always can."));
+  const t = el("table", { class: "grid" }, [el("tr", {}, ["Class", "Students", ""].map((h) => el("th", {}, h)))]);
+  classes.forEach((c) => t.append(el("tr", {}, [el("td", {}, c.name), el("td", {}, String((c.studentEmails || []).length)),
+    el("td", {}, [el("a", { href: `#/t/class/${c.id}` }, "edit"), " · ",
+      el("button", { class: "linkbtn", type: "button", onclick: async () => {
+        if (!confirm(`Delete class "${c.name}"? Its students lose access unless they are in another class. Their past results are kept.`)) return;
+        try { await deleteDoc(doc(db, "classes", c.id)); toast("Class deleted."); adminView(user); } catch (e) { toast(errMsg(e), "error"); }
+      } }, "delete")])])));
+  box.append(classes.length ? t : el("p", { class: "muted" }, "No classes yet."), el("p", {}, el("a", { class: "btn small", href: "#/t/class/new" }, "New class")));
+
+  // bulk paste
+  const area = el("textarea", { rows: 8, placeholder: "4A Physics\ts123456@syss.edu.hk\n4A Physics\ts123457@syss.edu.hk\n5B Physics\ts223344@syss.edu.hk" });
+  const mode = el("select", {}, [el("option", { value: "replace" }, "Replace the student list of each class named"),
+    el("option", { value: "add" }, "Add these students to the classes named")]);
+  const preview = el("div", { class: "muted" });
+  const apply = el("button", { class: "btn primary", type: "button", disabled: true }, "Apply");
+  let parsed = null;
+  const check = el("button", { class: "btn", type: "button" }, "Check");
+  check.addEventListener("click", () => {
+    parsed = parseRoster(area.value);
+    const lines = [...parsed.classes].map(([name, list]) => {
+      const ex = classes.find((c) => c.name.toLowerCase() === name.toLowerCase());
+      return `${name}: ${list.length} students — ${ex ? (mode.value === "replace" ? `replaces ${ex.studentEmails.length}` : "added to existing class") : "new class"}`;
+    });
+    preview.replaceChildren(...lines.map((l) => el("div", {}, l)),
+      ...(parsed.bad.length ? [el("div", { class: "error" }, `${parsed.bad.length} row(s) skipped (no class name or not a school email): ${parsed.bad.slice(0, 3).join(" | ")}`)] : []));
+    apply.disabled = !parsed.classes.size;
+  });
+  apply.addEventListener("click", async () => {
+    apply.disabled = true;
+    try {
+      for (const [name, list] of parsed.classes) {
+        const ex = classes.find((c) => c.name.toLowerCase() === name.toLowerCase());
+        if (!ex) await addDoc(collection(db, "classes"), { name, studentEmails: list, createdBy: user.email, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        else {
+          const merged = mode.value === "replace" ? list : [...new Set([...(ex.studentEmails || []), ...list])];
+          await updateDoc(doc(db, "classes", ex.id), { studentEmails: merged, updatedAt: serverTimestamp() });
+        }
+      }
+      toast(`Saved ${parsed.classes.size} class(es).`);
+      adminView(user);
+    } catch (e) { toast(errMsg(e), "error"); apply.disabled = false; }
+  });
+  box.append(el("h3", {}, "Paste class lists"),
+    el("p", { class: "muted" }, "Copy two columns from Excel or Google Sheets — class name and school email — and paste below. One student per row. A student can be in several classes."),
+    area, el("div", { class: "row" }, [mode, check, apply]), preview);
+
+  // look up one student / rebuild
+  const who = el("input", { type: "email", placeholder: "s123456@syss.edu.hk" });
+  const whoOut = el("span", { class: "muted" });
+  const lookup = el("button", { class: "btn small", type: "button" }, "Check access");
+  lookup.addEventListener("click", async () => {
+    const e = who.value.trim().toLowerCase();
+    if (!e) return;
+    const inCls = classes.filter((c) => (c.studentEmails || []).includes(e)).map((c) => c.name);
+    const teacher = (await getDoc(doc(db, "teachers", e))).exists();
+    whoOut.textContent = teacher ? "Teacher — has access." : inCls.length ? `Has access (classes: ${inCls.join(", ")}).` : "No access — not on any class list.";
+  });
+  const rebuild = el("button", { class: "btn small", type: "button" }, "Rebuild access list");
+  rebuild.addEventListener("click", async () => {
+    rebuild.disabled = true;
+    try { const r = await api.rebuildMembers({}); toast(`Access list rebuilt: ${r.members} students.`); }
+    catch (e) { toast(errMsg(e), "error"); }
+    rebuild.disabled = false;
+  });
+  box.append(el("h3", {}, "Check a student"), el("div", { class: "row" }, [who, lookup, whoOut]),
+    el("p", { class: "muted" }, ["The access list updates by itself whenever a class is saved. ", rebuild, " only if something looks out of date."]));
+  return box;
+}
+
 // ---------------------------------------------------------------- admin: import + teachers
 export async function adminView(user) {
   mount(loading());
@@ -368,6 +459,7 @@ export async function adminView(user) {
   const qs = await getDocs(collection(db, "questions"));
   mount(el("section", { class: "narrow" }, [
     el("h1", {}, "Admin"),
+    await classesPanel(user),
     el("div", { class: "panel" }, [el("h2", {}, "Teachers"), tList, el("div", { class: "row" }, [newT, addT])]),
     el("div", { class: "panel" }, [el("h2", {}, "Import questions"),
       el("p", { class: "muted" }, `${qs.size} questions on the platform now. Choose bundle.json and all files in its figures folder (made by platform_prep/export_for_platform.py). Re-importing updates questions with the same id.`),

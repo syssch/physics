@@ -12,6 +12,11 @@ service cloud.firestore {
     function isTeacher() {
       return isSchool() && exists(/databases/$(database)/documents/teachers/$(myEmail()));
     }
+    // On a class list (the access list is kept up to date by the syncMembers Cloud Function), or a teacher
+    function isMember() {
+      return isSchool()
+        && (exists(/databases/$(database)/documents/members/$(myEmail())) || isTeacher());
+    }
     function inClass(classId) {
       return isSchool()
         && myEmail() in get(/databases/$(database)/documents/classes/$(classId)).data.studentEmails;
@@ -23,24 +28,31 @@ service cloud.firestore {
       allow list, write: if isTeacher();
     }
 
+    // Access list: one document per student email. Written only by Cloud Functions.
+    match /members/{email} {
+      allow get: if isSchool() && (email == myEmail() || isTeacher());
+      allow list: if isTeacher();
+      allow write: if false;
+    }
+
     // Each user may keep a small profile (name shown to teachers).
     match /users/{uid} {
       allow read: if isSchool() && (request.auth.uid == uid || isTeacher());
-      allow write: if isSchool() && request.auth.uid == uid
+      allow write: if isMember() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['email', 'name', 'lastLogin'])
         && request.resource.data.email == myEmail();
     }
 
     // Questions are visible to everyone at school; answer keys only to teachers.
     match /questions/{qid} {
-      allow read: if isSchool();
+      allow read: if isMember();
       allow write: if isTeacher();
     }
     match /answerKeys/{qid} {
       allow read, write: if isTeacher();
     }
     match /meta/{doc} {
-      allow read: if isSchool();
+      allow read: if isMember();
       allow write: if isTeacher();
     }
 
@@ -58,7 +70,7 @@ service cloud.firestore {
     // Explain-card reading progress: each student keeps their own; teachers can read all.
     match /explainProgress/{uid} {
       allow read: if isSchool() && (request.auth.uid == uid || isTeacher());
-      allow write: if isSchool() && request.auth.uid == uid
+      allow write: if isMember() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['email', 'name', 'read', 'topics', 'today', 'updatedAt'])
         && request.resource.data.email == myEmail();
     }

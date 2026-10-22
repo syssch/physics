@@ -23,6 +23,17 @@ function signInPage(message) {
   document.getElementById("user").replaceChildren();
 }
 
+function notOnListPage(email) {
+  mount(el("section", { class: "signin" }, [
+    el("h1", {}, "SYSS Physics Practice"),
+    el("p", {}, `You're signed in as ${email}, but this site is only for SYSS Physics students.`),
+    el("p", { class: "muted" }, "If you take Physics, ask your physics teacher to add your school email to your class. Then sign in again."),
+    el("button", { class: "btn", type: "button", onclick: () => signOut(auth) }, "Sign out"),
+  ]));
+  document.getElementById("nav").replaceChildren();
+  document.getElementById("user").replaceChildren();
+}
+
 function drawChrome() {
   const links = [el("a", { href: "#/" }, "Home"), el("a", { href: "#/explain" }, "Explain"), el("a", { href: "#/history" }, "My results")];
   if (user.isTeacher) links.push(el("a", { href: "#/student" }, "Practise"), el("a", { href: "#/t" }, "Teacher"));
@@ -74,10 +85,13 @@ onAuthStateChanged(auth, async (u) => {
     return signInPage(`${email} is not a school account. Please use your @syss.edu.hk or @singyin.edu.hk account.`);
   }
   user = { uid: u.uid, email, name: u.displayName || email.split("@")[0], isTeacher: false };
+  let allowed = false;
   try {
     user.isTeacher = (await getDoc(doc(db, "teachers", email))).exists();
-    await setDoc(doc(db, "users", u.uid), { email, name: user.name, lastLogin: serverTimestamp() });
+    allowed = user.isTeacher || (await getDoc(doc(db, "members", email))).exists();
   } catch (e) { console.warn(e); }
+  if (!allowed) { user = null; return notOnListPage(email); }
+  try { await setDoc(doc(db, "users", u.uid), { email, name: user.name, lastLogin: serverTimestamp() }); } catch (e) { console.warn(e); }
   drawChrome();
   if (!user.isTeacher && (location.hash || "").startsWith("#/t")) history.replaceState(null, "", "#/");
   route();

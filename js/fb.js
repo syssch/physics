@@ -31,4 +31,5 @@ export const api = {
   startPractice: call("startPractice"),
   submitAnswers: call("submitAnswers"),
   getReview: call("getReview"),
+  rebuildMembers: call("rebuildMembers"),
 };

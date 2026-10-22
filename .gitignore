@@ -1,0 +1,10 @@
+node_modules/
+functions/node_modules/
+*.log
+.firebase/
+# Never commit question bundles (they contain answer keys) or service-account keys
+export/
+bundle.json
+*serviceAccount*.json
+tests/node_modules/
+.DS_Store
