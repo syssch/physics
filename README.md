@@ -115,7 +115,9 @@ updates itself whenever a class is saved or deleted.
   percentage correct per question, and how many students chose each option. You can download a
   CSV.
 - *Admin → Classes & students*: see all classes, edit or delete them, and **paste class lists** straight from
-  Excel or Google Sheets (two columns: class name, school email; one student per row). Choose whether the paste
+  Excel or Google Sheets — the school's columns `Class | Number | Name | CName | Email` (header row skipped); one student per row
+  (class + email alone also works). Teachers then see students as "4A 12 Chan Tai Man 陳大文", in class-number order.
+  Names and numbers are stored in a teacher-only `classRosters` document, so students never see classmates' details. Choose whether the paste
   replaces each named class's list or adds to it; *Check* shows what will change before you *Apply*.
   *Check access* tells you whether a given student can sign in. At the start of a new school year, paste the
   new lists with "Replace" (and delete classes that no longer exist) so leavers lose access.
@@ -144,6 +146,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `teachers/{email}` | teacher list | teachers (and each person checking themselves) |
 | `users/{uid}` | name, email, last login | the user, teachers |
 | `members/{email}` | access list: which classes a student is in (written only by Cloud Functions) | the student, teachers |
+| `classRosters/{id}` | class numbers and names for a class | teachers |
 | `classes/{id}` | name, `studentEmails` | teachers, students in the class |
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |

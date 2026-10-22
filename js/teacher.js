@@ -6,12 +6,13 @@ import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset
 import { getAllQuestions, getQuestions, getTopics, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
 async function listClasses() {
   const snap = await getDocs(collection(db, "classes"));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+  return attachRosters(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name)));
 }
 async function listAssignments(classId) {
   const snap = await getDocs(query(collection(db, "classes", classId, "assignments"), orderBy("dueAt", "desc")));
@@ -61,31 +62,34 @@ export async function classEditor(user, classId) {
   const isNew = classId === "new";
   const data = isNew ? { name: "", studentEmails: [] } : (await getDoc(doc(db, "classes", classId))).data();
   if (!data) return mount(el("p", { class: "error" }, "Class not found."));
-  const name = el("input", { type: "text", value: data.name, placeholder: "e.g. 4A Physics 2026-27" });
-  const emails = el("textarea", { rows: 14, placeholder: `One school email per line, e.g. s123456@syss.edu.hk` });
-  emails.value = (data.studentEmails || []).join("\n");
+  if (!isNew) await attachRoster(data, classId);
+  const name = el("input", { type: "text", value: data.name, placeholder: "e.g. 4A" });
+  const emails = el("textarea", { rows: 14, placeholder: "One student per line: number, name, Chinese name, school email\n12\tChan Tai Man\t陳大文\ts123456@syss.edu.hk\n(number and names are optional)" });
+  emails.value = rosterOf(data).map((r) => [r.no, r.name, r.cname, r.email].filter((x) => x !== null && x !== undefined && x !== "").join("\t")).join("\n");
   const save = el("button", { class: "btn primary", type: "button" }, "Save class");
   save.addEventListener("click", async () => {
-    const list = [...new Set(emails.value.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean))];
-    const bad = list.filter((e) => !emailRe.test(e));
+    const rows = emails.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).flatMap((l) => {
+      const many = l.split(/[\s,;]+/).filter((c) => c.includes("@"));
+      if (many.length > 1) return many.map((e) => ({ email: e.toLowerCase(), no: null, name: "", raw: e }));   // several emails on one line
+      const r = parseRow(l); return [{ email: r.email, no: r.no, name: r.words.join(" "), cname: r.cname, raw: l }];
+    });
+    const bad = rows.filter((r) => !emailRe.test(r.email)).map((r) => r.raw);
     if (!name.value.trim()) return toast("Please give the class a name.", "error");
-    if (bad.length) return toast(`Not school emails: ${bad.slice(0, 3).join(", ")}${bad.length > 3 ? "…" : ""}`, "error");
-    const payload = { name: name.value.trim(), studentEmails: list, updatedAt: serverTimestamp() };
+    if (bad.length) return toast(`Rows without a school email: ${bad.slice(0, 3).join(" | ")}${bad.length > 3 ? "…" : ""}`, "error");
     try {
-      if (isNew) await addDoc(collection(db, "classes"), { ...payload, createdBy: user.email, createdAt: serverTimestamp() });
-      else await updateDoc(doc(db, "classes", classId), payload);
+      await saveClass(isNew ? null : classId, name.value.trim(), mergeRoster(null, rows, "replace"), user);
       toast("Class saved.");
       location.hash = "#/t";
     } catch (e) { toast(errMsg(e), "error"); }
   });
   const del = isNew ? null : el("button", { class: "btn danger", type: "button", onclick: async () => {
     if (!confirm("Delete this class? Its assignments will no longer be visible to students. Submitted results are kept.")) return;
-    try { await deleteDoc(doc(db, "classes", classId)); location.hash = "#/t"; } catch (e) { toast(errMsg(e), "error"); }
+    try { await deleteClass(classId); location.hash = "#/t"; } catch (e) { toast(errMsg(e), "error"); }
   } }, "Delete class");
   mount(el("section", { class: "narrow" }, [
     el("h1", {}, isNew ? "New class" : "Edit class"),
     el("label", {}, ["Class name", name]),
-    el("label", {}, ["Student emails", emails]),
+    el("label", {}, ["Students (number, name, Chinese name, school email — one per line)", emails]),
     el("p", { class: "muted" }, "Students see this class's assignments after signing in with these accounts."),
     el("div", { class: "row" }, [save, el("a", { class: "btn", href: "#/t" }, "Cancel"), del]),
   ]));
@@ -230,7 +234,7 @@ export async function resultsView(user, classId, assignmentId) {
   mount(loading());
   const [cSnap, aSnap] = await Promise.all([getDoc(doc(db, "classes", classId)), getDoc(doc(db, "classes", classId, "assignments", assignmentId))]);
   if (!cSnap.exists() || !aSnap.exists()) return mount(el("p", { class: "error" }, "Not found."));
-  const cls = cSnap.data(), a = aSnap.data();
+  const cls = await attachRoster(cSnap.data(), classId), a = aSnap.data();
   const qids = a.questionIds;
   const [questions, attemptsSnap] = await Promise.all([
     getQuestions(qids),
@@ -241,7 +245,7 @@ export async function resultsView(user, classId, assignmentId) {
     (await getDocs(query(collection(db, "answerKeys"), where(documentId(), "in", part)))).forEach((d) => (answers[d.id] = d.data().answer));
   }
   const byEmail = new Map(attemptsSnap.docs.map((d) => [d.data().email, { id: d.id, ...d.data() }]));
-  const students = [...new Set([...(cls.studentEmails || []), ...byEmail.keys()])].sort();
+  const students = sortByRoster(cls, [...new Set([...(cls.studentEmails || []), ...byEmail.keys()])], (e) => byEmail.get(e)?.name);
 
   const head = el("tr", {}, [el("th", {}, "Student"), el("th", {}, "Score"), el("th", {}, "Submitted")]
     .concat(qids.map((id, i) => el("th", { class: "qcol" }, el("a", { href: `#q-${id}`, title: id }, `Q${i + 1}`)))));
@@ -251,7 +255,7 @@ export async function resultsView(user, classId, assignmentId) {
   let submitted = 0, totalScore = 0;
   for (const email of students) {
     const at = byEmail.get(email);
-    const cells = [el("td", {}, at && at.name && at.name !== email ? `${at.name} (${email.split("@")[0]})` : email.split("@")[0])];
+    const cells = [el("td", { class: "nowrap" }, studentLabel(cls, email, at && at.name))];
     if (!at) { cells.push(el("td", { class: "muted" }, "—"), el("td", { class: "muted" }, "not submitted")); qids.forEach(() => cells.push(el("td", {}))); }
     else {
       submitted++; totalScore += at.score;
@@ -271,11 +275,12 @@ export async function resultsView(user, classId, assignmentId) {
 
   const csv = el("button", { class: "btn small", type: "button" }, "Download CSV");
   csv.addEventListener("click", () => {
-    const rows = [["email", "name", "score", "total", "submitted", "late", ...qids.map((_, i) => `Q${i + 1}`)]];
-    rows.push(["(answer key)", "", "", "", "", "", ...qids.map((id) => answers[id] || "")]);
+    const ro = new Map(rosterOf(cls).map((r) => [r.email, r]));
+    const rows = [["class", "number", "name", "cname", "email", "score", "total", "submitted", "late", ...qids.map((_, i) => `Q${i + 1}`)]];
+    rows.push(["", "", "(answer key)", "", "", "", "", "", "", ...qids.map((id) => answers[id] || "")]);
     for (const email of students) {
-      const at = byEmail.get(email);
-      rows.push([email, at?.name || "", at?.score ?? "", at?.total ?? "", at ? fmtDate(at.submittedAt) : "", at?.late ? "yes" : "",
+      const at = byEmail.get(email), r = ro.get(email) || {};
+      rows.push([cls.name, r.no ?? "", r.name || at?.name || "", r.cname || "", email, at?.score ?? "", at?.total ?? "", at ? fmtDate(at.submittedAt) : "", at?.late ? "yes" : "",
         ...qids.map((id) => at?.responses?.[id] || "")]);
     }
     const blob = new Blob(["﻿" + rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" });
@@ -305,17 +310,15 @@ export async function resultsView(user, classId, assignmentId) {
 export function parseRoster(text) {
   const classes = new Map(), bad = [];
   for (const raw of text.split(/\r?\n/)) {
-    const cells = raw.split(/\t|,|;/).map((c) => c.trim()).filter(Boolean);
-    if (!cells.length) continue;
-    const email = cells.find((c) => c.includes("@"));
-    const name = cells.find((c) => !c.includes("@"));
-    if (!email) continue;                       // header or blank row
-    if (!name || !emailRe.test(email)) { bad.push(raw.trim()); continue; }
-    const key = name.replace(/\s+/g, " ");
-    if (!classes.has(key)) classes.set(key, new Set());
-    classes.get(key).add(email.toLowerCase());
+    if (!raw.trim()) continue;
+    const r = parseRow(raw);
+    if (!r.email) continue;                     // header or blank row
+    const cls = (r.words[0] || "").replace(/\s+/g, " ");
+    if (!cls || !emailRe.test(r.email)) { bad.push(raw.trim()); continue; }
+    if (!classes.has(cls)) classes.set(cls, new Map());
+    classes.get(cls).set(r.email, { email: r.email, no: r.no, name: r.words.slice(1).join(" "), cname: r.cname });
   }
-  return { classes: new Map([...classes].map(([k, v]) => [k, [...v]])), bad };
+  return { classes: new Map([...classes].map(([k, v]) => [k, [...v.values()]])), bad };
 }
 
 async function classesPanel(user) {
@@ -327,12 +330,12 @@ async function classesPanel(user) {
     el("td", {}, [el("a", { href: `#/t/class/${c.id}` }, "edit"), " · ",
       el("button", { class: "linkbtn", type: "button", onclick: async () => {
         if (!confirm(`Delete class "${c.name}"? Its students lose access unless they are in another class. Their past results are kept.`)) return;
-        try { await deleteDoc(doc(db, "classes", c.id)); toast("Class deleted."); adminView(user); } catch (e) { toast(errMsg(e), "error"); }
+        try { await deleteClass(c.id); toast("Class deleted."); adminView(user); } catch (e) { toast(errMsg(e), "error"); }
       } }, "delete")])])));
   box.append(classes.length ? t : el("p", { class: "muted" }, "No classes yet."), el("p", {}, el("a", { class: "btn small", href: "#/t/class/new" }, "New class")));
 
   // bulk paste
-  const area = el("textarea", { rows: 8, placeholder: "4A Physics\ts123456@syss.edu.hk\n4A Physics\ts123457@syss.edu.hk\n5B Physics\ts223344@syss.edu.hk" });
+  const area = el("textarea", { rows: 8, placeholder: "Class\tNumber\tName\tCName\tEmail\n4A\t12\tChan Tai Man\t陳大文\ts123456@syss.edu.hk\n4A\t13\tChan Siu Ming\t陳小明\ts123457@syss.edu.hk\n5B\t3\tLee Ka Yan\t李嘉欣\ts223344@syss.edu.hk" });
   const mode = el("select", {}, [el("option", { value: "replace" }, "Replace the student list of each class named"),
     el("option", { value: "add" }, "Add these students to the classes named")]);
   const preview = el("div", { class: "muted" });
@@ -354,18 +357,14 @@ async function classesPanel(user) {
     try {
       for (const [name, list] of parsed.classes) {
         const ex = classes.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        if (!ex) await addDoc(collection(db, "classes"), { name, studentEmails: list, createdBy: user.email, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-        else {
-          const merged = mode.value === "replace" ? list : [...new Set([...(ex.studentEmails || []), ...list])];
-          await updateDoc(doc(db, "classes", ex.id), { studentEmails: merged, updatedAt: serverTimestamp() });
-        }
+        await saveClass(ex ? ex.id : null, ex ? ex.name : name, mergeRoster(ex, list, ex ? mode.value : "replace"), user);
       }
       toast(`Saved ${parsed.classes.size} class(es).`);
       adminView(user);
     } catch (e) { toast(errMsg(e), "error"); apply.disabled = false; }
   });
   box.append(el("h3", {}, "Paste class lists"),
-    el("p", { class: "muted" }, "Copy two columns from Excel or Google Sheets — class name and school email — and paste below. One student per row. A student can be in several classes."),
+    el("p", { class: "muted" }, "Copy the columns Class | Number | Name | CName | Email from Excel or Google Sheets and paste below (the header row is skipped automatically). One student per row; Class and Email alone also work. Teachers then see students as e.g. \"4A 12 Chan Tai Man 陳大文\"."),
     area, el("div", { class: "row" }, [mode, check, apply]), preview);
 
   // look up one student / rebuild

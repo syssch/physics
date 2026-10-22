@@ -4,6 +4,7 @@ import { db } from "./fb.js";
 import { doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { el, mount, loading, toast, errMsg, fmtDate, chunk } from "./ui.js";
+import { studentLabel, sortByRoster, attachRosters } from "./roster.js";
 
 let bundleCache = null;
 export async function getCards() {
@@ -173,7 +174,7 @@ export async function explainCard(user, id) {
 export async function explainProgressView(user) {
   mount(loading());
   const [{ cards }, clsSnap] = await Promise.all([getCards(), getDocs(collection(db, "classes"))]);
-  const classes = clsSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+  const classes = await attachRosters(clsSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name)));
   const page = el("section", {}, [el("h1", {}, "Explain cards — reading progress"),
     el("p", { class: "muted" }, `${cards.length} cards on the platform. "Last 7 days" counts cards marked read in the past week.`)]);
   const weekAgo = Date.now() - 7 * 864e5;
@@ -185,10 +186,10 @@ export async function explainProgressView(user) {
       s.forEach((d) => prog.set(d.data().email, d.data()));
     }
     const t = el("table", { class: "grid" }, [el("tr", {}, ["Student", "Cards read", "Last 7 days", "Last read", "Topics chosen"].map((h) => el("th", {}, h)))]);
-    emails.forEach((e) => {
+    sortByRoster(c, emails, (e) => prog.get(e)?.name).forEach((e) => {
       const d = prog.get(e), times = Object.values((d && d.read) || {}).map((x) => Date.parse(x)).filter(Boolean);
       t.append(el("tr", { class: d ? "" : "missing" }, [
-        el("td", {}, d && d.name ? `${d.name} (${e.split("@")[0]})` : e.split("@")[0]),
+        el("td", { class: "nowrap" }, studentLabel(c, e, d && d.name)),
         el("td", {}, String(times.length)), el("td", {}, String(times.filter((x) => x >= weekAgo).length)),
         el("td", {}, times.length ? fmtDate(new Date(Math.max(...times))) : "—"),
         el("td", { class: "muted" }, d && d.topics ? d.topics.join(", ") : "all"),

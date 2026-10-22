@@ -92,3 +92,5 @@ h3.pattern { font-size:.9rem; color:var(--muted); margin:.9rem 0 .3rem; text-tra
 .xsec.q { border-left:4px solid var(--accent); } .xsec.ans { border-left:4px solid var(--good); background:#f6fbf8; }
 .xsec.exam { border-left:4px solid var(--warn); }
 .btn.done { background:var(--good-soft); border-color:var(--good); color:var(--good); }
+
+td.nowrap { white-space: nowrap; }

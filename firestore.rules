@@ -75,6 +75,11 @@ service cloud.firestore {
         && request.resource.data.email == myEmail();
     }
 
+    // Students' class numbers and names: teachers only (students see just their own class list membership).
+    match /classRosters/{classId} {
+      allow read, write: if isTeacher();
+    }
+
     // Written only by Cloud Functions (which bypass these rules), so marks cannot be forged.
     match /attempts/{attemptId} {
       allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);

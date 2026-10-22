@@ -15,7 +15,7 @@ export function checkRead(path, data) {
       case "users": return isSchool() && (s[1] === me().uid || isTeacher());
       case "questions": case "meta": return isMember();
       case "members": return isSchool() && (s[1] === myEmail() || isTeacher());
-      case "answerKeys": return isTeacher();
+      case "answerKeys": case "classRosters": return isTeacher();
       case "classes":
         if (s.length === 2) return isTeacher() || (isSchool() && data && (data.studentEmails || []).includes(myEmail()));
         return isTeacher() || (isSchool() && (fake.store.get(`classes/${s[1]}`)?.studentEmails || []).includes(myEmail()));
@@ -35,7 +35,7 @@ export function checkWrite(path, data) {
   const ok = (() => {
     switch (s[0]) {
       case "users": return isMember() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "lastLogin"].includes(k)) && data.email === myEmail();
-      case "questions": case "answerKeys": case "meta": case "classes": case "teachers": return isTeacher();
+      case "questions": case "answerKeys": case "meta": case "classes": case "teachers": case "classRosters": return isTeacher();
       case "explainProgress": return isMember() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "read", "topics", "today", "updatedAt"].includes(k)) && data.email === myEmail();
       default: return false;
     }
