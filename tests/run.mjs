@@ -273,23 +273,31 @@ ok(byText(".panel strong", `${first.year} ${first.qref}`), "today's card is the 
 byText("a.btn", "Read today's card").click(); await go(`#/explain/${first.id}`);
 await waitFor(() => byText("button", "Mark as read"), "card page");
 ok(byText(".xsec h3", "Marking-scheme answer") && byText(".xsec h3", "Teaching notes") && byText(".xsec h3", "Examiners"), "card shows all sections");
+ok(/Book 1 Heat and Gases › Ch 1 Temperature and Heat Transfer 溫度和熱傳遞/.test(w.document.body.textContent), "card shows its book and chapter");
 byText("button", "Mark as read").click();
 await waitFor(() => byText("button", "Read — tap to undo"), "marked");
 ok(fake.store.get("explainProgress/s1").read[first.id], "read mark saved");
 await go("#/explain");
-await waitFor(() => $$(".chip").length, "topic chips");
-ok($$(".chip").length === 7 && $$(".cardrow").length === 134, "7 topic chips, all 134 cards listed");
+await waitFor(() => $$(".chip").length, "chapter chips");
+const nCh = new Set(explain.cards.map((c) => c.chapter)).size;
+ok($$(".bookbox").length === 5 && $$(".chip").length === nCh && $$(".cardrow").length === 134, `5 books, ${nCh} chapter chips, all 134 cards listed`);
 ok($$(".cardrow.done").length === 1, "read card ticked in the list");
-const heat = $$(".chip").find((c) => c.textContent.includes("Heat and Gases"));
-ok(/1\/23/.test(heat.textContent), "topic progress counter");
-// student studies only Force and Motion
-for (const chip of $$(".chip")) { const cb = chip.querySelector("input"); if (!chip.textContent.includes("Force and Motion") && cb.checked) { cb.checked = false; cb.dispatchEvent(new w.Event("change")); await sleep(10); } }
+const ch1 = $$(".chip").find((c) => c.textContent.includes("Ch 1 Temperature and Heat Transfer"));
+ok(/1\/8/.test(ch1.textContent), "chapter progress counter");
+// student studies only Book 2 (Force and Motion): untick every other book
+for (const box of $$(".bookbox")) if (!box.textContent.includes("Book 2")) { const b = [...box.querySelectorAll("button")].find((x) => x.textContent === "Untick all"); b.click(); await sleep(15); }
 await sleep(30);
-ok($$(".cardrow").length === 32, "list narrowed to chosen topic (32 Force and Motion cards)");
-ok(JSON.stringify(fake.store.get("explainProgress/s1").topics) === JSON.stringify(["Force and Motion"]), "topic choice saved");
+const b2 = explain.cards.filter((c) => c.book === 2);
+ok($$(".cardrow").length === b2.length, `list narrowed to chosen chapters (${b2.length} Book 2 cards)`);
+ok(JSON.stringify(fake.store.get("explainProgress/s1").topics) === JSON.stringify([...new Set(b2.map((c) => c.chapter))]), "chapter choice saved");
+// untick one more chapter with its checkbox
+const ch10 = $$(".chip").find((c) => c.textContent.includes("Ch 10 Projectile"));
+ch10.querySelector("input").checked = false; ch10.querySelector("input").dispatchEvent(new w.Event("change")); await sleep(30);
+ok($$(".cardrow").length === b2.filter((c) => c.chapter !== "10").length && !fake.store.get("explainProgress/s1").topics.includes("10"), "single chapter can be unticked");
 await go("#/history"); await go("#/");
 await waitFor(() => byText("a.btn", "Read today's card") || byText("a.btn", "Read again"), "home");
-ok(/Force and Motion/.test(byText(".panel strong", "Force and Motion")?.textContent || ""), "today's card switches to the chosen topic");
+const todayCardDoc = explain.cards.find((c) => c.id === fake.store.get("explainProgress/s1").today.cardId);
+ok(todayCardDoc.book === 2 && todayCardDoc.chapter === "6" && byText(".panel strong", "Ch 6 Fundamentals of Force"), "today's card switches to the first chosen chapter");
 // same card all day
 const todayId = fake.store.get("explainProgress/s1").today.cardId;
 await go("#/history"); await go("#/");
@@ -309,6 +317,11 @@ fake.setUser(T); await sleep(50); await go("#/t/explain");
 await waitFor(() => byText("h1", "reading progress"), "teacher progress");
 const row = byText("table.grid tr", "s001");
 ok(row && row.children[1].textContent === "2", "teacher sees cards read per student");
+ok(row && row.children[4].textContent === "Ch 6, Ch 7, Ch 8, Ch 9, Ch 11", "teacher sees chosen chapters");
+// a reading record saved before chapters existed (topic names) counts as "all chapters"
+fake.store.get("explainProgress/s1").topics = ["Force and Motion"];
+await go("#/t"); await go("#/t/explain"); await waitFor(() => byText("h1", "reading progress"), "teacher progress again");
+ok(byText("table.grid tr", "s001").children[4].textContent === "all", "old topic choices fall back to all chapters");
 
 console.log("13. Class lists control access");
 const S9 = { uid: "s9", email: "s009@syss.edu.hk", name: "Not Physics" };

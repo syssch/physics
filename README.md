@@ -93,6 +93,9 @@ Until this is done, test with teacher accounts or a few adult accounts.
    cd ~/"Claude/Projects/HKDSE Physics Database"
    python3 platform_prep/export_explain_cards.py     # writes platform_prep/export/explain/explain_bundle.json
    ```
+   Each card is tagged with a textbook chapter (Books 1–7) in `platform_prep/explain_chapters.csv`. To re-tag a
+   card, change its `chapter` number in Excel and run the script again (chapter numbers: 1–27 for Books 1–5,
+   `A1`–`A4` for Book 6, `W1`–`W3` for Book 7; see `explain_chapters.json`).
 2. On the website: *Teacher → Admin → Import Explain cards*, then choose `explain_bundle.json`. Re-importing
    (e.g. after you edit the booklet) replaces the cards; students keep their read marks.
 
@@ -122,7 +125,7 @@ updates itself whenever a class is saved or deleted.
   *Check access* tells you whether a given student can sign in. At the start of a new school year, paste the
   new lists with "Replace" (and delete classes that no longer exist) so leavers lose access.
 - *Admin*: also add or remove teachers, and import questions and Explain cards.
-- *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date).
+- *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
@@ -131,8 +134,9 @@ updates itself whenever a class is saved or deleted.
   answers.
 - *My results*: every past attempt, with a review page for each.
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
-  comments. Home shows a *card of the day* (the first unread card in the student's chosen topics; it stays the same all
-  day). Students tick the topics they have learnt, can open any card, and tap *Mark as read*.
+  comments. Home shows a *card of the day* (the first unread card in the student's chosen chapters; it stays the same all
+  day). Cards are grouped by textbook book and chapter (e.g. "Book 2 · Ch 9 Momentum 動量"). Students tick the chapters
+  they have learnt, can open any card, and tap *Mark as read*.
 
 Each assignment can be submitted once. Late submissions are accepted and marked "late".
 Unfinished answers are saved in the browser, so reloading the page doesn't lose them.
@@ -151,7 +155,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |
 | `meta/explainCards` | all Explain cards in one document | anyone at school |
-| `explainProgress/{uid}` | a student's read marks, chosen topics, today's card | the student, teachers |
+| `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
 
 ## Testing changes locally
