@@ -5,6 +5,7 @@ import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/fire
 import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset } from "./ui.js";
 import { getAllQuestions, getQuestions, getTopics, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
+import { importExplainBundle } from "./explain.js";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -27,6 +28,7 @@ export async function teacherHome(user) {
       el("a", { class: "btn primary", href: "#/t/assign" }, "New assignment"),
       el("a", { class: "btn", href: "#/t/class/new" }, "New class"),
       el("a", { class: "btn", href: "#/t/bank" }, "Browse questions"),
+      el("a", { class: "btn", href: "#/t/explain" }, "Explain reading"),
       el("a", { class: "btn", href: "#/t/admin" }, "Admin"),
     ]),
   ]);
@@ -352,6 +354,17 @@ export async function adminView(user) {
     go.disabled = false;
   });
 
+  const exIn = el("input", { type: "file", accept: ".json,application/json" });
+  const exLog = el("p", { class: "muted" });
+  const exGo = el("button", { class: "btn primary", type: "button" }, "Import Explain cards");
+  exGo.addEventListener("click", async () => {
+    if (!exIn.files[0]) return toast("Choose explain_bundle.json first.", "error");
+    exGo.disabled = true;
+    try { const n = await importExplainBundle(exIn.files[0]); exLog.textContent = `Saved ${n} Explain cards.`; toast("Explain cards imported."); }
+    catch (e) { exLog.textContent = "Error: " + errMsg(e); toast(errMsg(e), "error"); }
+    exGo.disabled = false;
+  });
+
   const qs = await getDocs(collection(db, "questions"));
   mount(el("section", { class: "narrow" }, [
     el("h1", {}, "Admin"),
@@ -359,5 +372,8 @@ export async function adminView(user) {
     el("div", { class: "panel" }, [el("h2", {}, "Import questions"),
       el("p", { class: "muted" }, `${qs.size} questions on the platform now. Choose bundle.json and all files in its figures folder (made by platform_prep/export_for_platform.py). Re-importing updates questions with the same id.`),
       el("label", {}, ["bundle.json", bundleIn]), el("label", {}, ["Figure files", figIn]), go, log]),
+    el("div", { class: "panel" }, [el("h2", {}, "Import Explain cards"),
+      el("p", { class: "muted" }, "Choose explain_bundle.json (made by platform_prep/export_explain_cards.py). Importing again replaces all cards; students keep their read marks."),
+      el("label", {}, ["explain_bundle.json", exIn]), exGo, exLog]),
   ]));
 }

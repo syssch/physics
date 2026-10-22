@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/fi
 import { el, mount, toast, errMsg } from "./ui.js";
 import { isSchoolEmail } from "./config.js";
 import { studentHome, practiceView, doAssignment, reviewView, historyView } from "./student.js";
+import { explainLibrary, explainCard, explainProgressView } from "./explain.js";
 import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView } from "./teacher.js";
 
 let user = null;
@@ -23,7 +24,7 @@ function signInPage(message) {
 }
 
 function drawChrome() {
-  const links = [el("a", { href: "#/" }, "Home"), el("a", { href: "#/history" }, "My results")];
+  const links = [el("a", { href: "#/" }, "Home"), el("a", { href: "#/explain" }, "Explain"), el("a", { href: "#/history" }, "My results")];
   if (user.isTeacher) links.push(el("a", { href: "#/student" }, "Practise"), el("a", { href: "#/t" }, "Teacher"));
   document.getElementById("nav").replaceChildren(...links);
   document.getElementById("user").replaceChildren(
@@ -38,6 +39,9 @@ const routes = [
   [/^#\/practice\/([\w-]+)$/, (m) => practiceView(user, m[1])],
   [/^#\/do\/([\w-]+)\/([\w-]+)$/, (m) => doAssignment(user, m[1], m[2])],
   [/^#\/review\/([\w-]+)$/, (m) => reviewView(user, m[1])],
+  [/^#\/explain$/, () => explainLibrary(user)],
+  [/^#\/explain\/([\w-]+)$/, (m) => explainCard(user, m[1])],
+  [/^#\/t\/explain$/, () => explainProgressView(user), true],
   [/^#\/t$/, () => { sessionStorage.removeItem("asStudent"); return teacherHome(user); }, true],
   [/^#\/t\/class\/([\w-]+)$/, (m) => classEditor(user, m[1]), true],
   [/^#\/t\/assign(?:\/([\w-]+))?$/, (m) => assignmentBuilder(user, m[1]), true],

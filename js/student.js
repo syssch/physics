@@ -4,6 +4,7 @@ import { collection, getDocs, query, where, orderBy, limit, doc, getDoc }
 import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js";
 import { getTopics, getQuestions } from "./questions.js";
 import { runQuiz, showReview } from "./quiz.js";
+import { explainPanel } from "./explain.js";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -23,6 +24,7 @@ export async function studentHome(user) {
   // Assignments
   const asg = el("div", { class: "panel" }, [el("h2", {}, "Assignments")]);
   page.append(asg);
+  page.append(await explainPanel(user));
   // Practice
   page.append(await practicePanel());
   // History
