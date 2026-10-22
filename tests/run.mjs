@@ -29,6 +29,7 @@ for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, ac
 for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, { answer: a });
 fake.store.set("meta/topics", { topics: bundle.topics });
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
+const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
 for (const q of bundle.questions) for (const f of q.figures) fake.files.set(`figures/${f}`, "png");
 
 // cloud functions
@@ -246,6 +247,61 @@ fake.setUser(S1); await sleep(50);
 await go("#/t/admin");
 await waitFor(() => byText("p.error", "Teachers only"), "teachers only");
 ok(true, "teacher pages blocked for students");
+
+console.log("12. Explain cards");
+await go("#/"); await sleep(50);
+ok(byText(".panel h2", "Explain card of the day") && byText(".panel", "Coming soon"), "home shows Explain panel before cards are imported");
+fake.setUser(T); await sleep(50); await go("#/t/admin");
+await waitFor(() => byText("h2", "Import Explain cards"), "explain import box");
+const exFile = new NodeFile([JSON.stringify(explain)], "explain_bundle.json", { type: "application/json" });
+Object.defineProperty($$("input[type=file]")[2], "files", { value: [exFile] });
+byText("button", "Import Explain cards").click();
+await waitFor(() => /Saved 134 Explain cards/.test(w.document.body.textContent), "explain import");
+ok(fake.store.get("meta/explainCards").cards.length === 134, "134 cards stored in one document");
+fake.setUser(S1); await sleep(50);
+await go("#/history"); await go("#/");
+await waitFor(() => byText("a.btn", "Read today's card"), "today's card button");
+const first = explain.cards[0];
+ok(byText(".panel strong", `${first.year} ${first.qref}`), "today's card is the first card");
+byText("a.btn", "Read today's card").click(); await go(`#/explain/${first.id}`);
+await waitFor(() => byText("button", "Mark as read"), "card page");
+ok(byText(".xsec h3", "Marking-scheme answer") && byText(".xsec h3", "Teaching notes") && byText(".xsec h3", "Examiners"), "card shows all sections");
+byText("button", "Mark as read").click();
+await waitFor(() => byText("button", "Read — tap to undo"), "marked");
+ok(fake.store.get("explainProgress/s1").read[first.id], "read mark saved");
+await go("#/explain");
+await waitFor(() => $$(".chip").length, "topic chips");
+ok($$(".chip").length === 7 && $$(".cardrow").length === 134, "7 topic chips, all 134 cards listed");
+ok($$(".cardrow.done").length === 1, "read card ticked in the list");
+const heat = $$(".chip").find((c) => c.textContent.includes("Heat and Gases"));
+ok(/1\/23/.test(heat.textContent), "topic progress counter");
+// student studies only Force and Motion
+for (const chip of $$(".chip")) { const cb = chip.querySelector("input"); if (!chip.textContent.includes("Force and Motion") && cb.checked) { cb.checked = false; cb.dispatchEvent(new w.Event("change")); await sleep(10); } }
+await sleep(30);
+ok($$(".cardrow").length === 32, "list narrowed to chosen topic (32 Force and Motion cards)");
+ok(JSON.stringify(fake.store.get("explainProgress/s1").topics) === JSON.stringify(["Force and Motion"]), "topic choice saved");
+await go("#/history"); await go("#/");
+await waitFor(() => byText("a.btn", "Read today's card") || byText("a.btn", "Read again"), "home");
+ok(/Force and Motion/.test(byText(".panel strong", "Force and Motion")?.textContent || ""), "today's card switches to the chosen topic");
+// same card all day
+const todayId = fake.store.get("explainProgress/s1").today.cardId;
+await go("#/history"); await go("#/");
+await waitFor(() => byText(".panel h2", "Explain card of the day"), "home again"); await sleep(50);
+ok(fake.store.get("explainProgress/s1").today.cardId === todayId, "today's card stays the same during the day");
+// next day -> next unread
+fake.store.get("explainProgress/s1").today.date = "2000-01-01";
+fake.store.get("explainProgress/s1").read[todayId] = new Date().toISOString();
+await go("#/history"); await go("#/"); await sleep(100);
+ok(fake.store.get("explainProgress/s1").today.cardId !== todayId, "a new day gives the next unread card");
+// others cannot write my progress
+denied = false; fake.user = S2;
+try { await fs.setDoc(fs.doc({ __db: true }, "explainProgress", "s1"), { email: "s002@syss.edu.hk", read: {} }); } catch (e) { denied = /permission/.test(e.message); }
+ok(denied, "a student cannot change someone else's reading record"); fake.user = S1;
+// teacher view
+fake.setUser(T); await sleep(50); await go("#/t/explain");
+await waitFor(() => byText("h1", "reading progress"), "teacher progress");
+const row = byText("table.grid tr", "s001");
+ok(row && row.children[1].textContent === "2", "teacher sees cards read per student");
 
 console.log(`\n${passed} checks passed.`);
 const real = errors.filter((e) => !/Not implemented: navigation/.test(e));
