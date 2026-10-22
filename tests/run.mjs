@@ -358,6 +358,29 @@ fake.store.delete("members/s009@syss.edu.hk");
 const r = await api.rebuildMembers({});
 ok(r.members === 4 && fake.store.has("members/s009@syss.edu.hk"), "rebuild restores the access list from class lists");
 
+console.log("14. Deleting results");
+// a student cannot delete their own result
+fake.user = S2; denied = false;
+try { await fs.deleteDoc(fs.doc({ __db: true }, "attempts", `${a1}_s2`)); } catch (e) { denied = /permission/.test(e.message); }
+ok(denied && fake.store.has(`attempts/${a1}_s2`), "students cannot delete results");
+// teacher resets a student's submission from the results grid
+fake.setUser(T); await sleep(50);
+const cls1 = [...fake.store.entries()].find(([p, d]) => /^classes\/[^/]+$/.test(p) && (d.studentEmails || []).includes("s002@syss.edu.hk"))[0].split("/")[1];
+await go(`#/t/results/${cls1}/${a1}`);
+await waitFor(() => $("table.results"), "results");
+const s2row = $$("table.results tr").find((tr) => /Ho Siu Ming|s002/.test(tr.children[0].textContent));
+s2row.querySelector("button.linkbtn").click();
+await waitFor(() => !fake.store.has(`attempts/${a1}_s2`), "reset");
+ok(true, "teacher can reset a student's submission");
+// teacher deletes their own practice results
+await api.startPractice({ count: 3 }).then((r) => api.submitAnswers({ sessionId: r.sessionId, responses: {} }));
+ok([...fake.store.entries()].some(([p, d]) => p.startsWith("attempts/") && d.uid === "t1"), "teacher has a practice result");
+await go("#/history");
+await waitFor(() => byText("button", "Delete all my results"), "history with delete");
+byText("button", "Delete all my results").click();
+await waitFor(() => ![...fake.store.entries()].some(([p, d]) => p.startsWith("attempts/") && d.uid === "t1"), "deleted own");
+ok(true, "teacher can delete their own results");
+
 console.log(`\n${passed} checks passed.`);
 const real = errors.filter((e) => !/Not implemented: navigation/.test(e));
 if (real.length) { console.log("Console errors:\n" + real.join("\n")); process.exitCode = 1; }

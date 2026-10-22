@@ -1,5 +1,5 @@
 import { db, api } from "./fb.js";
-import { collection, getDocs, query, where, orderBy, limit, doc, getDoc }
+import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js";
 import { getTopics, getQuestions } from "./questions.js";
@@ -133,11 +133,18 @@ export async function historyView(user) {
   const page = el("section", {}, [el("h1", {}, "My results")]);
   if (!attempts.length) page.append(el("p", { class: "muted" }, "Nothing yet."));
   else {
-    const t = el("table", { class: "grid" }, [el("tr", {}, ["Date", "Set", "Score", "%"].map((h) => el("th", {}, h)))]);
+    const del = async (ids) => {
+      try { for (const id of ids) await deleteDoc(doc(db, "attempts", id)); toast(`Deleted ${ids.length} result(s).`); historyView(user); }
+      catch (e) { toast(errMsg(e), "error"); }
+    };
+    const t = el("table", { class: "grid" }, [el("tr", {}, ["Date", "Set", "Score", "%", user.isTeacher ? "" : null].filter((h) => h !== null).map((h) => el("th", {}, h)))]);
     attempts.forEach((a) => t.append(el("tr", {}, [el("td", {}, fmtDate(a.submittedAt)),
       el("td", {}, el("a", { href: `#/review/${a.id}` }, a.title || "Practice")),
-      el("td", {}, `${a.score}/${a.total}`), el("td", {}, a.total ? `${Math.round((100 * a.score) / a.total)}%` : "")])));
+      el("td", {}, `${a.score}/${a.total}`), el("td", {}, a.total ? `${Math.round((100 * a.score) / a.total)}%` : ""),
+      user.isTeacher ? el("td", {}, el("button", { class: "linkbtn", type: "button", onclick: () => confirm("Delete this result?") && del([a.id]) }, "delete")) : null])));
     page.append(t);
+    if (user.isTeacher) page.append(el("p", {}, el("button", { class: "btn small danger", type: "button",
+      onclick: () => confirm(`Delete all ${attempts.length} of your results? This can't be undone.`) && del(attempts.map((a) => a.id)) }, "Delete all my results")));
   }
   mount(page);
 }

@@ -83,7 +83,9 @@ service cloud.firestore {
     // Written only by Cloud Functions (which bypass these rules), so marks cannot be forged.
     match /attempts/{attemptId} {
       allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);
-      allow write: if false;
+      // Teachers may delete a result (their own test runs, or to let a student redo an assignment). Nobody can edit one.
+      allow delete: if isTeacher();
+      allow create, update: if false;
     }
     match /sessions/{sessionId} {
       allow read: if isSchool() && resource.data.uid == request.auth.uid;

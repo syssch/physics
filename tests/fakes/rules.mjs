@@ -30,12 +30,13 @@ export function checkList(path) {
   const s = path.split("/");
   if ((s[0] === "teachers" || s[0] === "members") && !isTeacher()) deny("list", path);
 }
-export function checkWrite(path, data) {
+export function checkWrite(path, data, op = "write") {
   const s = path.split("/");
   const ok = (() => {
     switch (s[0]) {
       case "users": return isMember() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "lastLogin"].includes(k)) && data.email === myEmail();
       case "questions": case "answerKeys": case "meta": case "classes": case "teachers": case "classRosters": return isTeacher();
+      case "attempts": return isTeacher() && op === "delete";
       case "explainProgress": return isMember() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "read", "topics", "today", "updatedAt"].includes(k)) && data.email === myEmail();
       default: return false;
     }

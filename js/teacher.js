@@ -259,7 +259,13 @@ export async function resultsView(user, classId, assignmentId) {
     if (!at) { cells.push(el("td", { class: "muted" }, "—"), el("td", { class: "muted" }, "not submitted")); qids.forEach(() => cells.push(el("td", {}))); }
     else {
       submitted++; totalScore += at.score;
-      cells.push(el("td", {}, `${at.score}/${at.total}`), el("td", { class: at.late ? "late" : "" }, fmtDate(at.submittedAt) + (at.late ? " (late)" : "")));
+      const reset = el("button", { class: "linkbtn", type: "button", title: "Delete this submission so the student can do the assignment again",
+        onclick: async () => {
+          if (!confirm(`Delete ${studentLabel(cls, email, at.name)}'s submission? They will be able to do this assignment again.`)) return;
+          try { await deleteDoc(doc(db, "attempts", at.id)); toast("Submission deleted."); resultsView(user, classId, assignmentId); }
+          catch (e) { toast(errMsg(e), "error"); }
+        } }, "reset");
+      cells.push(el("td", {}, [`${at.score}/${at.total} `, reset]), el("td", { class: at.late ? "late" : "" }, fmtDate(at.submittedAt) + (at.late ? " (late)" : "")));
       qids.forEach((id, i) => {
         const r = (at.responses || {})[id];
         if (r) dist[i][r] = (dist[i][r] || 0) + 1;
