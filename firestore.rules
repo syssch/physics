@@ -55,6 +55,14 @@ service cloud.firestore {
       }
     }
 
+    // Explain-card reading progress: each student keeps their own; teachers can read all.
+    match /explainProgress/{uid} {
+      allow read: if isSchool() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSchool() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'read', 'topics', 'today', 'updatedAt'])
+        && request.resource.data.email == myEmail();
+    }
+
     // Written only by Cloud Functions (which bypass these rules), so marks cannot be forged.
     match /attempts/{attemptId} {
       allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);
