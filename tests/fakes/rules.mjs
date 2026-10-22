@@ -17,6 +17,7 @@ export function checkRead(path, data) {
       case "classes":
         if (s.length === 2) return isTeacher() || (isSchool() && data && (data.studentEmails || []).includes(myEmail()));
         return isTeacher() || (isSchool() && (fake.store.get(`classes/${s[1]}`)?.studentEmails || []).includes(myEmail()));
+      case "explainProgress": return isSchool() && (s[1] === me().uid || isTeacher());
       case "attempts": case "sessions": return isTeacher() && s[0] === "attempts" || (isSchool() && data && data.uid === me().uid);
       default: return false;
     }
@@ -33,6 +34,7 @@ export function checkWrite(path, data) {
     switch (s[0]) {
       case "users": return isSchool() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "lastLogin"].includes(k)) && data.email === myEmail();
       case "questions": case "answerKeys": case "meta": case "classes": case "teachers": return isTeacher();
+      case "explainProgress": return isSchool() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "read", "topics", "today", "updatedAt"].includes(k)) && data.email === myEmail();
       default: return false;
     }
   })();
