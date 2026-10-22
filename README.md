@@ -86,6 +86,17 @@ Until this is done, test with teacher accounts or a few adult accounts.
 
 **Never put `bundle.json` on GitHub.** It contains the answer keys.
 
+### 6. Load the Explain cards (Paper 1B "explain" questions)
+
+1. On your Mac, build the cards from the booklet in the project folder:
+   ```bash
+   cd ~/"Claude/Projects/HKDSE Physics Database"
+   python3 platform_prep/export_explain_cards.py     # writes platform_prep/export/explain/explain_bundle.json
+   ```
+2. On the website: *Teacher → Admin → Import Explain cards*, then choose `explain_bundle.json`. Re-importing
+   (e.g. after you edit the booklet) replaces the cards; students keep their read marks.
+
+
 ---
 
 ## Using it
@@ -98,7 +109,8 @@ Until this is done, test with teacher accounts or a few adult accounts.
 - *Results*: shows each student's answer to each question (green is right, red is wrong), the
   percentage correct per question, and how many students chose each option. You can download a
   CSV.
-- *Admin*: add or remove teachers, and import questions.
+- *Admin*: add or remove teachers, and import questions and Explain cards.
+- *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date).
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
@@ -106,6 +118,9 @@ Until this is done, test with teacher accounts or a few adult accounts.
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
 - *My results*: every past attempt, with a review page for each.
+- *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
+  comments. Home shows a *card of the day* (the first unread card in the student's chosen topics; it stays the same all
+  day). Students tick the topics they have learnt, can open any card, and tap *Mark as read*.
 
 Each assignment can be submitted once. Late submissions are accepted and marked "late".
 Unfinished answers are saved in the browser, so reloading the page doesn't lose them.
@@ -121,6 +136,8 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `classes/{id}` | name, `studentEmails` | teachers, students in the class |
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |
+| `meta/explainCards` | all Explain cards in one document | anyone at school |
+| `explainProgress/{uid}` | a student's read marks, chosen topics, today's card | the student, teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
 
 ## Testing changes locally
