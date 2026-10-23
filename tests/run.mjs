@@ -27,9 +27,10 @@ const { fake, Timestamp } = await import("./fakes/core.mjs");
 const bundle = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/trial/bundle.json`, "utf8"));
 for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, active: true });
 for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, { answer: a });
-fake.store.set("meta/topics", { topics: bundle.topics });
+fake.store.set("meta/topics", { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
 const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
+if (process.env.NOBOOKS) delete explain.books;   // bundle imported without its book list
 for (const q of bundle.questions) for (const f of q.figures) fake.files.set(`figures/${f}`, "png");
 
 // cloud functions
@@ -94,18 +95,26 @@ console.log("3. teacher builds two assignments");
 await go("#/t/assign");
 await waitFor(() => $$(".pickrow").length, "question list");
 ok($$(".pickrow").length === 100, "all 100 questions listed");
-const topicSel = $(".builder select");
-set(topicSel, "Force and Motion");
+const [bookSel, chSel] = $$(".builder select");
+ok([...chSel.querySelectorAll("optgroup")].some((g) => g.label.startsWith("Book 2 Force and Motion")) && [...chSel.options].some((o) => o.textContent === "Ch 9 Momentum 動量"), "chapter filter lists textbook chapters by book");
+set(chSel, "9");
 await sleep(20);
-ok($$(".pickrow").length === 30, "topic filter works (30 Force and Motion)");
-set($$(".builder select")[1], "Kinematics");
+const n9 = bundle.questions.filter((q) => (q.chapters || []).includes("9")).length;
+ok(n9 > 0 && $$(".pickrow").length === n9, `chapter filter works (${n9} in Ch 9 Momentum)`);
+ok([...$$(".builder select")[2].options].slice(1).every((o) => o.closest("optgroup").label.startsWith("Ch 9 ")), "choosing a chapter narrows the subtopics to that chapter");
+set(chSel, "");
+set(bookSel, "Force and Motion");
+await sleep(20);
+ok($$(".pickrow").length === 30, "book filter works (30 Force and Motion)");
+ok([...chSel.querySelectorAll("optgroup")].length === 1 && chSel.querySelector("optgroup").label.startsWith("Book 2"), "choosing a book narrows the chapters to that book");
+set($$(".builder select")[2], "Kinematics");
 const kin = $$(".pickrow").length;
 ok(kin > 0 && kin < 30, `subtopic filter works (${kin} Kinematics)`);
 $$(".pickrow input[type=checkbox]").slice(0, 3).forEach((c) => { c.checked = true; c.dispatchEvent(new w.Event("change")); });
 ok(/3 selected/.test($(".sticky h2").textContent), "3 selected");
 byText(".pickrow button", "preview").click(); await sleep(20);
 ok($(".preview .qcard"), "preview renders");
-set($$(".builder select")[1], "");
+set($$(".builder select")[2], "");
 byText("button", "Add random from filter").click();
 ok(/8 selected/.test($(".sticky h2").textContent), "random add 5 more");
 set($$(".formgrid input")[0], "Kinematics HW1");
@@ -190,10 +199,15 @@ console.log("7. practice");
 await go("#/");
 await waitFor(() => byText("button", "Start practice"), "practice panel");
 const sels = $$(".panel select");
-set(sels[0], "Wave Motion"); set(sels[2], "5");
+set(sels[0], "Wave Motion"); set(sels[3], "5");
 byText("button", "Start practice").click();
 await waitFor(() => $$(".qcard").length === 5, "5 practice questions");
 ok($$(".qsrc").every((e) => e.textContent.startsWith("Wave Motion")), "practice respects topic");
+{ // practice by textbook chapter (through the Cloud Function)
+  const ch = bundle.questions.find((q) => (q.chapters || []).length).chapters[0];
+  const r = await api.startPractice({ chapter: ch, count: 20 });
+  ok(r.questionIds.length && r.questionIds.every((id) => bundle.questions.find((q) => q.id === id).chapters.includes(ch)), `practice by chapter only gives Ch ${ch} questions`);
+}
 $$(".qcard").forEach((c) => c.querySelector(".opt").click()); await sleep(10);
 byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "practice score");

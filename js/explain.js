@@ -26,9 +26,21 @@ export const chLabel = (c) => c.chapter ? `Ch ${c.chapterNo} ${c.chapterEn} ${c.
 const bookLabel = (b) => `Book ${b.book} ${b.en} ${b.zh || ""}`.trim();
 /** [{ title, items: [{ key, label, short }] }] — books with their chapters, or one group of topics. */
 function groupsOf({ topics, books, cards }) {
+  if (!books.length && cards.some((c) => c.chapter)) books = booksFromCards(cards);
   if (books.length && cards.some((c) => c.chapter))
     return books.map((b) => ({ title: bookLabel(b), items: b.chapters.map((ch) => ({ key: ch.id, short: `Ch ${ch.no}`, label: `Ch ${ch.no} ${ch.en} ${ch.zh || ""}`.trim() })) }));
   return [{ title: "Topics", items: topics.map((t) => ({ key: t, short: t, label: t })) }];
+}
+/** Rebuild the book/chapter list from the cards (in case the bundle was imported without it). */
+function booksFromCards(cards) {
+  const books = new Map();
+  for (const c of [...cards].sort((x, y) => x.order - y.order)) {
+    if (!c.chapter) continue;
+    if (!books.has(c.book)) books.set(c.book, { book: c.book, en: c.topic, zh: "", chapters: [] });
+    const b = books.get(c.book);
+    if (!b.chapters.some((ch) => ch.id === c.chapter)) b.chapters.push({ id: c.chapter, no: c.chapterNo, en: c.chapterEn, zh: c.chapterZh });
+  }
+  return [...books.values()].sort((x, y) => x.book - y.book);
 }
 const allKeys = (groups) => groups.flatMap((g) => g.items.map((i) => i.key));
 /** The student's chosen chapter keys; saved choices that no longer exist (e.g. old topic names) count as "everything". */

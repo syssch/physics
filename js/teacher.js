@@ -3,7 +3,7 @@ import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset } from "./ui.js";
-import { getAllQuestions, getQuestions, getTopics, renderQuestion, sourceLabel } from "./questions.js";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
 import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js";
@@ -96,25 +96,19 @@ export async function classEditor(user, classId) {
 }
 
 // ---------------------------------------------------------------- question picker (shared by builder and bank)
-function questionFilters(questions, topics, onChange) {
-  const topicSel = el("select", {}, [el("option", { value: "" }, "All topics")].concat(Object.keys(topics).map((t) => el("option", { value: t }, t))));
-  const subSel = el("select", {}, [el("option", { value: "" }, "All subtopics")]);
+function questionFilters(questions, topics, onChange, books = []) {
+  const syl = syllabusFilters(books.length ? books : booksFromQuestions(questions), onChange);
   const forms = [...new Set(questions.map((q) => q.form))].sort();
   const formSel = el("select", {}, [el("option", { value: "" }, "All forms")].concat(forms.map((f) => el("option", { value: f }, f))));
   const search = el("input", { type: "search", placeholder: "Search text…" });
-  topicSel.addEventListener("change", () => {
-    subSel.replaceChildren(el("option", { value: "" }, "All subtopics"), ...(topics[topicSel.value] || []).map((s) => el("option", { value: s }, s)));
-    onChange();
-  });
-  [subSel, formSel].forEach((s) => s.addEventListener("change", onChange));
+  formSel.addEventListener("change", onChange);
   search.addEventListener("input", onChange);
   const strip = (h) => (h || "").replace(/<[^>]+>/g, " ").toLowerCase();
   const apply = () => questions.filter((q) =>
-    (!topicSel.value || q.topic === topicSel.value) &&
-    (!subSel.value || (q.subtopics || []).includes(subSel.value)) &&
+    syl.matches(q) &&
     (!formSel.value || q.form === formSel.value) &&
     (!search.value || strip(q.textHtml).includes(search.value.toLowerCase())));
-  return { node: el("div", { class: "row" }, [topicSel, subSel, formSel, search]), apply };
+  return { node: el("div", { class: "row" }, [...syl.nodes, formSel, search]), apply };
 }
 
 function snippet(q) {
@@ -124,10 +118,10 @@ function snippet(q) {
 
 export async function bankView(user) {
   mount(loading());
-  const [questions, topics] = await Promise.all([getAllQuestions(), getTopics()]);
+  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks()]);
   const listBox = el("div", {});
   const count = el("p", { class: "muted" });
-  const f = questionFilters(questions, topics, () => draw());
+  const f = questionFilters(questions, topics, () => draw(), books);
   function draw() {
     const qs = f.apply();
     count.textContent = `${qs.length} of ${questions.length} questions`;
@@ -141,7 +135,7 @@ export async function bankView(user) {
 // ---------------------------------------------------------------- assignment builder
 export async function assignmentBuilder(user, presetClassId) {
   mount(loading());
-  const [classes, questions, topics] = await Promise.all([listClasses(), getAllQuestions(), getTopics()]);
+  const [classes, questions, topics, books] = await Promise.all([listClasses(), getAllQuestions(), getTopics(), getBooks()]);
   if (!classes.length) return mount(el("section", {}, [el("p", {}, "Create a class first."), el("a", { class: "btn", href: "#/t/class/new" }, "New class")]));
   const selected = [];
   const classSel = el("select", {}, classes.map((c) => el("option", { value: c.id, selected: c.id === presetClassId }, c.name)));
@@ -157,7 +151,7 @@ export async function assignmentBuilder(user, presetClassId) {
   const selCount = el("strong", {});
   const listBox = el("div", { class: "picklist" });
   const shown = el("p", { class: "muted" });
-  const f = questionFilters(questions, topics, () => drawList());
+  const f = questionFilters(questions, topics, () => drawList(), books);
   const randN = el("input", { type: "number", min: 1, max: 40, value: 5, style: "width:5em" });
 
   function drawSelected() {
@@ -185,7 +179,7 @@ export async function assignmentBuilder(user, presetClassId) {
         else { preview.replaceChildren(renderQuestion(q, {})); typeset(preview); }
       });
       return el("div", { class: "pickrow" }, [el("label", { class: "pick" }, [box,
-        el("span", {}, [el("strong", {}, `${q.topic} · ${(q.subtopics || [])[0] || ""}`), el("br"), el("span", { class: "muted" }, `${sourceLabel(q)} — ${snippet(q)}`)])]),
+        el("span", {}, [el("strong", { title: q.topic || "" }, `${(q.chapters || []).length ? (q.chapters || []).map(chapterShort).join(", ") : q.topic} · ${(q.subtopics || []).join(", ")}`), el("br"), el("span", { class: "muted" }, `${sourceLabel(q)} — ${snippet(q)}`)])]),
         toggle, preview]);
     }));
   }
@@ -438,7 +432,7 @@ export async function adminView(user) {
         ops.push([doc(db, "questions", q.id), { ...q, active: true, importedAt: serverTimestamp() }]);
         ops.push([doc(db, "answerKeys", q.id), { answer: bundle.answers[q.id] }]);
       });
-      ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, updatedAt: serverTimestamp() }]);
+      ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, books: bundle.books || [], updatedAt: serverTimestamp() }]);
       for (const part of chunk(ops, 400)) {
         const b = writeBatch(db);
         part.forEach(([r, d]) => b.set(r, d));

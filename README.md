@@ -112,7 +112,7 @@ updates itself whenever a class is saved or deleted.
 **Teachers** (*Teacher* tab):
 - *New class*: give the class a name and paste the students' school emails, one per line.
 - *New assignment*: pick the class, title, due date, and whether answers are shown right after
-  submitting or only after the due date. Filter by topic, subtopic, form or text, tick
+  submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), form or text, tick
   questions, or add random ones from the current filter.
 - *Results*: shows each student's answer to each question (green is right, red is wrong), the
   percentage correct per question, and how many students chose each option. You can download a
@@ -129,7 +129,7 @@ updates itself whenever a class is saved or deleted.
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
-- *Practise*: choose a topic, subtopic and number of questions. Questions in assignments that
+- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum 動量") and/or subtopic, and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
 - *My results*: every past attempt, with a review page for each.
@@ -145,7 +145,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 
 | Collection | Contents | Who can read |
 |---|---|---|
-| `questions/{id}` | text, options, figure file names, topic | anyone at school |
+| `questions/{id}` | text, options, figure file names, `subtopics` (plus `chapters` and `topic` = book, which follow from them) | anyone at school |
 | `answerKeys/{id}` | `answer` | teachers |
 | `teachers/{email}` | teacher list | teachers (and each person checking themselves) |
 | `users/{uid}` | name, email, last login | the user, teachers |

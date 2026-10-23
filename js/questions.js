@@ -28,6 +28,78 @@ export async function getAllQuestions() {
 export function byPaper(a, b) { return a.id.localeCompare(b.id, "en", { numeric: true }); }
 
 let topicsCache = null;
+// ---------------------------------------------------------------- syllabus: Book -> Chapter -> Subtopic
+// meta/topics.books = [{ book, en, zh, chapters: [{ id, no, en, zh, subtopics: [...] }] }] (from the question bank's
+// config/chapters.json). Each subtopic sits in one chapter; a question's chapters and topic (= book name) follow from it.
+let booksCache = null;
+export async function getBooks() {
+  if (!booksCache) {
+    const s = await getDoc(doc(db, "meta", "topics"));
+    booksCache = s.exists() ? s.data().books || [] : [];
+  }
+  return booksCache;
+}
+const chapterInfo = new Map();
+const rememberBooks = (books) => books.forEach((b) => b.chapters.forEach((c) => chapterInfo.set(c.id, { ...c, book: b.book })));
+/** "Ch 9" (Books 1–5) or "B6 Ch 1" (Books 6–7). */
+export const chapterShort = (id) => { const c = chapterInfo.get(id); return c ? (c.book > 5 ? `B${c.book} Ch ${c.no}` : `Ch ${c.no}`) : id; };
+/** Fallback when meta has no book list: group the questions' own topic -> chapters -> subtopics. */
+export function booksFromQuestions(questions) {
+  const order = (id) => (/^\d+$/.test(id) ? Number(id) : id[0] === "A" ? 100 + Number(id.slice(1)) : 200 + Number(id.slice(1)));
+  const books = new Map();
+  for (const q of questions) for (const id of q.chapters || []) {
+    if (!books.has(q.topic)) books.set(q.topic, { book: 0, en: q.topic, zh: "", chapters: new Map() });
+    const chs = books.get(q.topic).chapters;
+    if (!chs.has(id)) chs.set(id, { id, no: id, en: "", zh: "", subtopics: new Set() });
+    (q.subtopics || []).forEach((s) => chs.get(id).subtopics.add(s));
+  }
+  return [...books.values()].map((b) => ({ ...b, chapters: [...b.chapters.values()].sort((x, y) => order(x.id) - order(y.id)).map((c) => ({ ...c, subtopics: [...c.subtopics] })) }));
+}
+const opt = (label, value) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; };
+const bookTitle = (b) => (b.book ? `Book ${b.book} ${b.en} ${b.zh || ""}`.trim() : b.en);
+const chTitle = (c) => `Ch ${c.no} ${c.en} ${c.zh || ""}`.trim();
+/**
+ * Three linked dropdowns: Book -> Chapter -> Subtopic ("" = all). Choosing a book narrows the chapters,
+ * choosing a chapter narrows the subtopics. Returns { nodes, book, chapter, subtopic, matches(q) }.
+ */
+export function syllabusFilters(books, onChange = () => {}) {
+  rememberBooks(books);
+  const bookSel = document.createElement("select"), chSel = document.createElement("select"), subSel = document.createElement("select");
+  bookSel.append(opt("All books", ""), ...books.map((b) => opt(bookTitle(b), b.en)));
+  const fill = () => {
+    const keepCh = chSel.value, keepSub = subSel.value;
+    const shown = bookSel.value ? books.filter((b) => b.en === bookSel.value) : books;
+    chSel.replaceChildren(opt("All chapters", ""));
+    for (const b of shown) {
+      const g = document.createElement("optgroup"); g.label = bookTitle(b);
+      b.chapters.forEach((c) => g.append(opt(chTitle(c), c.id)));
+      chSel.append(g);
+    }
+    chSel.value = [...chSel.options].some((o) => o.value === keepCh) ? keepCh : "";
+    subSel.replaceChildren(opt("All subtopics", ""));
+    for (const b of shown) for (const c of b.chapters) {
+      if (chSel.value && c.id !== chSel.value) continue;
+      const g = document.createElement("optgroup"); g.label = chTitle(c);
+      (c.subtopics || []).forEach((s) => g.append(opt(s, s)));
+      subSel.append(g);
+    }
+    subSel.value = [...subSel.options].some((o) => o.value === keepSub) ? keepSub : "";
+  };
+  fill();
+  bookSel.addEventListener("change", () => { fill(); onChange(); });
+  chSel.addEventListener("change", () => { fill(); onChange(); });
+  subSel.addEventListener("change", onChange);
+  if (!books.length) [bookSel, chSel, subSel].forEach((s) => { s.hidden = true; });
+  const f = {
+    nodes: [bookSel, chSel, subSel], bookSel, chSel, subSel,
+    get book() { return bookSel.value; }, get chapter() { return chSel.value; }, get subtopic() { return subSel.value; },
+    matches: (q) => (!bookSel.value || q.topic === bookSel.value) &&
+      (!chSel.value || (q.chapters || []).includes(chSel.value)) &&
+      (!subSel.value || (q.subtopics || []).includes(subSel.value)),
+  };
+  return f;
+}
+
 export async function getTopics() {
   if (!topicsCache) {
     const s = await getDoc(doc(db, "meta", "topics"));

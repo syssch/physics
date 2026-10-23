@@ -122,18 +122,19 @@ function cleanResponses(questionIds, raw) {
   return out;
 }
 
-/** Start a practice set: random questions, optionally limited to one topic / subtopic. */
+/** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic. */
 exports.startPractice = onCall(async (request) => {
   const user = await requireMember(request);
-  const { topic, subtopic } = request.data || {};
+  const { topic, subtopic, chapter } = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt((request.data || {}).count, 10) || 10));
 
   let q = db.collection("questions").where("active", "==", true);
   if (topic) q = q.where("topic", "==", String(topic));
-  const snap = await q.select("subtopics").get();
+  const snap = await q.select("subtopics", "chapters").get();
   const blocked = await openAssignmentQuestionIds(user.email);
   let pool = snap.docs
     .filter((d) => !subtopic || (d.get("subtopics") || []).includes(subtopic))
+    .filter((d) => !chapter || (d.get("chapters") || []).includes(String(chapter)))
     .map((d) => d.id)
     .filter((id) => !blocked.has(id));
   if (!pool.length) throw new HttpsError("not-found", "No questions match that choice yet.");
@@ -141,7 +142,7 @@ exports.startPractice = onCall(async (request) => {
 
   const ref = await db.collection("sessions").add({
     uid: user.uid, email: user.email, mode: "practice",
-    topic: topic || null, subtopic: subtopic || null,
+    topic: topic || null, subtopic: subtopic || null, chapter: chapter ? String(chapter) : null,
     questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
   });
   return { sessionId: ref.id, questionIds };
