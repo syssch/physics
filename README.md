@@ -82,8 +82,10 @@ Until this is done, test with teacher accounts or a few adult accounts.
    # python3 platform_prep/export_for_platform.py            # (just the 100 trial questions -> export/trial/)
    ```
    "Ready" means the question has no figure, or its figures were checked against the original paper;
-   exact duplicates are left out. Questions with unchecked or missing figures are added as their papers are checked
-   (list the checked papers in `VERIFIED_FIGURE_PAPERS` in `platform_readiness.py`).
+   exact duplicates are left out. Questions with unchecked or missing figures are added as their papers are checked:
+   `platform_prep/figure_check.py` compares each stored figure with the original paper and proposes fresh crops,
+   and `platform_prep/apply_figure_checks.py` applies the reviewed result and records the paper in
+   `platform_prep/figure_checks.json` (the list of checked papers).
 2. On the website, sign in, then open *Teacher*, then *Admin*, then *Import questions*. Choose
    `bundle.json` and select **all** the files in its `figures` folder, then click *Import*.
    Importing again later updates questions that have the same ID and adds new ones; nothing is removed.
