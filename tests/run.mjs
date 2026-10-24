@@ -262,6 +262,7 @@ Object.defineProperty(bundleIn, "files", { value: [bf] }); Object.defineProperty
 byText("button", "Import").click();
 await waitFor(() => /Saved 3 questions/.test($(".log").textContent), "import done");
 ok(fake.store.get(`questions/${small.questions[0].id}`).textHtml.endsWith("<p>updated</p>"), "import updates questions");
+ok(Object.keys(fake.store.get("meta/questionIndex").questions).length === bundle.questions.length, "first import builds the practice index from all questions already on the platform");
 
 console.log("11. teacher is NOT allowed what students aren't, and students can't reach teacher pages");
 fake.setUser(S1); await sleep(50);
@@ -407,6 +408,31 @@ await waitFor(() => byText("button", "Delete all my results"), "history with del
 byText("button", "Delete all my results").click();
 await waitFor(() => ![...fake.store.entries()].some(([p, d]) => p.startsWith("attempts/") && d.uid === "t1"), "deleted own");
 ok(true, "teacher can delete their own results");
+
+console.log("15. full SYSS import (all ready questions) and the practice index");
+{
+  const full = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/all_ready/bundle.json`, "utf8"));
+  fake.setUser(T); await sleep(50);
+  await go("#/t"); await go("#/t/admin");
+  await waitFor(() => byText("h2", "Import questions"), "admin for full import");
+  const bf2 = new NodeFile([JSON.stringify(full)], "bundle.json", { type: "application/json" });
+  const figs2 = [...new Set(full.questions.flatMap((q) => q.figures))].map((n) => new NodeFile(["png"], n, { type: "image/png" }));
+  const [bIn, fIn] = $$("input[type=file]");
+  Object.defineProperty(bIn, "files", { value: [bf2] }); Object.defineProperty(fIn, "files", { value: figs2 });
+  byText("button", "Import").click();
+  await waitFor(() => new RegExp(`Saved ${full.questions.length} questions`).test($(".log").textContent), "full import done", 20000);
+  ok(full.questions.every((q) => fake.store.has(`questions/${q.id}`) && fake.store.has(`answerKeys/${q.id}`)), `all ${full.questions.length} ready questions and answer keys stored`);
+  const idx = fake.store.get("meta/questionIndex").questions;
+  ok(Object.keys(idx).length >= full.questions.length && full.questions.every((q) => idx[q.id] && idx[q.id].t === q.topic), "practice index lists every question with its book");
+  ok(!JSON.stringify(idx).includes('"answer'), "practice index holds no answers");
+  // a student practises by chapter: the pool comes from the index
+  fake.setUser(S1); await sleep(50);
+  const inCh = full.questions.filter((q) => q.chapters.includes("18")).map((q) => q.id);
+  const r = await api.startPractice({ chapter: "18", count: 20 });
+  ok(r.questionIds.length === Math.min(20, inCh.length) && r.questionIds.every((id) => inCh.includes(id)), `practice by chapter draws from all ${inCh.length} Ch 18 questions`);
+  const rb = await api.startPractice({ topic: "Atomic World", count: 5 });
+  ok(rb.questionIds.every((id) => idx[id].t === "Atomic World"), "practice by book uses the index");
+}
 
 console.log(`\n${passed} checks passed.`);
 const real = errors.filter((e) => !/Not implemented: navigation/.test(e));

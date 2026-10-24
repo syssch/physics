@@ -124,7 +124,7 @@ export async function bankView(user) {
   const f = questionFilters(questions, topics, () => draw(), books);
   function draw() {
     const qs = f.apply();
-    count.textContent = `${qs.length} of ${questions.length} questions`;
+    count.textContent = `${qs.length} of ${questions.length} questions` + (qs.length > 200 ? " — showing the first 200; narrow the filters to see the rest" : "");
     listBox.replaceChildren(...qs.slice(0, 200).map((q, i) => renderQuestion(q, { number: i + 1 })));
     typeset(listBox);
   }
@@ -164,7 +164,7 @@ export async function assignmentBuilder(user, presetClassId) {
   }
   function drawList() {
     const qs = f.apply();
-    shown.textContent = `${qs.length} questions match`;
+    shown.textContent = `${qs.length} questions match` + (qs.length > 300 ? " (showing the first 300 — narrow the filters to see the rest)" : "");
     listBox.replaceChildren(...qs.slice(0, 300).map((q) => {
       const box = el("input", { type: "checkbox", checked: selected.includes(q.id) });
       box.addEventListener("change", () => {
@@ -433,6 +433,14 @@ export async function adminView(user) {
         ops.push([doc(db, "answerKeys", q.id), { answer: bundle.answers[q.id] }]);
       });
       ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, books: bundle.books || [], updatedAt: serverTimestamp() }]);
+      // practice index: one small document listing every question's book / chapters / subtopics, merged with
+      // questions imported earlier, so starting a practice set costs one read instead of one per question
+      const old = await getDoc(doc(db, "meta", "questionIndex"));
+      const index = {};
+      if (old.exists()) Object.assign(index, old.data().questions || {});
+      else (await getAllQuestions()).forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [] }; }); // first time: include earlier imports
+      bundle.questions.forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [] }; });
+      ops.push([doc(db, "meta", "questionIndex"), { questions: index, updatedAt: serverTimestamp() }]);
       for (const part of chunk(ops, 400)) {
         const b = writeBatch(db);
         part.forEach(([r, d]) => b.set(r, d));

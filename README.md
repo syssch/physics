@@ -74,15 +74,21 @@ Until this is done, test with teacher accounts or a few adult accounts.
 
 ### 5. Upload the questions
 
-1. On your Mac, build the bundle (this creates `platform_prep/export/trial/`):
+1. On your Mac, build the bundle:
    ```bash
    cd ~/"Claude/Projects/HKDSE Physics Database"
-   python3 platform_prep/export_for_platform.py              # the 100 trial questions
-   # python3 platform_prep/export_for_platform.py --all-ready  # later: every checked question
+   python3 platform_prep/platform_readiness.py               # refresh the "ready" list after any data fix
+   python3 platform_prep/export_for_platform.py --all-ready  # every ready SYSS question -> platform_prep/export/all_ready/
+   # python3 platform_prep/export_for_platform.py            # (just the 100 trial questions -> export/trial/)
    ```
+   "Ready" means the question has no figure, or its figures were checked against the original paper;
+   exact duplicates are left out. Questions with unchecked or missing figures are added as their papers are checked
+   (list the checked papers in `VERIFIED_FIGURE_PAPERS` in `platform_readiness.py`).
 2. On the website, sign in, then open *Teacher*, then *Admin*, then *Import questions*. Choose
    `bundle.json` and select **all** the files in its `figures` folder, then click *Import*.
-   Importing again later updates questions that have the same ID.
+   Importing again later updates questions that have the same ID and adds new ones; nothing is removed.
+   The import also updates `meta/questionIndex`, a small list of every question's book, chapter and subtopic,
+   so starting a practice set costs one database read instead of one per question.
 
 **Never put `bundle.json` on GitHub.** It contains the answer keys.
 
@@ -154,6 +160,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `classes/{id}` | name, `studentEmails` | teachers, students in the class |
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |
+| `meta/questionIndex` | each question's book, chapters, subtopics (no answers) — used to pick practice questions | anyone at school |
 | `meta/explainCards` | all Explain cards in one document | anyone at school |
 | `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
