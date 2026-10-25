@@ -27,7 +27,7 @@ const { fake, Timestamp } = await import("./fakes/core.mjs");
 const bundle = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/trial/bundle.json`, "utf8"));
 for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, active: true });
 for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, { answer: a });
-fake.store.set("meta/topics", { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it
+fake.store.set("meta/topics", process.env.NOMETABOOKS ? { topics: bundle.topics } : { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it (NOMETABOOKS: an older import without the book list)
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
 const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
 if (process.env.NOBOOKS) delete explain.books;   // bundle imported without its book list

@@ -3,6 +3,7 @@ import { collection, getDocs, query, where, documentId, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, chunk } from "./ui.js";
+import { SYLLABUS } from "./syllabus.js";
 
 const cache = new Map();
 let allLoaded = false;
@@ -32,10 +33,28 @@ let topicsCache = null;
 // meta/topics.books = [{ book, en, zh, chapters: [{ id, no, en, zh, subtopics: [...] }] }] (from the question bank's
 // config/chapters.json). Each subtopic sits in one chapter; a question's chapters and topic (= book name) follow from it.
 let booksCache = null;
+/** Books for the menus: the list saved by the last import; if that is missing, the built-in syllabus trimmed to the
+ *  chapters/subtopics that have questions (from meta/questionIndex), or the whole syllabus as a last resort. */
 export async function getBooks() {
   if (!booksCache) {
-    const s = await getDoc(doc(db, "meta", "topics"));
-    booksCache = s.exists() ? s.data().books || [] : [];
+    let books = [];
+    try {
+      const s = await getDoc(doc(db, "meta", "topics"));
+      books = (s.exists() && s.data().books) || [];
+    } catch (e) { console.warn(e); }
+    if (!books.length) {
+      books = SYLLABUS;
+      try {
+        const ix = await getDoc(doc(db, "meta", "questionIndex"));
+        const qs = ix.exists() ? Object.values(ix.data().questions || {}) : [];
+        if (qs.length) {
+          const ch = new Set(qs.flatMap((q) => q.c || [])), sub = new Set(qs.flatMap((q) => q.s || []));
+          books = SYLLABUS.map((b) => ({ ...b, chapters: b.chapters.filter((c) => ch.has(c.id))
+            .map((c) => ({ ...c, subtopics: (c.subtopics || []).filter((t) => sub.has(t)) })) })).filter((b) => b.chapters.length);
+        }
+      } catch (e) { console.warn(e); }
+    }
+    booksCache = books;
   }
   return booksCache;
 }
