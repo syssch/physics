@@ -392,3 +392,42 @@ export const SYLLABUS = [
   ]
  }
 ];
+// Skills tested (question_bank/config/skills.json + skill_descriptions.json).
+export const SKILLS = [
+ {
+  "name": "Recall of knowledge",
+  "about": "Facts, definitions, units, laws and models remembered directly."
+ },
+ {
+  "name": "Conceptual understanding",
+  "about": "Explain or predict physical behaviour qualitatively."
+ },
+ {
+  "name": "Numerical calculation",
+  "about": "Substitute data into formulae to get a numerical answer."
+ },
+ {
+  "name": "Multi-step problem solving",
+  "about": "Combine two or more principles or steps to reach the answer."
+ },
+ {
+  "name": "Algebraic & proportional reasoning",
+  "about": "Symbolic answers, ratios, scaling (if x is doubled ...), estimation."
+ },
+ {
+  "name": "Graph & data analysis",
+  "about": "Read, interpret or choose graphs, tables, traces and spectra."
+ },
+ {
+  "name": "Diagram interpretation",
+  "about": "Use a circuit, ray, field, force or set-up diagram."
+ },
+ {
+  "name": "Experimental skills",
+  "about": "Apparatus, procedure, measurement, errors and precautions."
+ },
+ {
+  "name": "Evaluating statements",
+  "about": "Judge several statements (1), (2), (3) and pick the correct combination."
+ }
+];

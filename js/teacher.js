@@ -3,7 +3,7 @@ import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset } from "./ui.js";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
 import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js";
@@ -98,6 +98,7 @@ export async function classEditor(user, classId) {
 // ---------------------------------------------------------------- question picker (shared by builder and bank)
 function questionFilters(questions, topics, onChange, books = []) {
   const syl = syllabusFilters(books.length ? books : booksFromQuestions(questions), onChange);
+  const skill = skillFilter(onChange);
   const forms = [...new Set(questions.map((q) => q.form))].sort();
   const formSel = el("select", {}, [el("option", { value: "" }, "All forms")].concat(forms.map((f) => el("option", { value: f }, f))));
   const search = el("input", { type: "search", placeholder: "Search text…" });
@@ -105,10 +106,10 @@ function questionFilters(questions, topics, onChange, books = []) {
   search.addEventListener("input", onChange);
   const strip = (h) => (h || "").replace(/<[^>]+>/g, " ").toLowerCase();
   const apply = () => questions.filter((q) =>
-    syl.matches(q) &&
+    syl.matches(q) && skill.matches(q) &&
     (!formSel.value || q.form === formSel.value) &&
     (!search.value || strip(q.textHtml).includes(search.value.toLowerCase())));
-  return { node: el("div", { class: "row" }, [...syl.nodes, formSel, search]), apply };
+  return { node: el("div", { class: "row" }, [...syl.nodes, skill.node, formSel, search]), apply };
 }
 
 function snippet(q) {
@@ -432,14 +433,14 @@ export async function adminView(user) {
         ops.push([doc(db, "questions", q.id), { ...q, active: true, importedAt: serverTimestamp() }]);
         ops.push([doc(db, "answerKeys", q.id), { answer: bundle.answers[q.id] }]);
       });
-      ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, books: bundle.books || [], updatedAt: serverTimestamp() }]);
+      ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, books: bundle.books || [], skills: bundle.skills || [], updatedAt: serverTimestamp() }]);
       // practice index: one small document listing every question's book / chapters / subtopics, merged with
       // questions imported earlier, so starting a practice set costs one read instead of one per question
       const old = await getDoc(doc(db, "meta", "questionIndex"));
       const index = {};
       if (old.exists()) Object.assign(index, old.data().questions || {});
-      else (await getAllQuestions()).forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [] }; }); // first time: include earlier imports
-      bundle.questions.forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [] }; });
+      else (await getAllQuestions()).forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; }); // first time: include earlier imports
+      bundle.questions.forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; });
       ops.push([doc(db, "meta", "questionIndex"), { questions: index, updatedAt: serverTimestamp() }]);
       for (const part of chunk(ops, 400)) {
         const b = writeBatch(db);

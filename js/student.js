@@ -2,7 +2,7 @@ import { db, api } from "./fb.js";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js";
-import { getQuestions, getBooks, syllabusFilters } from "./questions.js";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js";
 import { runQuiz, showReview } from "./quiz.js";
 import { explainPanel } from "./explain.js";
 
@@ -68,19 +68,20 @@ export async function studentHome(user) {
 
 async function practicePanel() {
   const syl = syllabusFilters(await getBooks());
+  const sk = skillFilter();
   const countSel = el("select", {}, [5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button" }, "Start practice");
   go.addEventListener("click", async () => {
     go.disabled = true;
     try {
-      const r = await api.startPractice({ topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, count: Number(countSel.value) });
+      const r = await api.startPractice({ topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, skill: sk.skill || null, count: Number(countSel.value) });
       sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
       location.hash = `#/practice/${r.sessionId}`;
     } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
   });
   return el("div", { class: "panel" }, [el("h2", {}, "Practise"),
-    el("p", { class: "muted" }, "Pick a book, chapter or subtopic (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
-    el("div", { class: "row" }, [...syl.nodes, countSel, go])]);
+    el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
+    el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
 }
 
 export async function practiceView(user, sessionId) {

@@ -89,7 +89,7 @@ Until this is done, test with teacher accounts or a few adult accounts.
 2. On the website, sign in, then open *Teacher*, then *Admin*, then *Import questions*. Choose
    `bundle.json` and select **all** the files in its `figures` folder, then click *Import*.
    Importing again later updates questions that have the same ID and adds new ones; nothing is removed.
-   The import also updates `meta/questionIndex`, a small list of every question's book, chapter and subtopic,
+   The import also updates `meta/questionIndex`, a small list of every question's book, chapter, subtopic and skills,
    so starting a practice set costs one database read instead of one per question.
 
 **Never put `bundle.json` on GitHub.** It contains the answer keys.
@@ -120,7 +120,7 @@ updates itself whenever a class is saved or deleted.
 **Teachers** (*Teacher* tab):
 - *New class*: give the class a name and paste the students' school emails, one per line.
 - *New assignment*: pick the class, title, due date, and whether answers are shown right after
-  submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), form or text, tick
+  submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), skill tested, form or text, tick
   questions, or add random ones from the current filter.
 - *Results*: shows each student's answer to each question (green is right, red is wrong), the
   percentage correct per question, and how many students chose each option. You can download a
@@ -137,7 +137,7 @@ updates itself whenever a class is saved or deleted.
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
-- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum 動量") and/or subtopic, and the number of questions. Questions in assignments that
+- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum 動量"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
 - *My results*: every past attempt, with a review page for each.
@@ -162,7 +162,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `classes/{id}` | name, `studentEmails` | teachers, students in the class |
 | `classes/{id}/assignments/{id}` | title, `questionIds`, `dueAt`, `reveal` | teachers, students in the class |
 | `attempts/{id}` | responses, score (written only by Cloud Functions) | the student, teachers |
-| `meta/questionIndex` | each question's book, chapters, subtopics (no answers) — used to pick practice questions | anyone at school |
+| `meta/questionIndex` | each question's book, chapters, subtopics, skills (no answers) — used to pick practice questions | anyone at school |
 | `meta/explainCards` | all Explain cards in one document | anyone at school |
 | `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |

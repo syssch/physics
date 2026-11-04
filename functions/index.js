@@ -122,10 +122,10 @@ function cleanResponses(questionIds, raw) {
   return out;
 }
 
-/** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic. */
+/** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic / skill. */
 exports.startPractice = onCall(async (request) => {
   const user = await requireMember(request);
-  const { topic, subtopic, chapter } = request.data || {};
+  const { topic, subtopic, chapter, skill } = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt((request.data || {}).count, 10) || 10));
 
   // One read: meta/questionIndex lists every question's book/chapters/subtopics (written by the Admin import).
@@ -133,16 +133,17 @@ exports.startPractice = onCall(async (request) => {
   let entries;
   const idx = await db.doc("meta/questionIndex").get();
   if (idx.exists && idx.get("questions")) {
-    entries = Object.entries(idx.get("questions")).map(([id, v]) => ({ id, topic: v.t, chapters: v.c || [], subtopics: v.s || [] }));
+    entries = Object.entries(idx.get("questions")).map(([id, v]) => ({ id, topic: v.t, chapters: v.c || [], subtopics: v.s || [], skills: v.k || [] }));
   } else {
-    const snap = await db.collection("questions").where("active", "==", true).select("topic", "subtopics", "chapters").get();
-    entries = snap.docs.map((d) => ({ id: d.id, topic: d.get("topic"), chapters: d.get("chapters") || [], subtopics: d.get("subtopics") || [] }));
+    const snap = await db.collection("questions").where("active", "==", true).select("topic", "subtopics", "chapters", "skills").get();
+    entries = snap.docs.map((d) => ({ id: d.id, topic: d.get("topic"), chapters: d.get("chapters") || [], subtopics: d.get("subtopics") || [], skills: d.get("skills") || [] }));
   }
   const blocked = await openAssignmentQuestionIds(user.email);
   let pool = entries
     .filter((e) => !topic || e.topic === String(topic))
     .filter((e) => !subtopic || e.subtopics.includes(subtopic))
     .filter((e) => !chapter || e.chapters.includes(String(chapter)))
+    .filter((e) => !skill || e.skills.includes(String(skill)))
     .map((e) => e.id)
     .filter((id) => !blocked.has(id));
   if (!pool.length) throw new HttpsError("not-found", "No questions match that choice yet.");
@@ -150,7 +151,7 @@ exports.startPractice = onCall(async (request) => {
 
   const ref = await db.collection("sessions").add({
     uid: user.uid, email: user.email, mode: "practice",
-    topic: topic || null, subtopic: subtopic || null, chapter: chapter ? String(chapter) : null,
+    topic: topic || null, subtopic: subtopic || null, chapter: chapter ? String(chapter) : null, skill: skill ? String(skill) : null,
     questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
   });
   return { sessionId: ref.id, questionIds };

@@ -3,7 +3,7 @@ import { collection, getDocs, query, where, documentId, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, chunk } from "./ui.js";
-import { SYLLABUS } from "./syllabus.js";
+import { SYLLABUS, SKILLS } from "./syllabus.js";
 
 const cache = new Map();
 let allLoaded = false;
@@ -117,6 +117,15 @@ export function syllabusFilters(books, onChange = () => {}) {
       (!subSel.value || (q.subtopics || []).includes(subSel.value)),
   };
   return f;
+}
+
+/** Skill menu ("All skills" + the skills tested). Returns { node, skill, matches(q) }. */
+export function skillFilter(onChange = () => {}) {
+  const sel = document.createElement("select");
+  sel.className = "skill-filter";
+  sel.append(opt("All skills", ""), ...(SKILLS || []).map((k) => { const o = opt(k.name, k.name); o.title = k.about || ""; return o; }));
+  sel.addEventListener("change", onChange);
+  return { node: sel, sel, get skill() { return sel.value; }, matches: (q) => !sel.value || (q.skills || []).includes(sel.value) };
 }
 
 export async function getTopics() {

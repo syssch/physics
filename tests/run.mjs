@@ -110,6 +110,14 @@ ok([...chSel.querySelectorAll("optgroup")].length === 1 && chSel.querySelector("
 set($$(".builder select")[2], "Kinematics");
 const kin = $$(".pickrow").length;
 ok(kin > 0 && kin < 30, `subtopic filter works (${kin} Kinematics)`);
+{ // skill filter (combined with the book / subtopic choice)
+  const skSel = $(".builder .skill-filter");
+  ok(skSel && [...skSel.options].length === 10, "skill menu lists the 9 skills");
+  set(skSel, "Conceptual understanding"); await sleep(20);
+  const nk = bundle.questions.filter((q) => q.topic === "Force and Motion" && q.subtopics.includes("Kinematics") && (q.skills || []).includes("Conceptual understanding")).length;
+  ok($$(".pickrow").length === nk, `skill filter works (${nk} Kinematics questions testing conceptual understanding)`);
+  set(skSel, ""); await sleep(20);
+}
 $$(".pickrow input[type=checkbox]").slice(0, 3).forEach((c) => { c.checked = true; c.dispatchEvent(new w.Event("change")); });
 ok(/3 selected/.test($(".sticky h2").textContent), "3 selected");
 byText(".pickrow button", "preview").click(); await sleep(20);
@@ -199,7 +207,8 @@ console.log("7. practice");
 await go("#/");
 await waitFor(() => byText("button", "Start practice"), "practice panel");
 const sels = $$(".panel select");
-set(sels[0], "Wave Motion"); set(sels[3], "5");
+ok($(".panel .skill-filter"), "practice panel has a skill menu");
+set(sels[0], "Wave Motion"); set(sels[4], "5");
 byText("button", "Start practice").click();
 await waitFor(() => $$(".qcard").length === 5, "5 practice questions");
 ok($$(".qsrc").every((e) => e.textContent.startsWith("Wave Motion")), "practice respects topic");
@@ -432,6 +441,10 @@ console.log("15. full SYSS import (all ready questions) and the practice index")
   ok(r.questionIds.length === Math.min(20, inCh.length) && r.questionIds.every((id) => inCh.includes(id)), `practice by chapter draws from all ${inCh.length} Ch 18 questions`);
   const rb = await api.startPractice({ topic: "Atomic World", count: 5 });
   ok(rb.questionIds.every((id) => idx[id].t === "Atomic World"), "practice by book uses the index");
+  ok(full.questions.every((q) => JSON.stringify(idx[q.id].k) === JSON.stringify(q.skills)), "practice index lists every question's skills");
+  const inSk = full.questions.filter((q) => q.skills.includes("Experimental skills")).map((q) => q.id);
+  const rs = await api.startPractice({ skill: "Experimental skills", count: 20 });
+  ok(inSk.length && rs.questionIds.length === Math.min(20, inSk.length) && rs.questionIds.every((id) => inSk.includes(id)), `practice by skill draws only from the ${inSk.length} experimental-skills questions`);
 }
 
 console.log(`\n${passed} checks passed.`);
