@@ -31,6 +31,9 @@ fake.store.set("meta/topics", process.env.NOMETABOOKS ? { topics: bundle.topics 
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
 const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
 if (process.env.NOBOOKS) delete explain.books;   // bundle imported without its book list
+// an Explain bundle imported before the Chinese chapter names were dropped still carries them: they must not show
+explain.cards.forEach((c) => { c.chapterZh = "中文"; });
+(explain.books || []).forEach((b) => { b.zh = "中文"; b.chapters.forEach((ch) => { ch.zh = "中文"; }); });
 for (const q of bundle.questions) for (const f of q.figures) fake.files.set(`figures/${f}`, "png");
 
 // cloud functions
@@ -322,6 +325,7 @@ await go("#/history"); await go("#/");
 await waitFor(() => byText("a.btn", "Read today's card") || byText("a.btn", "Read again"), "home");
 const todayCardDoc = explain.cards.find((c) => c.id === fake.store.get("explainProgress/s1").today.cardId);
 ok(todayCardDoc.book === 2 && todayCardDoc.chapter === "6" && byText(".panel strong", "Ch 6 Fundamentals of Force"), "today's card switches to the first chosen chapter");
+ok(!/\p{Script=Han}/u.test(w.document.body.textContent), "Explain page shows English chapter names only (no Chinese)");
 // same card all day
 const todayId = fake.store.get("explainProgress/s1").today.cardId;
 await go("#/history"); await go("#/");

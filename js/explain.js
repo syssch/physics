@@ -22,7 +22,7 @@ export async function getCards() {
 /** The key a card is chosen by: its chapter id (e.g. "9"), or its topic for older bundles. */
 export const keyOf = (c) => c.chapter || c.topic;
 /** "Ch 9 Momentum" (or the topic name for older bundles). English names only. */
-export const chLabel = (c) => c.chapter ? `Ch ${c.chapterNo} ${c.chapterEn} ${c.chapterZh || ""}`.trim() : c.topic;
+export const chLabel = (c) => c.chapter ? `Ch ${c.chapterNo} ${c.chapterEn}` : c.topic;
 const bookLabel = (b) => `Book ${b.book} ${b.en}`;
 /** [{ title, items: [{ key, label, short }] }] — books with their chapters, or one group of topics. */
 function groupsOf({ topics, books, cards }) {
