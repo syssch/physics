@@ -21,14 +21,14 @@ export async function getCards() {
 // ---------------------------------------------------------------- chapters
 /** The key a card is chosen by: its chapter id (e.g. "9"), or its topic for older bundles. */
 export const keyOf = (c) => c.chapter || c.topic;
-/** "Ch 9 Momentum 動量" (or the topic name for older bundles). */
+/** "Ch 9 Momentum" (or the topic name for older bundles). English names only. */
 export const chLabel = (c) => c.chapter ? `Ch ${c.chapterNo} ${c.chapterEn} ${c.chapterZh || ""}`.trim() : c.topic;
-const bookLabel = (b) => `Book ${b.book} ${b.en} ${b.zh || ""}`.trim();
+const bookLabel = (b) => `Book ${b.book} ${b.en}`;
 /** [{ title, items: [{ key, label, short }] }] — books with their chapters, or one group of topics. */
 function groupsOf({ topics, books, cards }) {
   if (!books.length && cards.some((c) => c.chapter)) books = booksFromCards(cards);
   if (books.length && cards.some((c) => c.chapter))
-    return books.map((b) => ({ title: bookLabel(b), items: b.chapters.map((ch) => ({ key: ch.id, short: `Ch ${ch.no}`, label: `Ch ${ch.no} ${ch.en} ${ch.zh || ""}`.trim() })) }));
+    return books.map((b) => ({ title: bookLabel(b), items: b.chapters.map((ch) => ({ key: ch.id, short: `Ch ${ch.no}`, label: `Ch ${ch.no} ${ch.en}`.trim() })) }));
   return [{ title: "Topics", items: topics.map((t) => ({ key: t, short: t, label: t })) }];
 }
 /** Rebuild the book/chapter list from the cards (in case the bundle was imported without it). */
@@ -36,9 +36,9 @@ function booksFromCards(cards) {
   const books = new Map();
   for (const c of [...cards].sort((x, y) => x.order - y.order)) {
     if (!c.chapter) continue;
-    if (!books.has(c.book)) books.set(c.book, { book: c.book, en: c.topic, zh: "", chapters: [] });
+    if (!books.has(c.book)) books.set(c.book, { book: c.book, en: c.topic, chapters: [] });
     const b = books.get(c.book);
-    if (!b.chapters.some((ch) => ch.id === c.chapter)) b.chapters.push({ id: c.chapter, no: c.chapterNo, en: c.chapterEn, zh: c.chapterZh });
+    if (!b.chapters.some((ch) => ch.id === c.chapter)) b.chapters.push({ id: c.chapter, no: c.chapterNo, en: c.chapterEn });
   }
   return [...books.values()].sort((x, y) => x.book - y.book);
 }

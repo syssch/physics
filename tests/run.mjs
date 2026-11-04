@@ -96,7 +96,7 @@ await go("#/t/assign");
 await waitFor(() => $$(".pickrow").length, "question list");
 ok($$(".pickrow").length === 100, "all 100 questions listed");
 const [bookSel, chSel] = $$(".builder select");
-ok([...chSel.querySelectorAll("optgroup")].some((g) => g.label.startsWith("Book 2 Force and Motion")) && [...chSel.options].some((o) => o.textContent === "Ch 9 Momentum 動量"), "chapter filter lists textbook chapters by book");
+ok([...chSel.querySelectorAll("optgroup")].some((g) => g.label.startsWith("Book 2 Force and Motion")) && [...chSel.options].some((o) => o.textContent === "Ch 9 Momentum"), "chapter filter lists textbook chapters by book");
 set(chSel, "9");
 await sleep(20);
 const n9 = bundle.questions.filter((q) => (q.chapters || []).includes("9")).length;
@@ -297,7 +297,7 @@ ok(byText(".panel strong", `${first.year} ${first.qref}`), "today's card is the 
 byText("a.btn", "Read today's card").click(); await go(`#/explain/${first.id}`);
 await waitFor(() => byText("button", "Mark as read"), "card page");
 ok(byText(".xsec h3", "Marking-scheme answer") && byText(".xsec h3", "Teaching notes") && byText(".xsec h3", "Examiners"), "card shows all sections");
-ok(/Book 1 Heat and Gases › Ch 1 Temperature and Heat Transfer 溫度和熱傳遞/.test(w.document.body.textContent), "card shows its book and chapter");
+ok(/Book 1 Heat and Gases › Ch 1 Temperature and Heat Transfer(?! *\p{Script=Han})/u.test(w.document.body.textContent), "card shows its book and chapter");
 byText("button", "Mark as read").click();
 await waitFor(() => byText("button", "Read — tap to undo"), "marked");
 ok(fake.store.get("explainProgress/s1").read[first.id], "read mark saved");

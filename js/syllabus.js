@@ -4,13 +4,11 @@ export const SYLLABUS = [
  {
   "book": 1,
   "en": "Heat and Gases",
-  "zh": "熱和氣體",
   "chapters": [
    {
     "id": "1",
     "no": 1,
     "en": "Temperature and Heat Transfer",
-    "zh": "溫度和熱傳遞",
     "subtopics": [
      "Temperature & Internal Energy",
      "Heat Transfer Processes"
@@ -20,7 +18,6 @@ export const SYLLABUS = [
     "id": "2",
     "no": 2,
     "en": "Heat Capacity",
-    "zh": "熱容量",
     "subtopics": [
      "Specific Heat Capacity"
     ]
@@ -29,7 +26,6 @@ export const SYLLABUS = [
     "id": "3",
     "no": 3,
     "en": "Change of State",
-    "zh": "物態變化",
     "subtopics": [
      "Change of State & Latent Heat"
     ]
@@ -38,7 +34,6 @@ export const SYLLABUS = [
     "id": "4",
     "no": 4,
     "en": "Gas Laws and Kinetic Theory",
-    "zh": "氣體定律與分子運動論",
     "subtopics": [
      "Gas Laws",
      "Kinetic Theory of Gases"
@@ -49,13 +44,11 @@ export const SYLLABUS = [
  {
   "book": 2,
   "en": "Force and Motion",
-  "zh": "力和運動",
   "chapters": [
    {
     "id": "5",
     "no": 5,
     "en": "Motion",
-    "zh": "運動",
     "subtopics": [
      "Kinematics"
     ]
@@ -64,7 +57,6 @@ export const SYLLABUS = [
     "id": "6",
     "no": 6,
     "en": "Fundamentals of Force",
-    "zh": "力的基礎知識",
     "subtopics": [
      "Newton's Laws & Free-body Diagrams",
      "Newton's Second Law: Acceleration & Apparent Weight"
@@ -74,7 +66,6 @@ export const SYLLABUS = [
     "id": "7",
     "no": 7,
     "en": "More about Force",
-    "zh": "進一步認識力",
     "subtopics": [
      "Adding & Resolving Forces",
      "Static Equilibrium: Strings & Tension",
@@ -87,7 +78,6 @@ export const SYLLABUS = [
     "id": "8",
     "no": 8,
     "en": "Work, Energy and Power",
-    "zh": "功、能量和功率",
     "subtopics": [
      "Work, Energy & Power"
     ]
@@ -96,7 +86,6 @@ export const SYLLABUS = [
     "id": "9",
     "no": 9,
     "en": "Momentum",
-    "zh": "動量",
     "subtopics": [
      "Momentum & Collisions"
     ]
@@ -105,7 +94,6 @@ export const SYLLABUS = [
     "id": "10",
     "no": 10,
     "en": "Projectile Motion",
-    "zh": "拋體運動",
     "subtopics": [
      "Projectile Motion"
     ]
@@ -114,7 +102,6 @@ export const SYLLABUS = [
     "id": "11",
     "no": 11,
     "en": "Uniform Circular Motion",
-    "zh": "勻速圓周運動",
     "subtopics": [
      "Circular Motion"
     ]
@@ -123,7 +110,6 @@ export const SYLLABUS = [
     "id": "12",
     "no": 12,
     "en": "Gravitation",
-    "zh": "引力",
     "subtopics": [
      "Gravitation"
     ]
@@ -133,13 +119,11 @@ export const SYLLABUS = [
  {
   "book": 3,
   "en": "Wave Motion",
-  "zh": "波動",
   "chapters": [
    {
     "id": "13",
     "no": 13,
     "en": "Wave Motion",
-    "zh": "波動",
     "subtopics": [
      "Wave Properties",
      "Travelling Waves: Graphs & Particle Motion",
@@ -150,7 +134,6 @@ export const SYLLABUS = [
     "id": "14",
     "no": 14,
     "en": "Reflection, Refraction and Diffraction",
-    "zh": "反射、折射與繞射",
     "subtopics": [
      "Reflection, Refraction & Diffraction of Waves",
      "Echoes"
@@ -160,7 +143,6 @@ export const SYLLABUS = [
     "id": "15",
     "no": 15,
     "en": "Interference and Stationary Waves",
-    "zh": "干涉與駐波",
     "subtopics": [
      "Interference of Waves",
      "Stationary (Standing) Waves",
@@ -171,7 +153,6 @@ export const SYLLABUS = [
     "id": "16",
     "no": 16,
     "en": "Light Waves",
-    "zh": "光波",
     "subtopics": [
      "EM Spectrum",
      "Double-slit Interference and Diffraction Grating of Light"
@@ -181,7 +162,6 @@ export const SYLLABUS = [
     "id": "17",
     "no": 17,
     "en": "Reflection of Light",
-    "zh": "光的反射",
     "subtopics": [
      "Reflection of Light"
     ]
@@ -190,7 +170,6 @@ export const SYLLABUS = [
     "id": "18",
     "no": 18,
     "en": "Refraction of Light",
-    "zh": "光的折射",
     "subtopics": [
      "Refraction of Light",
      "Total Internal Reflection of Light"
@@ -200,7 +179,6 @@ export const SYLLABUS = [
     "id": "19",
     "no": 19,
     "en": "Lenses",
-    "zh": "透鏡",
     "subtopics": [
      "Lenses & Optical Instruments"
     ]
@@ -210,13 +188,11 @@ export const SYLLABUS = [
  {
   "book": 4,
   "en": "Electricity and Magnetism",
-  "zh": "電和磁",
   "chapters": [
    {
     "id": "20",
     "no": 20,
     "en": "Electrostatics",
-    "zh": "靜電學",
     "subtopics": [
      "Electrostatics"
     ]
@@ -225,7 +201,6 @@ export const SYLLABUS = [
     "id": "21",
     "no": 21,
     "en": "Circuit and Power",
-    "zh": "電路和電功率",
     "subtopics": [
      "Circuit Analysis: Current, Voltage, Power & Brightness",
      "Resistor Networks & Resistivity",
@@ -237,7 +212,6 @@ export const SYLLABUS = [
     "id": "22",
     "no": 22,
     "en": "AC and Domestic Electricity",
-    "zh": "交流電和家居用電",
     "subtopics": [
      "Electricity Cost & kWh",
      "A.C. & r.m.s.",
@@ -248,7 +222,6 @@ export const SYLLABUS = [
     "id": "23",
     "no": 23,
     "en": "Electromagnetism",
-    "zh": "電磁學",
     "subtopics": [
      "Electromagnetism (Motor Effect)"
     ]
@@ -257,7 +230,6 @@ export const SYLLABUS = [
     "id": "24",
     "no": 24,
     "en": "Electromagnetic Induction",
-    "zh": "電磁感應",
     "subtopics": [
      "Electromagnetic Induction",
      "Transformers & Power Transmission"
@@ -268,13 +240,11 @@ export const SYLLABUS = [
  {
   "book": 5,
   "en": "Radioactivity and Nuclear Energy",
-  "zh": "放射現象和核能",
   "chapters": [
    {
     "id": "25",
     "no": 25,
     "en": "Radiation and Radioactivity",
-    "zh": "輻射和放射現象",
     "subtopics": [
      "Decay Equations",
      "Detection of Radiation"
@@ -284,7 +254,6 @@ export const SYLLABUS = [
     "id": "26",
     "no": 26,
     "en": "Rate of Decay and Uses of Radionuclides",
-    "zh": "衰變率和放射性核素的用途",
     "subtopics": [
      "Half-life & Activity",
      "Uses of Radionuclides"
@@ -294,7 +263,6 @@ export const SYLLABUS = [
     "id": "27",
     "no": 27,
     "en": "Nuclear Energy",
-    "zh": "核能",
     "subtopics": [
      "Nuclear Fission, Fusion & Mass-Energy Equivalence"
     ]
@@ -304,13 +272,11 @@ export const SYLLABUS = [
  {
   "book": 6,
   "en": "Astronomy and Space Science",
-  "zh": "天文學和航天科學",
   "chapters": [
    {
     "id": "A1",
     "no": 1,
     "en": "Space Travel",
-    "zh": "宇宙旅行",
     "subtopics": [
      "Scale of the Universe"
     ]
@@ -319,7 +285,6 @@ export const SYLLABUS = [
     "id": "A2",
     "no": 2,
     "en": "Modelling the Universe",
-    "zh": "建立宇宙模型",
     "subtopics": [
      "Geocentric & Heliocentric Models",
      "Celestial Sphere & Apparent Motion"
@@ -329,7 +294,6 @@ export const SYLLABUS = [
     "id": "A3",
     "no": 3,
     "en": "Orbital Motion under Gravity",
-    "zh": "引力作用下的軌道運動",
     "subtopics": [
      "Circular Orbital Motion & Kepler's Third Law",
      "Elliptical Orbits & Kepler's Second Law",
@@ -342,7 +306,6 @@ export const SYLLABUS = [
     "id": "A4",
     "no": 4,
     "en": "Starlight: The Messenger of Stars",
-    "zh": "星光：恆星的信使",
     "subtopics": [
      "Parallax & Stellar Distance",
      "Stellar Magnitude, Brightness & Luminosity",
@@ -355,13 +318,11 @@ export const SYLLABUS = [
  {
   "book": 7,
   "en": "Atomic World",
-  "zh": "原子世界",
   "chapters": [
    {
     "id": "W1",
     "no": 1,
     "en": "Photoelectric Effect & Photon Theory",
-    "zh": "光電效應與光子理論",
     "subtopics": [
      "Photoelectric Effect"
     ]
@@ -370,7 +331,6 @@ export const SYLLABUS = [
     "id": "W2",
     "no": 2,
     "en": "Atomic Models & Spectra",
-    "zh": "原子模型與光譜",
     "subtopics": [
      "Rutherford Scattering & Nuclear Atomic Model",
      "Bohr Model: Assumptions & Predictions",
@@ -382,7 +342,6 @@ export const SYLLABUS = [
     "id": "W3",
     "no": 3,
     "en": "Nanotechnology",
-    "zh": "納米科技",
     "subtopics": [
      "Wave-Particle Duality & de Broglie Wavelength",
      "Electron Microscopes & Resolving Power",

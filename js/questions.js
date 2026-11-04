@@ -30,7 +30,7 @@ export function byPaper(a, b) { return a.id.localeCompare(b.id, "en", { numeric:
 
 let topicsCache = null;
 // ---------------------------------------------------------------- syllabus: Book -> Chapter -> Subtopic
-// meta/topics.books = [{ book, en, zh, chapters: [{ id, no, en, zh, subtopics: [...] }] }] (from the question bank's
+// meta/topics.books = [{ book, en, chapters: [{ id, no, en, subtopics: [...] }] }] (from the question bank's
 // config/chapters.json). Each subtopic sits in one chapter; a question's chapters and topic (= book name) follow from it.
 let booksCache = null;
 /** Books for the menus: the list saved by the last import; if that is missing, the built-in syllabus trimmed to the
@@ -67,16 +67,16 @@ export function booksFromQuestions(questions) {
   const order = (id) => (/^\d+$/.test(id) ? Number(id) : id[0] === "A" ? 100 + Number(id.slice(1)) : 200 + Number(id.slice(1)));
   const books = new Map();
   for (const q of questions) for (const id of q.chapters || []) {
-    if (!books.has(q.topic)) books.set(q.topic, { book: 0, en: q.topic, zh: "", chapters: new Map() });
+    if (!books.has(q.topic)) books.set(q.topic, { book: 0, en: q.topic, chapters: new Map() });
     const chs = books.get(q.topic).chapters;
-    if (!chs.has(id)) chs.set(id, { id, no: id, en: "", zh: "", subtopics: new Set() });
+    if (!chs.has(id)) chs.set(id, { id, no: id, en: "", subtopics: new Set() });
     (q.subtopics || []).forEach((s) => chs.get(id).subtopics.add(s));
   }
   return [...books.values()].map((b) => ({ ...b, chapters: [...b.chapters.values()].sort((x, y) => order(x.id) - order(y.id)).map((c) => ({ ...c, subtopics: [...c.subtopics] })) }));
 }
 const opt = (label, value) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; };
-const bookTitle = (b) => (b.book ? `Book ${b.book} ${b.en} ${b.zh || ""}`.trim() : b.en);
-const chTitle = (c) => `Ch ${c.no} ${c.en} ${c.zh || ""}`.trim();
+const bookTitle = (b) => (b.book ? `Book ${b.book} ${b.en}` : b.en);
+const chTitle = (c) => `Ch ${c.no} ${c.en}`.trim();
 /**
  * Three linked dropdowns: Book -> Chapter -> Subtopic ("" = all). Choosing a book narrows the chapters,
  * choosing a chapter narrows the subtopics. Returns { nodes, book, chapter, subtopic, matches(q) }.

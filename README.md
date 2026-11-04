@@ -137,13 +137,13 @@ updates itself whenever a class is saved or deleted.
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
-- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum 動量"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
+- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
 - *My results*: every past attempt, with a review page for each.
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
   comments. Home shows a *card of the day* (the first unread card in the student's chosen chapters; it stays the same all
-  day). Cards are grouped by textbook book and chapter (e.g. "Book 2 · Ch 9 Momentum 動量"). Students tick the chapters
+  day). Cards are grouped by textbook book and chapter (e.g. "Book 2 · Ch 9 Momentum"). Students tick the chapters
   they have learnt, can open any card, and tap *Mark as read*.
 
 Each assignment can be submitted once. Late submissions are accepted and marked "late".
