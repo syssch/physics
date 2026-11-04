@@ -1,9 +1,44 @@
 {
   "indexes": [
-    { "collectionGroup": "attempts", "queryScope": "COLLECTION",
-      "fields": [ { "fieldPath": "uid", "order": "ASCENDING" }, { "fieldPath": "submittedAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "attempts", "queryScope": "COLLECTION",
-      "fields": [ { "fieldPath": "assignmentId", "order": "ASCENDING" }, { "fieldPath": "submittedAt", "order": "ASCENDING" } ] }
+    {
+      "collectionGroup": "attempts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "submittedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "attempts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "assignmentId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "submittedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "meta",
+      "fieldPath": "data",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "meta",
+      "fieldPath": "questions",
+      "indexes": []
+    }
+  ]
 }

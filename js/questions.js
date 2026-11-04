@@ -46,7 +46,7 @@ export async function getBooks() {
       books = SYLLABUS;
       try {
         const ix = await getDoc(doc(db, "meta", "questionIndex"));
-        const qs = ix.exists() ? Object.values(ix.data().questions || {}) : [];
+        const qs = ix.exists() ? Object.values(readQuestionIndex(ix.data())) : [];
         if (qs.length) {
           const ch = new Set(qs.flatMap((q) => q.c || [])), sub = new Set(qs.flatMap((q) => q.s || []));
           books = SYLLABUS.map((b) => ({ ...b, chapters: b.chapters.filter((c) => ch.has(c.id))
@@ -81,6 +81,13 @@ const chTitle = (c) => `Ch ${c.no} ${c.en}`.trim();
  * Three linked dropdowns: Book -> Chapter -> Subtopic ("" = all). Choosing a book narrows the chapters,
  * choosing a chapter narrows the subtopics. Returns { nodes, book, chapter, subtopic, matches(q) }.
  */
+/** meta/questionIndex: { data: JSON text {id: {t, c, s, k}} } (older imports: { questions: {...} } as a map). */
+export function readQuestionIndex(d) {
+  if (!d) return {};
+  if (typeof d.data === "string") { try { return JSON.parse(d.data); } catch { return {}; } }
+  return d.questions || {};
+}
+
 export function syllabusFilters(books, onChange = () => {}) {
   rememberBooks(books);
   const bookSel = document.createElement("select"), chSel = document.createElement("select"), subSel = document.createElement("select");

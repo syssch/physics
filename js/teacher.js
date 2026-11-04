@@ -3,7 +3,7 @@ import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset } from "./ui.js";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
 import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js";
@@ -438,10 +438,11 @@ export async function adminView(user) {
       // questions imported earlier, so starting a practice set costs one read instead of one per question
       const old = await getDoc(doc(db, "meta", "questionIndex"));
       const index = {};
-      if (old.exists()) Object.assign(index, old.data().questions || {});
+      if (old.exists()) Object.assign(index, readQuestionIndex(old.data()));
       else (await getAllQuestions()).forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; }); // first time: include earlier imports
       bundle.questions.forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; });
-      ops.push([doc(db, "meta", "questionIndex"), { questions: index, updatedAt: serverTimestamp() }]);
+      // stored as one JSON text field: a map with thousands of entries exceeds Firestore's index-entry limit
+      ops.push([doc(db, "meta", "questionIndex"), { data: JSON.stringify(index), count: Object.keys(index).length, updatedAt: serverTimestamp() }]);
       for (const part of chunk(ops, 400)) {
         const b = writeBatch(db);
         part.forEach(([r, d]) => b.set(r, d));

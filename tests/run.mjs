@@ -274,7 +274,7 @@ Object.defineProperty(bundleIn, "files", { value: [bf] }); Object.defineProperty
 byText("button", "Import").click();
 await waitFor(() => /Saved 3 questions/.test($(".log").textContent), "import done");
 ok(fake.store.get(`questions/${small.questions[0].id}`).textHtml.endsWith("<p>updated</p>"), "import updates questions");
-ok(Object.keys(fake.store.get("meta/questionIndex").questions).length === bundle.questions.length, "first import builds the practice index from all questions already on the platform");
+ok(Object.keys(JSON.parse(fake.store.get("meta/questionIndex").data)).length === bundle.questions.length, "first import builds the practice index from all questions already on the platform");
 
 console.log("11. teacher is NOT allowed what students aren't, and students can't reach teacher pages");
 fake.setUser(S1); await sleep(50);
@@ -435,7 +435,9 @@ console.log("15. full SYSS import (all ready questions) and the practice index")
   byText("button", "Import").click();
   await waitFor(() => new RegExp(`Saved ${full.questions.length} questions`).test($(".log").textContent), "full import done", 20000);
   ok(full.questions.every((q) => fake.store.has(`questions/${q.id}`) && fake.store.has(`answerKeys/${q.id}`)), `all ${full.questions.length} ready questions and answer keys stored`);
-  const idx = fake.store.get("meta/questionIndex").questions;
+  const idxDoc = fake.store.get("meta/questionIndex");
+  ok(typeof idxDoc.data === "string" && !idxDoc.questions, "practice index is stored as one text field (no per-entry Firestore index entries)");
+  const idx = JSON.parse(idxDoc.data);
   ok(Object.keys(idx).length >= full.questions.length && full.questions.every((q) => idx[q.id] && idx[q.id].t === q.topic), "practice index lists every question with its book");
   ok(!JSON.stringify(idx).includes('"answer'), "practice index holds no answers");
   // a student practises by chapter: the pool comes from the index
@@ -443,6 +445,13 @@ console.log("15. full SYSS import (all ready questions) and the practice index")
   const inCh = full.questions.filter((q) => q.chapters.includes("18")).map((q) => q.id);
   const r = await api.startPractice({ chapter: "18", count: 20 });
   ok(r.questionIds.length === Math.min(20, inCh.length) && r.questionIds.every((id) => inCh.includes(id)), `practice by chapter draws from all ${inCh.length} Ch 18 questions`);
+  { // an index written by an older import (a map, not text) is still understood
+    const saved = fake.store.get("meta/questionIndex");
+    fake.store.set("meta/questionIndex", { questions: idx });
+    const rl = await api.startPractice({ chapter: "18", count: 5 });
+    ok(rl.questionIds.length === 5 && rl.questionIds.every((id) => inCh.includes(id)), "older map-style practice index still works");
+    fake.store.set("meta/questionIndex", saved);
+  }
   const rb = await api.startPractice({ topic: "Atomic World", count: 5 });
   ok(rb.questionIds.every((id) => idx[id].t === "Atomic World"), "practice by book uses the index");
   ok(full.questions.every((q) => JSON.stringify(idx[q.id].k) === JSON.stringify(q.skills)), "practice index lists every question's skills");

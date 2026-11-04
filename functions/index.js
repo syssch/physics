@@ -132,8 +132,11 @@ exports.startPractice = onCall(async (request) => {
   // Older data without the index falls back to reading the question documents.
   let entries;
   const idx = await db.doc("meta/questionIndex").get();
-  if (idx.exists && idx.get("questions")) {
-    entries = Object.entries(idx.get("questions")).map(([id, v]) => ({ id, topic: v.t, chapters: v.c || [], subtopics: v.s || [], skills: v.k || [] }));
+  let ix = null;
+  if (idx.exists && typeof idx.get("data") === "string") { try { ix = JSON.parse(idx.get("data")); } catch (e) { ix = null; } }
+  else if (idx.exists && idx.get("questions")) ix = idx.get("questions");   // older imports
+  if (ix) {
+    entries = Object.entries(ix).map(([id, v]) => ({ id, topic: v.t, chapters: v.c || [], subtopics: v.s || [], skills: v.k || [] }));
   } else {
     const snap = await db.collection("questions").where("active", "==", true).select("topic", "subtopics", "chapters", "skills").get();
     entries = snap.docs.map((d) => ({ id: d.id, topic: d.get("topic"), chapters: d.get("chapters") || [], subtopics: d.get("subtopics") || [], skills: d.get("skills") || [] }));
