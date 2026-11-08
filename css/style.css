@@ -1,0 +1,5 @@
+/* worked solutions (shown with the answers) */
+.solution { margin:.6rem 0 0; border-left:4px solid var(--good); background:#f3faf6; border-radius:6px; padding:.4rem .8rem; }
+.solution summary { font-weight:600; color:var(--good); cursor:pointer; }
+.solution .soltext p { margin:.35rem 0; }
+.solution .why-not { color:#555; font-size:.95em; }

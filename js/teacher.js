@@ -145,8 +145,9 @@ export async function assignmentBuilder(user, presetClassId) {
   const pad = (n) => String(n).padStart(2, "0");
   const dueInput = el("input", { type: "datetime-local",
     value: `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}` });
-  const reveal = el("select", {}, [el("option", { value: "after_submit" }, "Show answers right after submitting"),
-    el("option", { value: "after_due" }, "Show answers after the due date")]);
+  const reveal = el("select", {}, [el("option", { value: "after_submit" }, "Show answers & solutions right after submitting"),
+    el("option", { value: "after_due" }, "Show answers & solutions after the due date"),
+    el("option", { value: "manual" }, "Hide until I release them")]);
 
   const selBox = el("ol", { class: "sellist" });
   const selCount = el("strong", {});
@@ -213,7 +214,7 @@ export async function assignmentBuilder(user, presetClassId) {
     el("h1", {}, "New assignment"),
     el("div", { class: "formgrid" }, [
       el("label", {}, ["Class", classSel]), el("label", {}, ["Title", title]),
-      el("label", {}, ["Due", dueInput]), el("label", {}, ["Answers", reveal]),
+      el("label", {}, ["Due", dueInput]), el("label", {}, ["Answers & solutions", reveal]),
     ]),
     el("div", { class: "builder" }, [
       el("div", { class: "panel" }, [el("h2", {}, "Choose questions"), f.node,
@@ -225,6 +226,17 @@ export async function assignmentBuilder(user, presetClassId) {
 }
 
 // ---------------------------------------------------------------- results
+/** When students may see answers and solutions (same rule as the Cloud Functions). */
+export function revealState(a, now = Date.now()) {
+  if (a.released) return true;
+  if (a.reveal === "manual") return false;
+  if (a.reveal === "after_due") return !!a.dueAt && (a.dueAt.toMillis ? a.dueAt.toMillis() : +a.dueAt) <= now;
+  return true;
+}
+export function revealLabel(a) {
+  return a.reveal === "after_due" ? "after the due date" : a.reveal === "manual" ? "when released" : "after submitting";
+}
+
 export async function resultsView(user, classId, assignmentId) {
   mount(loading());
   const [cSnap, aSnap] = await Promise.all([getDoc(doc(db, "classes", classId)), getDoc(doc(db, "classes", classId, "assignments", assignmentId))]);
@@ -235,9 +247,12 @@ export async function resultsView(user, classId, assignmentId) {
     getQuestions(qids),
     getDocs(query(collection(db, "attempts"), where("assignmentId", "==", assignmentId))),
   ]);
-  const answers = {};
+  const answers = {}, solutions = {};
   for (const part of chunk(qids, 30)) {
-    (await getDocs(query(collection(db, "answerKeys"), where(documentId(), "in", part)))).forEach((d) => (answers[d.id] = d.data().answer));
+    (await getDocs(query(collection(db, "answerKeys"), where(documentId(), "in", part)))).forEach((d) => {
+      answers[d.id] = d.data().answer;
+      if (d.data().solution) solutions[d.id] = d.data().solution;
+    });
   }
   const byEmail = new Map(attemptsSnap.docs.map((d) => [d.data().email, { id: d.id, ...d.data() }]));
   const students = sortByRoster(cls, [...new Set([...(cls.studentEmails || []), ...byEmail.keys()])], (e) => byEmail.get(e)?.name);
@@ -294,14 +309,23 @@ export async function resultsView(user, classId, assignmentId) {
     const d = dist[i];
     const keys = q.optionKeys || ["A", "B", "C", "D"];
     const bars = el("div", { class: "dist" }, keys.map((k) => el("span", { class: k === answers[q.id] ? "key" : "" }, `${k}: ${d[k] || 0}`)));
-    qBox.append(renderQuestion(q, { number: i + 1, review: { answer: answers[q.id], correct: true } }));
+    qBox.append(renderQuestion(q, { number: i + 1, review: { answer: answers[q.id], correct: true, solution: solutions[q.id] } }));
     qBox.lastChild.append(el("div", { class: "muted" }, [`Chosen by students — `, bars]));
   });
   qBox.querySelectorAll(".fb").forEach((n) => n.remove());
 
+  const shownNow = revealState(a);
+  const release = el("button", { class: "btn small", type: "button" }, a.released ? "Hide answers & solutions again" : "Release answers & solutions now");
+  release.addEventListener("click", async () => {
+    try {
+      await updateDoc(doc(db, "classes", classId, "assignments", assignmentId), { released: !a.released });
+      toast(a.released ? "Hidden again." : "Released — students can now see answers and solutions.");
+      resultsView(user, classId, assignmentId);
+    } catch (e) { toast(errMsg(e), "error"); }
+  });
   mount(el("section", {}, [
-    el("h1", {}, a.title), el("p", { class: "muted" }, `${cls.name} · due ${fmtDate(a.dueAt)} · answers ${a.reveal === "after_due" ? "after due date" : "after submitting"}`),
-    el("div", { class: "row" }, [csv, el("a", { class: "btn small", href: "#/t" }, "Back")]),
+    el("h1", {}, a.title), el("p", { class: "muted" }, `${cls.name} · due ${fmtDate(a.dueAt)} · answers & solutions ${revealLabel(a)}${shownNow ? " — students can see them now" : " — hidden from students for now"}`),
+    el("div", { class: "row" }, [csv, a.reveal === "after_submit" ? null : release, el("a", { class: "btn small", href: "#/t" }, "Back")].filter(Boolean)),
     el("div", { class: "scroll" }, table), qBox,
   ]));
 }
@@ -431,7 +455,7 @@ export async function adminView(user) {
       const ops = [];
       bundle.questions.forEach((q) => {
         ops.push([doc(db, "questions", q.id), { ...q, active: true, importedAt: serverTimestamp() }]);
-        ops.push([doc(db, "answerKeys", q.id), { answer: bundle.answers[q.id] }]);
+        ops.push([doc(db, "answerKeys", q.id), { answer: bundle.answers[q.id], solution: (bundle.solutions || {})[q.id] || "" }]);
       });
       ops.push([doc(db, "meta", "topics"), { topics: bundle.topics, books: bundle.books || [], skills: bundle.skills || [], updatedAt: serverTimestamp() }]);
       // practice index: one small document listing every question's book / chapters / subtopics, merged with
@@ -448,7 +472,7 @@ export async function adminView(user) {
         part.forEach(([r, d]) => b.set(r, d));
         await b.commit();
       }
-      say(`Saved ${bundle.questions.length} questions and answer keys.`);
+      say(`Saved ${bundle.questions.length} questions, answer keys and ${Object.keys(bundle.solutions || {}).length} solutions.`);
       toast("Import finished.");
     } catch (e) { say("Error: " + errMsg(e)); toast(errMsg(e), "error"); }
     go.disabled = false;

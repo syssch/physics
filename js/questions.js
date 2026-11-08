@@ -158,7 +158,7 @@ export function sourceLabel(q) {
 
 /**
  * Render one question.
- * opts: { number, selected, onSelect(letter), review: { answer, correct } | null, showSource }
+ * opts: { number, selected, onSelect(letter), review: { answer, correct, solution? } | null, showSource }
  */
 export function renderQuestion(q, opts = {}) {
   const { number, selected, onSelect, review, showSource = true } = opts;
@@ -209,6 +209,11 @@ export function renderQuestion(q, opts = {}) {
     else if (review.correct) msg = el("p", { class: "fb good" }, `Correct (${review.answer})`);
     else msg = el("p", { class: "fb bad" }, `${selected ? `Your answer: ${selected}. ` : "Not answered. "}Correct answer: ${review.answer}`);
     card.append(msg);
+    if (review.solution) {
+      const sol = el("details", { class: "solution", open: true }, [el("summary", {}, "Solution")]);
+      sol.append(el("div", { class: "soltext", html: review.solution }));
+      card.append(sol);
+    }
   }
   return card;
 }

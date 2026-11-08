@@ -94,12 +94,32 @@ function shuffle(a) {
   return a;
 }
 
-async function loadAnswers(questionIds) {
+/** Answer keys and worked solutions (both teacher-only in Firestore). */
+async function loadKeys(questionIds) {
   const refs = questionIds.map((id) => db.doc(`answerKeys/${id}`));
   const snaps = refs.length ? await db.getAll(...refs) : [];
-  const answers = {};
-  snaps.forEach((s) => { if (s.exists) answers[s.id] = s.get("answer"); });
-  return answers;
+  const answers = {}, solutions = {};
+  snaps.forEach((s) => {
+    if (!s.exists) return;
+    answers[s.id] = s.get("answer");
+    if (s.get("solution")) solutions[s.id] = s.get("solution");
+  });
+  return { answers, solutions };
+}
+
+/**
+ * May students see an assignment's answers and solutions now?
+ *   reveal "after_submit" (default) | "after_due" | "manual"; a teacher can also release early (released: true).
+ */
+function canReveal(a, now = Date.now()) {
+  if (a.get("released") === true) return true;
+  const mode = a.get("reveal") || "after_submit";
+  if (mode === "manual") return false;
+  if (mode === "after_due") {
+    const due = a.get("dueAt");
+    return !due || due.toMillis() <= now;
+  }
+  return true;
 }
 
 function mark(questionIds, responses, answers) {
@@ -164,12 +184,12 @@ exports.startPractice = onCall(async (request) => {
  * Submit answers.
  *   practice:   { sessionId, responses }
  *   assignment: { classId, assignmentId, responses }
- * Returns the score, plus answers/correctness when the student is allowed to see them.
+ * Returns the score, plus answers/correctness/solutions when the student is allowed to see them.
  */
 exports.submitAnswers = onCall(async (request) => {
   const user = await requireMember(request);
   const data = request.data || {};
-  let questionIds, attemptRef, meta, reveal;
+  let questionIds, attemptRef, meta, reveal, revealMode = "after_submit";
 
   if (data.sessionId) {
     const sRef = db.doc(`sessions/${data.sessionId}`);
@@ -195,13 +215,14 @@ exports.submitAnswers = onCall(async (request) => {
     const late = !!due && due.toMillis() < Date.now();
     meta = { mode: "assignment", classId: data.classId, assignmentId: data.assignmentId,
              title: a.get("title"), dueAt: due || null, late };
-    reveal = a.get("reveal") !== "after_due" || late;
+    reveal = canReveal(a);
+    revealMode = a.get("reveal") || "after_submit";
   } else {
     throw new HttpsError("invalid-argument", "Missing sessionId or classId/assignmentId.");
   }
 
   const responses = cleanResponses(questionIds, data.responses);
-  const answers = await loadAnswers(questionIds);
+  const { answers, solutions } = await loadKeys(questionIds);
   const result = mark(questionIds, responses, answers);
 
   await attemptRef.set({
@@ -210,12 +231,13 @@ exports.submitAnswers = onCall(async (request) => {
     submittedAt: FieldValue.serverTimestamp(),
   });
 
-  const out = { attemptId: attemptRef.id, score: result.score, total: result.total, revealed: reveal };
-  if (reveal) Object.assign(out, { answers, correct: result.correct });
+  const out = { attemptId: attemptRef.id, score: result.score, total: result.total, revealed: reveal, reveal: revealMode,
+                dueAt: meta.dueAt ? meta.dueAt.toMillis() : null };
+  if (reveal) Object.assign(out, { answers, correct: result.correct, solutions });
   return out;
 });
 
-/** Answers and correctness for a past attempt, if the student may see them now. */
+/** Answers, correctness and solutions for a past attempt, if the student may see them now. */
 exports.getReview = onCall(async (request) => {
   const user = requireSchoolUser(request);
   const { attemptId } = request.data || {};
@@ -225,19 +247,16 @@ exports.getReview = onCall(async (request) => {
   const teacher = await isTeacher(user.email);
   if (at.get("uid") !== user.uid && !teacher) throw new HttpsError("permission-denied", "Not your attempt.");
 
-  let reveal = true;
+  let reveal = true, revealMode = "after_submit";
   if (at.get("mode") === "assignment" && !teacher) {
     const a = await db.doc(`classes/${at.get("classId")}/assignments/${at.get("assignmentId")}`).get();
-    if (a.exists && a.get("reveal") === "after_due") {
-      const due = a.get("dueAt");
-      reveal = !due || due.toMillis() <= Date.now();
-    }
+    if (a.exists) { reveal = canReveal(a); revealMode = a.get("reveal") || "after_submit"; }
   }
   const questionIds = at.get("questionIds");
   const base = { score: at.get("score"), total: at.get("total"), responses: at.get("responses"),
-                 questionIds, title: at.get("title"), revealed: reveal,
+                 questionIds, title: at.get("title"), revealed: reveal, reveal: revealMode,
                  dueAt: at.get("dueAt") ? at.get("dueAt").toMillis() : null };
   if (!reveal) return base;
-  const answers = await loadAnswers(questionIds);
-  return { ...base, answers, correct: mark(questionIds, at.get("responses") || {}, answers).correct };
+  const { answers, solutions } = await loadKeys(questionIds);
+  return { ...base, answers, solutions, correct: mark(questionIds, at.get("responses") || {}, answers).correct };
 });

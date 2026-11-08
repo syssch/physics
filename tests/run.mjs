@@ -26,7 +26,9 @@ const { fake, Timestamp } = await import("./fakes/core.mjs");
 // seed
 const bundle = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/trial/bundle.json`, "utf8"));
 for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, active: true });
-for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, { answer: a });
+// every trial question gets a worked solution, except one (questions without a solution still work)
+const noSol = Object.keys(bundle.answers)[0];
+for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, id === noSol ? { answer: a } : { answer: a, solution: `<p><b>Key idea:</b> worked solution for ${id} $x^2$</p>` });
 fake.store.set("meta/topics", process.env.NOMETABOOKS ? { topics: bundle.topics } : { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it (NOMETABOOKS: an older import without the book list)
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
 const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
@@ -170,6 +172,7 @@ byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "score");
 ok($(".score").textContent === "4 / 8", "score 4/8");
 ok($$(".opt.right").length === 8 && $$(".opt.wrong").length === 3, "review highlights right/wrong");
+ok($$(".qcard .solution").length === qids1.filter((id) => id !== noSol).length && byText(".solution", "worked solution for " + qids1.find((id) => id !== noSol)), "solutions shown after submitting");
 const at = fake.store.get(`attempts/${a1}_s1`);
 ok(at && at.score === 4 && at.total === 8 && !at.late, "attempt stored server-side");
 ok(!w.localStorage.getItem(`resp-asg-${a1}`), "local progress cleared");
@@ -196,6 +199,7 @@ byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "score");
 ok(byText(".notice", "after the due date"), "answers withheld until due date");
 ok(!$$(".opt.right").length, "no answer highlighted");
+ok(!$$(".solution").length, "no solution shown before the due date");
 await go(`#/review/${a2}_s1`);
 await waitFor(() => $(".scorebox"), "review page");
 ok(byText(".notice", "after the due date") && !$$(".opt.right").length, "review also withholds answers");
@@ -205,6 +209,20 @@ fake.store.get(p2).dueAt = Timestamp.fromMillis(Date.now() - 1000);
 await go("#/history"); await go(`#/review/${a2}_s1`);
 await waitFor(() => $$(".opt.right").length === 2, "answers after due");
 ok(true, "answers released after due date");
+ok($$(".solution").length === fake.store.get(p2).questionIds.filter((id) => id !== noSol).length, "solutions released with the answers");
+{ // "hide until I release them": nothing shown until the teacher releases
+  const qm = Object.keys(bundle.answers).slice(20, 22);
+  fake.store.set(`classes/${classId}/assignments/manual1`, { title: "Released by teacher", questionIds: qm, reveal: "manual",
+    dueAt: Timestamp.fromMillis(Date.now() - 1000), createdBy: T.email });
+  const r = await api.submitAnswers({ classId, assignmentId: "manual1", responses: { [qm[0]]: "A" } });
+  ok(r.revealed === false && !r.answers && !r.solutions, "manual: nothing revealed on submit, even after the due date");
+  await go("#/history"); await go(`#/review/manual1_s1`);
+  await waitFor(() => $(".scorebox"), "manual review");
+  ok(byText(".notice", "when your teacher releases") && !$$(".solution").length, "manual: student told to wait for the teacher");
+  fake.store.get(`classes/${classId}/assignments/manual1`).released = true;
+  const r2 = await api.getReview({ attemptId: "manual1_s1" });
+  ok(r2.revealed && r2.answers[qm[0]] && Object.keys(r2.solutions).length === 2, "manual: answers and solutions after the teacher releases");
+}
 
 console.log("7. practice");
 await go("#/");
@@ -224,6 +242,7 @@ $$(".qcard").forEach((c) => c.querySelector(".opt").click()); await sleep(10);
 byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "practice score");
 ok($$(".opt.right").length === 5, "practice shows answers");
+ok($$(".qcard .solution").length >= 4, "practice shows solutions");
 const pat = [...fake.store.entries()].find(([p, d]) => p.startsWith("attempts/practice_"));
 ok(pat && pat[1].total === 5 && pat[1].uid === "s1", "practice attempt stored");
 // practice excludes questions in open assignments
@@ -236,7 +255,7 @@ ok(!leak, "practice never serves questions from open assignments");
 console.log("8. history");
 await go("#/history");
 await waitFor(() => byText("h1", "My results"), "history");
-ok($$("table.grid tr").length === 4, "history lists 3 attempts");
+ok($$("table.grid tr").length === 5, "history lists 4 attempts");
 
 console.log("9. second student + teacher results");
 fake.setUser(S2); await sleep(50); await go("#/");
@@ -257,7 +276,20 @@ ok(byText("table.results tr", "s003") && byText("table.results tr", "not submitt
 ok($$("td.ok").length === 4 + 8 && $$("td.no").length === 3, "cell colouring matches answers");
 ok(byText("tr.foot td", "2/3 submitted"), "submission count");
 ok($$(".dist").length === 8, "per-question distribution shown");
+ok($$(".qcard .solution").length === qids1.filter((id) => id !== noSol).length, "teacher sees the solutions in the results page");
+ok(!byText("button", "Release answers"), "no release button when answers show after submitting");
 byText("button", "Download CSV").click();
+{ // after-due assignment (due date in the future again): the teacher can release early
+  await go(`#/t/results/${classId}/${a2}`);
+  await waitFor(() => byText("button", "Release answers & solutions now"), "release button");
+  ok(byText("p.muted", "hidden from students for now"), "results page says answers are hidden for now");
+  byText("button", "Release answers & solutions now").click();
+  await waitFor(() => fake.store.get(p2).released === true, "released flag");
+  await waitFor(() => byText("button", "Hide answers & solutions again"), "page redrawn after release");
+  ok(true, "teacher releases answers and solutions early");
+  const r = await (async () => { fake.user = S1; const x = await api.getReview({ attemptId: `${a2}_s1` }); fake.user = T; return x; })();
+  ok(r.revealed && Object.keys(r.solutions).length >= 1, "student sees them once released");
+}
 
 console.log("10. admin");
 await go("#/t/admin");
@@ -266,7 +298,8 @@ set($("input[placeholder='teacher@singyin.edu.hk']"), "newteacher@singyin.edu.hk
 byText("button", "Add teacher").click(); await sleep(50);
 ok(fake.store.has("teachers/newteacher@singyin.edu.hk"), "teacher added");
 await waitFor(() => byText("h2", "Import questions"), "admin reloaded");
-const small = { ...bundle, questions: bundle.questions.slice(0, 3).map((q) => ({ ...q, textHtml: q.textHtml + "<p>updated</p>" })) };
+const small = { ...bundle, questions: bundle.questions.slice(0, 3).map((q) => ({ ...q, textHtml: q.textHtml + "<p>updated</p>" })),
+  solutions: { [bundle.questions[0].id]: "<p>imported solution</p>" } };
 const bf = new NodeFile([JSON.stringify(small)], "bundle.json", { type: "application/json" });
 const figs = small.questions.flatMap((q) => q.figures).map((n) => new NodeFile(["png"], n, { type: "image/png" }));
 const [bundleIn, figIn] = $$("input[type=file]");
@@ -274,6 +307,7 @@ Object.defineProperty(bundleIn, "files", { value: [bf] }); Object.defineProperty
 byText("button", "Import").click();
 await waitFor(() => /Saved 3 questions/.test($(".log").textContent), "import done");
 ok(fake.store.get(`questions/${small.questions[0].id}`).textHtml.endsWith("<p>updated</p>"), "import updates questions");
+ok(fake.store.get(`answerKeys/${small.questions[0].id}`).solution === "<p>imported solution</p>" && !("solution" in fake.store.get(`questions/${small.questions[0].id}`)), "import stores solutions with the answer keys (not in the public question)");
 ok(Object.keys(JSON.parse(fake.store.get("meta/questionIndex").data)).length === bundle.questions.length, "first import builds the practice index from all questions already on the platform");
 
 console.log("11. teacher is NOT allowed what students aren't, and students can't reach teacher pages");

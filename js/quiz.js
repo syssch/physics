@@ -4,7 +4,7 @@ import { getQuestions, renderQuestion } from "./questions.js";
 /**
  * Run a set of questions.
  * cfg: { title, subtitle, questionIds, saveKey, submit(responses) -> result }
- * result: { score, total, revealed, answers?, correct?, attemptId }
+ * result: { score, total, revealed, answers?, correct?, solutions?, attemptId }
  */
 export async function runQuiz(cfg) {
   const questions = await getQuestions(cfg.questionIds);
@@ -63,11 +63,12 @@ export function showReview({ title, questions, responses, result, backHref = "#/
   if (note) page.append(el("p", { class: "muted" }, note));
   if (!result.revealed) {
     page.append(el("p", { class: "notice" },
-      `Answers will be shown after the due date${result.dueAt ? ` (${fmtDate(result.dueAt)})` : ""}.`));
+      result.reveal === "manual" ? "Answers and solutions will be shown when your teacher releases them."
+        : `Answers and solutions will be shown after the due date${result.dueAt ? ` (${fmtDate(result.dueAt)})` : ""}.`));
   }
   questions.forEach((q, i) => page.append(renderQuestion(q, {
     number: i + 1, selected: (responses || {})[q.id],
-    review: result.revealed ? { answer: result.answers[q.id], correct: result.correct[q.id] } : { answer: null },
+    review: result.revealed ? { answer: result.answers[q.id], correct: result.correct[q.id], solution: (result.solutions || {})[q.id] } : { answer: null },
   })));
   page.append(el("p", {}, el("a", { class: "btn", href: backHref }, "Back")));
   mount(page);
