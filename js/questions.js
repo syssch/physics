@@ -158,7 +158,8 @@ export function sourceLabel(q) {
 
 /**
  * Render one question.
- * opts: { number, selected, onSelect(letter), review: { answer, correct, solution? } | null, showSource }
+ * opts: { number, selected, onSelect(letter), review: { answer, correct, solution?, teacher? } | null, showSource }
+ * review.teacher: teacher view — shows "Answer: X" and the solution, with no "your answer" feedback.
  */
 export function renderQuestion(q, opts = {}) {
   const { number, selected, onSelect, review, showSource = true } = opts;
@@ -205,7 +206,8 @@ export function renderQuestion(q, opts = {}) {
 
   if (review) {
     let msg;
-    if (!review.answer) msg = el("p", { class: "muted" }, selected ? `Your answer: ${selected}` : "Not answered");
+    if (review.teacher) msg = review.answer ? el("p", { class: "fb good keyline" }, `Answer: ${review.answer}`) : el("p", { class: "muted" }, "No answer key.");
+    else if (!review.answer) msg = el("p", { class: "muted" }, selected ? `Your answer: ${selected}` : "Not answered");
     else if (review.correct) msg = el("p", { class: "fb good" }, `Correct (${review.answer})`);
     else msg = el("p", { class: "fb bad" }, `${selected ? `Your answer: ${selected}. ` : "Not answered. "}Correct answer: ${review.answer}`);
     card.append(msg);

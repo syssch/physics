@@ -291,6 +291,31 @@ byText("button", "Download CSV").click();
   ok(r.revealed && Object.keys(r.solutions).length >= 1, "student sees them once released");
 }
 
+{ // question bank: teachers see answers and solutions (toggle remembered)
+  await go("#/t/bank");
+  await waitFor(() => $$(".qcard").length && $$(".qcard .keyline").length, "bank with answers");
+  const cards = $$(".qcard").length;
+  ok($$(".qcard .keyline").length === cards, "every bank question shows its answer");
+  ok($$(".qcard .solution").length >= cards - 1 && byText(".solution", "worked solution for"), "bank shows the worked solutions");
+  ok(!$$(".qcard .fb.bad").length && !byText(".qcard", "Your answer"), "no student-style feedback in the bank");
+  const box = [...$$("label.check input")][0];
+  box.checked = false; box.dispatchEvent(new window.Event("change"));
+  await waitFor(() => !$$(".qcard .solution").length, "solutions hidden");
+  ok($$(".qcard").length === cards && !$$(".qcard .keyline").length, "toggle hides answers and solutions");
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+  await go("#/t/bank"); await waitFor(() => $$(".qcard").length, "bank again");
+  await sleep(30);
+  ok(!$$(".qcard .solution").length && !$("label.check input").checked, "toggle setting remembered");
+  $("label.check input").checked = true; $("label.check input").dispatchEvent(new window.Event("change"));
+  await waitFor(() => $$(".qcard .solution").length, "solutions back on");
+  // assignment builder preview also shows the answer and solution
+  await go("#/t/assign");
+  await waitFor(() => $$(".pickrow").length, "builder");
+  byText(".pickrow button", "preview").click();
+  await waitFor(() => $(".pickrow .preview .keyline"), "preview answer");
+  ok($(".pickrow .preview .qcard"), "builder preview shows answer and solution");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");

@@ -3,3 +3,6 @@
 .solution summary { font-weight:600; color:var(--good); cursor:pointer; }
 .solution .soltext p { margin:.35rem 0; }
 .solution .why-not { color:#555; font-size:.95em; }
+/* teacher question bank: "Show answers & solutions" toggle */
+label.check { display:inline-flex; flex-direction:row; align-items:center; gap:.4rem; margin:.5rem 0; font-weight:600; cursor:pointer; }
+label.check input { width:auto; margin:0; }

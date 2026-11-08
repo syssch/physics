@@ -2,7 +2,7 @@ import { db, storage, api } from "./fb.js";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset } from "./ui.js";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js";
 import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
@@ -117,19 +117,46 @@ function snippet(q) {
   return t.length > 140 ? t.slice(0, 140) + "…" : t;
 }
 
+// Answer keys + solutions (teacher-only collection), fetched on demand and cached for the session.
+const keyCache = new Map();
+async function loadKeys(ids) {
+  const missing = [...new Set(ids)].filter((id) => !keyCache.has(id));
+  await Promise.all(chunk(missing, 30).map(async (part) => {
+    const snap = await getDocs(query(collection(db, "answerKeys"), where(documentId(), "in", part)));
+    part.forEach((id) => keyCache.set(id, null));            // no key stored
+    snap.forEach((d) => keyCache.set(d.id, d.data()));
+  }));
+  return keyCache;
+}
+function teacherReview(id) {
+  const k = keyCache.get(id) || {};
+  return { teacher: true, answer: k.answer || null, correct: true, solution: k.solution || "" };
+}
+
 export async function bankView(user) {
   mount(loading());
   const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks()]);
   const listBox = el("div", {});
   const count = el("p", { class: "muted" });
   const f = questionFilters(questions, topics, () => draw(), books);
-  function draw() {
+  const showKeys = el("input", { type: "checkbox", checked: store.get("bankShowSolutions") !== false });
+  showKeys.addEventListener("change", () => { store.set("bankShowSolutions", showKeys.checked); draw(); });
+  let drawId = 0;
+  async function draw() {
+    const id = ++drawId;
     const qs = f.apply();
     count.textContent = `${qs.length} of ${questions.length} questions` + (qs.length > 200 ? " — showing the first 200; narrow the filters to see the rest" : "");
-    listBox.replaceChildren(...qs.slice(0, 200).map((q, i) => renderQuestion(q, { number: i + 1 })));
+    const page = qs.slice(0, 200);
+    if (showKeys.checked) {
+      try { await loadKeys(page.map((q) => q.id)); }
+      catch (e) { toast(errMsg(e), "error"); }
+      if (id !== drawId) return;                               // a newer filter change has started
+    }
+    listBox.replaceChildren(...page.map((q, i) => renderQuestion(q, { number: i + 1, review: showKeys.checked ? teacherReview(q.id) : null })));
     typeset(listBox);
   }
-  mount(el("section", {}, [el("h1", {}, "Question bank"), f.node, count, listBox]));
+  mount(el("section", {}, [el("h1", {}, "Question bank"), f.node,
+    el("label", { class: "check" }, [showKeys, " Show answers & solutions"]), count, listBox]));
   draw();
 }
 
@@ -178,7 +205,11 @@ export async function assignmentBuilder(user, presetClassId) {
       const toggle = el("button", { class: "linkbtn", type: "button" }, "preview");
       toggle.addEventListener("click", () => {
         if (preview.firstChild) preview.replaceChildren();
-        else { preview.replaceChildren(renderQuestion(q, {})); typeset(preview); }
+        else {
+          loadKeys([q.id]).catch(() => {}).then(() => {
+            preview.replaceChildren(renderQuestion(q, { review: teacherReview(q.id) })); typeset(preview);
+          });
+        }
       });
       return el("div", { class: "pickrow" }, [el("label", { class: "pick" }, [box,
         el("span", {}, [el("strong", { title: q.topic || "" }, `${(q.chapters || []).length ? (q.chapters || []).map(chapterShort).join(", ") : q.topic} · ${(q.subtopics || []).join(", ")}`), el("br"), el("span", { class: "muted" }, `${sourceLabel(q)} — ${snippet(q)}`)])]),
