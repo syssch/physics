@@ -26,9 +26,10 @@ const { fake, Timestamp } = await import("./fakes/core.mjs");
 // seed
 const bundle = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/trial/bundle.json`, "utf8"));
 for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, active: true });
+const PNG1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="; // 1x1 png
 // every trial question gets a worked solution, except one (questions without a solution still work)
 const noSol = Object.keys(bundle.answers)[0];
-for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, id === noSol ? { answer: a } : { answer: a, solution: `<p><b>Key idea:</b> worked solution for ${id} $x^2$</p>` });
+for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, id === noSol ? { answer: a } : { answer: a, solution: `<p><b>Key idea:</b> worked solution for ${id} $x^2$</p><p class="sol-fig"><img src="data:image/png;base64,${PNG1}" alt="Solution figure"></p>` });
 fake.store.set("meta/topics", process.env.NOMETABOOKS ? { topics: bundle.topics } : { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it (NOMETABOOKS: an older import without the book list)
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
 const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
@@ -173,6 +174,7 @@ await waitFor(() => $(".scorebox"), "score");
 ok($(".score").textContent === "4 / 8", "score 4/8");
 ok($$(".opt.right").length === 8 && $$(".opt.wrong").length === 3, "review highlights right/wrong");
 ok($$(".qcard .solution").length === qids1.filter((id) => id !== noSol).length && byText(".solution", "worked solution for " + qids1.find((id) => id !== noSol)), "solutions shown after submitting");
+ok($$(".qcard .solution .sol-fig img").length === $$(".qcard .solution").length && $(".qcard .solution .sol-fig img").getAttribute("src").startsWith("data:image/png"), "solution figures (data: images) survive sanitising");
 const at = fake.store.get(`attempts/${a1}_s1`);
 ok(at && at.score === 4 && at.total === 8 && !at.late, "attempt stored server-side");
 ok(!w.localStorage.getItem(`resp-asg-${a1}`), "local progress cleared");
