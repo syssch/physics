@@ -1,12 +1,12 @@
-import { db, storage, api } from "./fb.js?v=202611102311";
+import { db, storage, api } from "./fb.js?v=202611102320";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611102311";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611102311";
-import { isSchoolEmail } from "./config.js?v=202611102311";
-import { importExplainBundle } from "./explain.js?v=202611102311";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611102311";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611102320";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611102320";
+import { isSchoolEmail } from "./config.js?v=202611102320";
+import { importExplainBundle } from "./explain.js?v=202611102320";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611102320";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -348,7 +348,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611102311");
+      const { buildPaperDocx } = await import("./docx.js?v=202611102320");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -429,22 +429,22 @@ export async function leaderboardView(user) {
     try {
       const r = await api.getLeaderboard({ form: formSel.value, period });
       if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, "No practice points in this period yet.")); return; }
-      const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points", "Practice sets", "Explain cards", "Check-in bonuses", "Email"].map((h) => el("th", {}, h)))]);
-      r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets || 0)), el("td", {}, String(x.cards || 0)), el("td", {}, String(x.bonus || 0)), el("td", { class: "muted" }, x.email || "")])));
+      const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points", "Practice sets", "Assignments", "Explain cards", "Check-in bonuses", "Email"].map((h) => el("th", {}, h)))]);
+      r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets || 0)), el("td", {}, String(x.asg || 0)), el("td", {}, String(x.cards || 0)), el("td", {}, String(x.bonus || 0)), el("td", { class: "muted" }, x.email || "")])));
       body.replaceChildren(el("p", { class: "muted" }, `${r.form} · ${period === "all" ? "all time" : r.key} · ${r.rows.length} student(s) with points. Students see the top 10 and their own rank.`), t);
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }
   LB_PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => { period = p; draw(); } }, label)));
   formSel.addEventListener("change", draw);
   rebuild.addEventListener("click", async () => {
-    if (!confirm("Recount this week's, this month's and the all-time leaderboards from all saved practice results and Explain cards?")) return;
+    if (!confirm("Recount this week's, this month's and the all-time leaderboards from all saved results (practice and assignments) and Explain cards?")) return;
     rebuild.disabled = true;
     try { const r = await api.rebuildLeaderboards({}); toast(`Recounted: ${r.students} student(s).`); draw(); }
     catch (e) { toast(errMsg(e), "error"); }
     rebuild.disabled = false;
   });
   mount(el("section", {}, [el("h1", {}, "Leaderboard"),
-    el("p", { class: "muted" }, "Points: 100 per correct answer in practice (incl. Redo my mistakes), +500 for 90%+ or +200 for 75–89% in sets of 5+ questions; 300 for the Explain card of the day (once a day); +500 once a week for activity on 3 different days. Assignments don't count. A student's form comes from their class name (e.g. 4A → F4)."),
+    el("p", { class: "muted" }, "Points: 100 per correct answer in practice (incl. Redo my mistakes) and assignments (each assignment once), +500 for 90%+ or +200 for 75–89% in sets of 5+ questions; 300 for the Explain card of the day (once a day); +500 once a week for activity on 3 different days. A student's form comes from their class name (e.g. 4A → F4)."),
     el("div", { class: "row" }, [el("label", {}, ["Form ", formSel]), tabs, rebuild]), body]));
   draw();
 }

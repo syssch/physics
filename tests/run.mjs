@@ -323,11 +323,12 @@ console.log("8c. leaderboard");
 {
   const bonus = (a) => a.total >= 5 ? (a.score / a.total >= 0.9 ? 500 : a.score / a.total >= 0.75 ? 200 : 0) : 0;
   const pAtts = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/practice_") && d.uid === "s1").map(([, d]) => d);
-  const expPts = pAtts.reduce((t, a) => t + a.score * 100 + bonus(a), 0);
+  const aAtts = [...fake.store.entries()].filter(([p, d]) => !p.startsWith("attempts/practice_") && p.startsWith("attempts/") && d.uid === "s1").map(([, d]) => d);
+  const expPts = [...pAtts, ...aAtts].reduce((t, a) => t + a.score * 100 + bonus(a), 0);
   const lbs = [...fake.store.entries()].filter(([p]) => p.startsWith("leaderboards/"));
   ok(lbs.length === 3 && lbs.every(([, d]) => d.form === "F4"), "practice points go to the F4 week, month and all-time boards");
-  ok(fake.store.get("leaderboards/F4_all").scores.s1.pts === expPts, `all-time points match the practice results (${expPts})`);
-  ok(lbs.every(([, d]) => d.scores.s1.sets === pAtts.length), "each practice set counted once; assignments not counted");
+  ok(aAtts.length >= 2 && fake.store.get("leaderboards/F4_all").scores.s1.pts === expPts, `all-time points match the practice and assignment results (${expPts})`);
+  ok(lbs.every(([, d]) => d.scores.s1.sets === pAtts.length && d.scores.s1.asg === aAtts.length), "each practice set and each assignment counted once");
   const before = fake.store.get("leaderboards/F4_all").scores.s1.pts;
   const r = await api.startPractice({ count: 5 });
   const res = await api.submitAnswers({ sessionId: r.sessionId, responses: Object.fromEntries(r.questionIds.map((q) => [q, bundle.answers[q]])) });
@@ -375,8 +376,8 @@ console.log("8c. leaderboard");
   ok(byText("table.board", "s001@syss.edu.hk") && byText("table.board", String(fake.store.get("leaderboards/F4_all").scores.s1.pts)), "teacher sees the full list with emails");
   fake.store.get("leaderboards/F4_all").scores.s1.pts = 1;           // corrupt, then recount from the results
   const rb = await api.rebuildLeaderboards({});
-  const allSets = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/practice_") && d.uid === "s1").map(([, d]) => d);
-  ok(rb.students >= 1 && fake.store.get("leaderboards/F4_all").scores.s1.pts === allSets.reduce((x, a) => x + a.score * 100 + bonus(a), 0), "recount rebuilds totals from saved practice results");
+  const allSets = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.uid === "s1" && (d.mode === "practice" || d.mode === "assignment")).map(([, d]) => d);
+  ok(rb.students >= 1 && fake.store.get("leaderboards/F4_all").scores.s1.pts === allSets.reduce((x, a) => x + a.score * 100 + bonus(a), 0), "recount rebuilds totals from saved practice and assignment results");
   // teacher/student switch
   byText(".seg a", "Student").click(); await go("#/student");
   await waitFor(() => byText("#nav a", "Practise") && byText(".seg a.on", "Student"), "student view");
@@ -696,6 +697,18 @@ const s2row = $$("table.results tr").find((tr) => /Ho Siu Ming|s002/.test(tr.chi
 s2row.querySelector("button.linkbtn").click();
 await waitFor(() => !fake.store.has(`attempts/${a1}_s2`), "reset");
 ok(true, "teacher can reset a student's submission");
+{ // the student redoes it: only the difference in points is added, and the assignment still counts once
+  const sc0 = { ...fake.store.get("leaderboards/F4_all").scores.s2 };
+  const oldA = fake.store.get(`assignmentPoints/${a1}_s2`).pts;
+  const qa = fake.store.get(`classes/${cls1}/assignments/${a1}`).questionIds;
+  fake.setUser(S2); await sleep(50);
+  const rr = await api.submitAnswers({ classId: cls1, assignmentId: a1, responses: Object.fromEntries(qa.map((q) => [q, bundle.answers[q]])) });
+  const sc1 = fake.store.get("leaderboards/F4_all").scores.s2;
+  const full = qa.length * 100 + (qa.length >= 5 ? 500 : 0);
+  ok(rr.points === full && sc1.asg === sc0.asg && sc1.pts - sc0.pts === full - oldA && fake.store.get(`assignmentPoints/${a1}_s2`).pts === full,
+    "a redo after a reset replaces the old assignment score (counted once)");
+  fake.setUser(T); await sleep(50);
+}
 // teacher deletes their own practice results
 await api.startPractice({ count: 3 }).then((r) => api.submitAnswers({ sessionId: r.sessionId, responses: {} }));
 ok([...fake.store.entries()].some(([p, d]) => p.startsWith("attempts/") && d.uid === "t1"), "teacher has a practice result");

@@ -296,15 +296,25 @@ exports.submitAnswers = onCall(async (request) => {
 
   const out = { attemptId: attemptRef.id, score: result.score, total: result.total, revealed: reveal, reveal: revealMode,
                 dueAt: meta.dueAt ? meta.dueAt.toMillis() : null };
-  if (meta.mode === "practice") {                 // leaderboards count practice (not assignments)
-    try {
-      const pts = setPoints(result.score, result.total);
+  try {                                           // leaderboard points: practice and assignments
+    const pts = setPoints(result.score, result.total);
+    if (meta.mode === "practice") {
       if (await addPoints(user, pts, Date.now(), { sets: 1 })) {
         out.points = pts;
         out.checkinBonus = await recordCheckin(user, Date.now(), "practice");
       }
-    } catch (e) { console.error("leaderboard", e); }
-  }
+    } else {
+      // an assignment counts once; if a teacher resets it and the student redoes it, only the difference is added
+      const pref = db.doc(`assignmentPoints/${data.assignmentId}_${user.uid}`);
+      const prev = await pref.get();
+      const before = prev.exists ? prev.get("pts") || 0 : 0;
+      if (await addPoints(user, pts - before, Date.now(), prev.exists ? {} : { asg: 1 })) {
+        await pref.set({ uid: user.uid, assignmentId: data.assignmentId, pts, at: FieldValue.serverTimestamp() });
+        out.points = pts;
+        out.checkinBonus = await recordCheckin(user, Date.now(), "assignment");
+      }
+    }
+  } catch (e) { console.error("leaderboard", e); }
   if (reveal) Object.assign(out, { answers, correct: result.correct, solutions });
   return out;
 });
@@ -312,10 +322,10 @@ exports.submitAnswers = onCall(async (request) => {
 // ------------------------------------------------------------------ leaderboards
 /**
  * Points (all in Hong Kong time):
- *  - practice set (incl. Redo my mistakes): 100 per correct answer; sets of 5+ questions also get +500 for 90%+ correct
- *    or +200 for 75–89%. Assignments don't count.
+ *  - practice set (incl. Redo my mistakes) or assignment: 100 per correct answer; sets of 5+ questions also get +500
+ *    for 90%+ correct or +200 for 75–89%. Each assignment counts once (a redo after a teacher reset replaces it).
  *  - Explain: 300 for marking the card of the day as read, once a day.
- *  - Check-in bonus: +500 once a week (Mon–Sun) on the 3rd day with any practice set or card of the day.
+ *  - Check-in bonus: +500 once a week (Mon–Sun) on the 3rd day with any practice set, assignment or card of the day.
  */
 const PTS = { correct: 100, bonus90: 500, bonus75: 200, explain: 300, checkin: 500, checkinDays: 3 };
 function setPoints(score, total) {
@@ -358,7 +368,7 @@ async function addPoints(user, pts, ms, counts = {}) {
   if (!info) return null;
   const label = await boardLabel(info, user.email, user.name);
   const entry = { pts: FieldValue.increment(pts), label, email: user.email };
-  for (const k of ["sets", "cards", "bonus"]) if (counts[k]) entry[k] = FieldValue.increment(counts[k]);
+  for (const k of ["sets", "asg", "cards", "bonus"]) if (counts[k]) entry[k] = FieldValue.increment(counts[k]);
   for (const [period, key] of Object.entries(periodKeys(ms))) {
     await db.doc(`leaderboards/${lbDocId(info.form, period, key)}`).set({
       form: info.form, period, key, updatedAt: FieldValue.serverTimestamp(), scores: { [user.uid]: entry },
@@ -402,7 +412,7 @@ exports.explainRead = onCall(async (request) => {
   return { points: PTS.explain, checkinBonus };
 });
 function ranked(scores) {
-  const rows = Object.entries(scores || {}).map(([uid, v]) => ({ uid, label: v.label, pts: v.pts || 0, sets: v.sets || 0, cards: v.cards || 0, bonus: v.bonus || 0 }))
+  const rows = Object.entries(scores || {}).map(([uid, v]) => ({ uid, label: v.label, pts: v.pts || 0, sets: v.sets || 0, asg: v.asg || 0, cards: v.cards || 0, bonus: v.bonus || 0 }))
     .filter((r) => r.pts > 0).sort((a, b) => b.pts - a.pts || a.label.localeCompare(b.label));
   let last = null, rank = 0;
   rows.forEach((r, i) => { if (r.pts !== last) { rank = i + 1; last = r.pts; } r.rank = rank; });
@@ -429,12 +439,12 @@ exports.getLeaderboard = onCall(async (request) => {
   const strip = (r) => ({ rank: r.rank, label: r.label, pts: r.pts, me: r.uid === user.uid });
   if (teacher) {
     const sc = snap.exists ? snap.get("scores") : {};
-    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, cards: r.cards, bonus: r.bonus, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
+    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, asg: r.asg, cards: r.cards, bonus: r.bonus, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
   }
   return { form, period, key: keys[period], rows: all.slice(0, 10).map(strip), me: mine ? { rank: mine.rank, pts: mine.pts } : null, total: all.length };
 });
 
-/** Teachers: rebuild the current week's, month's and all-time boards from saved practice results and Explain activity. */
+/** Teachers: rebuild the current week's, month's and all-time boards from saved results (practice and assignments) and Explain activity. */
 exports.rebuildLeaderboards = onCall(async (request) => {
   const user = requireSchoolUser(request);
   if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
@@ -454,7 +464,7 @@ exports.rebuildLeaderboards = onCall(async (request) => {
       const id = lbDocId(f.info.form, period, keys[period]);
       if (!docs.has(id)) docs.set(id, { form: f.info.form, period, key: keys[period], scores: {} });
       const sc = docs.get(id).scores;
-      sc[uid] = sc[uid] || { pts: 0, sets: 0, cards: 0, bonus: 0, label: f.label, email };
+      sc[uid] = sc[uid] || { pts: 0, sets: 0, asg: 0, cards: 0, bonus: 0, label: f.label, email };
       sc[uid].pts += pts;
       for (const k of Object.keys(counts)) sc[uid][k] += counts[k];
     }
@@ -466,13 +476,16 @@ exports.rebuildLeaderboards = onCall(async (request) => {
     if (!weeks.has(w)) weeks.set(w, new Map());
     if (!weeks.get(w).has(d)) weeks.get(w).set(d, ms);
   };
-  for (const d of (await db.collection("attempts").where("mode", "==", "practice").get()).docs) {
+  const asgPts = new Map();
+  for (const d of (await db.collection("attempts").get()).docs) {
     const a = d.data();
-    if (!a.email || !a.uid) continue;
+    if (!a.email || !a.uid || (a.mode !== "practice" && a.mode !== "assignment")) continue;
     const f = await who(a.uid, a.email, a.name);
     if (!f) continue;
     const ms = a.submittedAt && a.submittedAt.toMillis ? a.submittedAt.toMillis() : Date.now();
-    credit(f, a.uid, a.email, ms, setPoints(a.score || 0, a.total || 0), { sets: 1 });
+    const pts = setPoints(a.score || 0, a.total || 0);
+    credit(f, a.uid, a.email, ms, pts, a.mode === "practice" ? { sets: 1 } : { asg: 1 });
+    if (a.mode === "assignment") asgPts.set(`${a.assignmentId}_${a.uid}`, { uid: a.uid, assignmentId: a.assignmentId, pts });
     active(a.uid, a.email, ms);
   }
   for (const d of (await db.collection("activity").get()).docs) {
@@ -499,6 +512,8 @@ exports.rebuildLeaderboards = onCall(async (request) => {
     if (v.period === "all" || v.key === now[v.period]) await d.ref.delete();   // past weeks/months are kept as history
   }
   for (const [id, v] of docs) await db.doc(`leaderboards/${id}`).set({ ...v, updatedAt: FieldValue.serverTimestamp() });
+  for (const d of (await db.collection("assignmentPoints").get()).docs) await d.ref.delete();
+  for (const [id, v] of asgPts) await db.doc(`assignmentPoints/${id}`).set({ ...v, at: FieldValue.serverTimestamp() });
   return { boards: docs.size, students: [...forms.values()].filter(Boolean).length };
 });
 

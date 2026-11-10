@@ -97,6 +97,10 @@ service cloud.firestore {
       allow read: if isTeacher();
       allow write: if false;
     }
+    match /assignmentPoints/{id} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
     match /checkinBonus/{id} {
       allow read: if isTeacher();
       allow write: if false;

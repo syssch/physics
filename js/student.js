@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js?v=202611102311";
+import { db, api } from "./fb.js?v=202611102320";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611102311";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611102311";
-import { runQuiz, showReview } from "./quiz.js?v=202611102311";
-import { explainPanel } from "./explain.js?v=202611102311";
-import { setDue, setChip } from "./chrome.js?v=202611102311";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611102320";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611102320";
+import { runQuiz, showReview } from "./quiz.js?v=202611102320";
+import { explainPanel } from "./explain.js?v=202611102320";
+import { setDue, setChip } from "./chrome.js?v=202611102320";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -92,12 +92,12 @@ function pointsPanel() {
   return el("div", { class: "panel points-panel" }, [
     el("div", { class: "panelhead" }, [el("h2", {}, "Earn leaderboard points"), el("a", { class: "btn small", href: "#/leaderboard" }, "See leaderboard")]),
     el("div", { class: "pt-grid" }, [
-      item("pencil", "100", "for each correct answer in a practice set (including Redo my mistakes)"),
+      item("pencil", "100", "for each correct answer in practice (including Redo my mistakes) and assignments"),
       item("target-arrow", "+500 / +200", "accuracy bonus for 90%+ / 75–89% correct in a set of 5 or more questions"),
       item("book", "300", "for reading your Explain card of the day (once a day)"),
-      item("calendar-check", "+500", "check-in bonus when you practise or read your card on 3 different days in a week (Mon–Sun)"),
+      item("calendar-check", "+500", "check-in bonus when you practise, do an assignment or read your card on 3 different days in a week (Mon–Sun)"),
     ]),
-    el("p", { class: "muted small" }, "Assignments don't count towards the leaderboard. Rankings are by form, for this week, this month and all time."),
+    el("p", { class: "muted small" }, "Each assignment counts once. Rankings are by form, for this week, this month and all time."),
   ]);
 }
 
@@ -132,7 +132,7 @@ export async function refreshStudentStatus(user) {
 }
 
 const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
-export const POINTS_HELP = "How to earn points: 100 per correct answer in practice (including Redo my mistakes), plus +500 for 90%+ or +200 for 75–89% in sets of 5 or more questions · 300 for reading your Explain card of the day (once a day) · +500 check-in bonus once a week when you practise or read your card on 3 different days (Monday–Sunday). Assignments don't count.";
+export const POINTS_HELP = "How to earn points: 100 per correct answer in practice (including Redo my mistakes) and assignments, plus +500 for 90%+ or +200 for 75–89% in sets of 5 or more questions · 300 for reading your Explain card of the day (once a day) · +500 check-in bonus once a week when you practise, do an assignment or read your card on 3 different days (Monday–Sunday).";
 
 /** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
 function leaderboardPanel(user) {

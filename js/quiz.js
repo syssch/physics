@@ -1,5 +1,5 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102311";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611102311";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102320";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611102320";
 
 /**
  * Run a set of questions.
@@ -65,7 +65,7 @@ export function showReview({ title, questions, responses, result, backHref = "#/
     const acc = (result.points || 0) - result.score * 100;
     page.append(el("p", { class: "points" }, `+${result.points || 0} leaderboard points`
       + (acc > 0 ? ` (including a ${acc}-point accuracy bonus)` : "")
-      + (result.checkinBonus ? ` · +${result.checkinBonus} check-in bonus for practising on 3 days this week!` : "")));
+      + (result.checkinBonus ? ` · +${result.checkinBonus} check-in bonus for being active on 3 days this week!` : "")));
   }
   if (!result.revealed) {
     page.append(el("p", { class: "notice" },

@@ -157,10 +157,10 @@ Questions (question bank, printable paper), Leaderboard and Explain, a Teacher |
   and questions in open assignments are left out. Built by the `startMistakes` Cloud Function from the student's
   `attempts`; the redo attempt is saved like practice, titled "Redo my mistakes".
 - *Leaderboard* (home page): the student's form (from the class name, e.g. 4A → F4) for this week, this month and all
-  time (Hong Kong time; weeks start on Monday). Points: 100 per correct answer in practice (including Redo my mistakes;
+  time (Hong Kong time; weeks start on Monday). Points: 100 per correct answer in practice and assignments (including Redo my mistakes; each assignment once;
   sets of 3, 5, 10, 15 or 20), +500 for 90%+ or +200 for 75–89% in sets of 5 or more; 300 for marking the Explain card of
   the day as read (once a day, `explainRead` function); +500 check-in bonus once a week on the 3rd day with any practice
-  set or card of the day (`activity/{uid}_{day}`, `checkinBonus/{uid}_{week}`). Assignments don't count. Students see the
+  set, assignment or card of the day (`activity/{uid}_{day}`, `checkinBonus/{uid}_{week}`). Students see the
   top 10 (class + name from the class list) and their own rank. Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
   `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
   shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
