@@ -2,7 +2,8 @@ import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { el, mount, toast, errMsg } from "./ui.js";
 import { isSchoolEmail } from "./config.js";
-import { studentHome, practiceView, doAssignment, reviewView, historyView } from "./student.js";
+import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js";
+import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js";
 import { explainLibrary, explainCard, explainProgressView } from "./explain.js";
 import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView } from "./teacher.js";
 
@@ -19,8 +20,7 @@ function signInPage(message) {
     message ? el("p", { class: "error" }, message) : null,
     btn,
   ]));
-  document.getElementById("nav").replaceChildren();
-  document.getElementById("user").replaceChildren();
+  clearChrome();
 }
 
 function notOnListPage(email) {
@@ -30,23 +30,15 @@ function notOnListPage(email) {
     el("p", { class: "muted" }, "If you take Physics, ask your physics teacher to add your school email to your class. Then sign in again."),
     el("button", { class: "btn", type: "button", onclick: () => signOut(auth) }, "Sign out"),
   ]));
-  document.getElementById("nav").replaceChildren();
-  document.getElementById("user").replaceChildren();
-}
-
-function drawChrome() {
-  const links = [el("a", { href: "#/" }, "Home"), el("a", { href: "#/explain" }, "Explain"), el("a", { href: "#/history" }, "My results")];
-  if (user.isTeacher) links.push(el("a", { href: "#/student" }, "Practise"), el("a", { href: "#/t" }, "Teacher"));
-  document.getElementById("nav").replaceChildren(...links);
-  document.getElementById("user").replaceChildren(
-    el("span", { class: "muted" }, user.email),
-    el("button", { class: "linkbtn", type: "button", onclick: () => signOut(auth) }, "Sign out"));
+  clearChrome();
 }
 
 const routes = [
   [/^#?\/?$/, () => (user.isTeacher && !sessionStorage.getItem("asStudent") ? teacherHome(user) : studentHome(user))],
   [/^#\/student$/, () => { sessionStorage.setItem("asStudent", "1"); return studentHome(user); }],
   [/^#\/history$/, () => historyView(user)],
+  [/^#\/practi[cs]e$/, () => practisePage(user)],
+  [/^#\/leaderboard$/, () => leaderboardPage(user)],
   [/^#\/practice\/([\w-]+)$/, (m) => practiceView(user, m[1])],
   [/^#\/do\/([\w-]+)\/([\w-]+)$/, (m) => doAssignment(user, m[1], m[2])],
   [/^#\/review\/([\w-]+)$/, (m) => reviewView(user, m[1])],
@@ -68,6 +60,9 @@ async function route() {
   const h = location.hash || "#/";
   if (h.startsWith("#q-")) return;   // in-page anchor
   document.body.classList.remove("printmode");
+  if (user.isTeacher && /^#\/t(\/|$)/.test(h)) sessionStorage.removeItem("asStudent");
+  if (user.isTeacher && h === "#/student") sessionStorage.setItem("asStudent", "1");
+  updateChrome();
   for (const [re, fn, teacherOnly] of routes) {
     const m = h.match(re);
     if (!m) continue;
@@ -95,7 +90,8 @@ onAuthStateChanged(auth, async (u) => {
   } catch (e) { console.warn(e); }
   if (!allowed) { user = null; return notOnListPage(email); }
   try { await setDoc(doc(db, "users", u.uid), { email, name: user.name, lastLogin: serverTimestamp() }); } catch (e) { console.warn(e); }
-  drawChrome();
   if (!user.isTeacher && (location.hash || "").startsWith("#/t")) history.replaceState(null, "", "#/");
+  drawChrome(user, () => signOut(auth));
+  if (!user.isTeacher) refreshStudentStatus(user);
   route();
 });

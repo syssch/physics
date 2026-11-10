@@ -82,7 +82,7 @@ ok(fake.user === null, "non-school account is signed out");
 console.log("2. teacher creates a class");
 fake.setUser(T);
 await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
-ok(byText("#nav a", "Teacher"), "teacher nav shown");
+ok(byText("#nav a", "Classes") && byText(".seg a", "Student") && $('#nav .dd a[href="#/t/paper"]'), "teacher top bar: Classes, Questions menu, teacher/student switch");
 await go("#/t/class/new");
 await waitFor(() => $("textarea"), "class form");
 set($("input[type=text]"), "4A Physics");
@@ -154,6 +154,9 @@ fake.setUser(S1);
 await waitFor(() => byText("h1", "Hello"), "student home");
 await waitFor(() => byText("a.btn", "Start"), "assignment list");
 ok($$("table.grid tr").length >= 3, "student sees both assignments");
+await waitFor(() => byText("#nav a.on .navbadge", "due"), "due badge");
+ok(/^\d+ due$/.test($("#nav .navbadge").textContent) && !$(".seg") && !byText("#nav a", "Classes"), "student top bar: Home shows assignments due, no teacher items");
+ok($$("#tabbar a").length === 5 && byText("#tabbar a", "Practise"), "phone tab bar has the five student links");
 await go(`#/do/${classId}/${a1}`);
 await waitFor(() => $$(".qcard").length === 8, "8 questions");
 ok($$("img.figure").length === qids1.filter((id) => fake.store.get(`questions/${id}`).figures.length).length, "figures rendered");
@@ -227,7 +230,7 @@ ok($$(".solution").length === fake.store.get(p2).questionIds.filter((id) => id !
 }
 
 console.log("7. practice");
-await go("#/");
+await go("#/practise");
 await waitFor(() => byText("button", "Start practice"), "practice panel");
 const sels = $$(".panel select");
 ok($(".panel .skill-filter"), "practice panel has a skill menu");
@@ -295,7 +298,7 @@ console.log("8b. redo my mistakes");
   const rb = await api.startMistakes({ topic: book, count: 20 });
   ok(rb.questionIds.every((q) => bundle.questions.find((x) => x.id === q).topic === book), "set can be limited to one book");
   // through the page
-  await go("#/");
+  await go("#/practise");
   await waitFor(() => { const b = byText("button", "Redo my mistakes"); return b && !b.disabled; }, "redo button");
   byText("button", "Redo my mistakes").click();
   await waitFor(() => byText("h1", "Redo my mistakes") && $$(".qcard").length, "redo quiz page");
@@ -309,7 +312,7 @@ console.log("8b. redo my mistakes");
   ok(at.title === "Redo my mistakes" && at.kind === "mistakes", "redo attempt is saved with its own title");
   const pv2 = await api.startMistakes({ preview: true });
   ok(pv2.available === pv.available - r.questionIds.length, "questions answered correctly leave the list");
-  await go("#/history"); await go("#/");
+  await go("#/history"); await go("#/practise");
   await waitFor(() => byText(".mistakes p", "No mistakes to redo"), "empty redo panel");
   ok($(".mistakes .row").style.display === "none", "nothing to redo: the panel says so and hides the button");
 }
@@ -330,8 +333,11 @@ console.log("8c. leaderboard");
   const r2 = await api.startPractice({ count: 5 });
   const res2 = await api.submitAnswers({ sessionId: r2.sessionId, responses: {} });
   ok(res2.points === undefined || res2.points === 0, "a blank set earns nothing");
-  await go("#/history"); await go("#/");
+  await go("#/leaderboard");
   await waitFor(() => byText(".leaderboard h2", "F4 leaderboard") && $(".leaderboard table"), "student leaderboard");
+  ok($('#nav a.on[href="#/leaderboard"]') && $('#nav a.on').getAttribute("aria-current") === "page", "top bar highlights the current page");
+  await waitFor(() => /4A · \d+ pts/.test($(".chip-pts")?.textContent || ""), "points chip");
+  ok(true, "top bar shows the student's class and points");
   ok($(".leaderboard tr.me") && byText(".leaderboard tr.me", "4A"), "student sees the board with their own row highlighted");
   const lb = await api.getLeaderboard({ period: "all" });
   ok(lb.rows.length <= 10 && lb.rows.every((x) => !("email" in x)) && lb.me && lb.me.pts === before + 10, "students get the top 10 and their own rank, without emails");
@@ -349,6 +355,17 @@ console.log("8c. leaderboard");
   fake.store.get("leaderboards/F4_all").scores.s1.pts = 1;           // corrupt, then recount from the results
   const rb = await api.rebuildLeaderboards({});
   ok(rb.students >= 1 && fake.store.get("leaderboards/F4_all").scores.s1.pts === before + 10, "recount rebuilds totals from saved practice results");
+  // teacher/student switch
+  byText(".seg a", "Student").click(); await go("#/student");
+  await waitFor(() => byText("#nav a", "Practise") && byText(".seg a.on", "Student"), "student view");
+  ok(!byText("#nav a", "Classes") && $(".avatar"), "switching to student view swaps the menu");
+  await go("#/t/bank");
+  await waitFor(() => byText("#nav a", "Classes") && byText(".seg a.on", "Teacher"), "teacher view again");
+  ok($("#nav .dd.on"), "opening a teacher page switches back and highlights Questions");
+  $(".avatar").click(); await sleep(10);
+  ok($("#user .dd.open") && byText("#user .dd-menu", "Sign out") && byText("#user .dd-menu", "Admin"), "initials button opens the account menu");
+  w.document.body.click(); await sleep(10);
+  ok(!$("#user .dd.open"), "clicking elsewhere closes it");
   fake.setUser(S1); await sleep(50);
 }
 
@@ -413,7 +430,7 @@ byText("button", "Download CSV").click();
 { // printable paper
   let printed = 0; w.print = () => { printed++; }; window.print = w.print;
   await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
-  ok(byText("a.btn", "Printable paper"), "dashboard links to the paper builder");
+  ok($('#nav a[href="#/t/paper"]'), "top bar links to the paper builder");
   const printLink = $$("a").find((a) => a.textContent === "Print" && a.getAttribute("href").startsWith("#/t/paper/"));
   ok(printLink, "each assignment has a Print link");
   const [, , , cid, aid] = printLink.getAttribute("href").split("/");

@@ -28,11 +28,6 @@ export async function teacherHome(user) {
     el("div", { class: "row" }, [
       el("a", { class: "btn primary", href: "#/t/assign" }, "New assignment"),
       el("a", { class: "btn", href: "#/t/class/new" }, "New class"),
-      el("a", { class: "btn", href: "#/t/bank" }, "Browse questions"),
-      el("a", { class: "btn", href: "#/t/paper" }, "Printable paper"),
-      el("a", { class: "btn", href: "#/t/leaderboard" }, "Leaderboard"),
-      el("a", { class: "btn", href: "#/t/explain" }, "Explain reading"),
-      el("a", { class: "btn", href: "#/t/admin" }, "Admin"),
     ]),
   ]);
   if (!classes.length) page.append(el("p", { class: "muted" }, "No classes yet. Create a class and add your students' school emails."));

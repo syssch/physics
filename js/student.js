@@ -5,6 +5,7 @@ import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js";
 import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js";
 import { runQuiz, showReview } from "./quiz.js";
 import { explainPanel } from "./explain.js";
+import { setDue, setChip } from "./chrome.js";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -25,10 +26,6 @@ export async function studentHome(user) {
   const asg = el("div", { class: "panel" }, [el("h2", {}, "Assignments")]);
   page.append(asg);
   page.append(await explainPanel(user));
-  // Practice
-  page.append(await practicePanel());
-  page.append(mistakesPanel());
-  page.append(leaderboardPanel());
   // History
   const hist = el("div", { class: "panel" }, [el("h2", {}, "Recent results")]);
   page.append(hist);
@@ -42,6 +39,7 @@ export async function studentHome(user) {
       const s = await getDocs(query(collection(db, "classes", c.id, "assignments"), orderBy("dueAt", "desc")));
       s.forEach((d) => rows.push({ cls: c, id: d.id, ...d.data() }));
     }
+    setDue(rows.filter((a) => !done.has(a.id)).length);
     if (!rows.length) asg.append(el("p", { class: "muted" }, classes.length ? "No assignments yet." : "You are not in any class yet. Your teacher will add you."));
     else {
       const t = el("table", { class: "grid" }, [el("tr", {}, ["Assignment", "Class", "Due", "Status"].map((h) => el("th", {}, h)))]);
@@ -84,6 +82,36 @@ async function practicePanel() {
   return el("div", { class: "panel" }, [el("h2", {}, "Practise"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
+}
+
+/** Practise page: a random set by book / chapter / subtopic / skill, and "Redo my mistakes". */
+export async function practisePage(user) {
+  mount(loading());
+  const page = el("section", {}, [el("h1", {}, "Practise"), await practicePanel(), mistakesPanel()]);
+  mount(page);
+}
+
+/** Leaderboard page for the student's form. */
+export async function leaderboardPage(user) {
+  mount(el("section", {}, [el("h1", {}, "Leaderboard"), leaderboardPanel()]));
+}
+
+/** Top-bar status for students: assignments waiting, and "4A · 132 pts". */
+export async function refreshStudentStatus(user) {
+  try {
+    const [classes, attempts] = await Promise.all([myClasses(user), myAttempts(user)]);
+    const done = new Set(attempts.filter((a) => a.mode === "assignment").map((a) => a.assignmentId));
+    let due = 0;
+    for (const c of classes) {
+      const s = await getDocs(query(collection(db, "classes", c.id, "assignments"), orderBy("dueAt", "desc")));
+      s.forEach((d) => { if (!done.has(d.id)) due++; });
+    }
+    setDue(due);
+    const cls = (classes.map((c) => (c.name || "").trim()).find((n) => /^\s*(?:F\.?\s*)?[1-6]/i.test(n)) || (classes[0] && classes[0].name) || "").split(/\s+/)[0];
+    const lb = await api.getLeaderboard({ period: "all" }).catch(() => null);
+    const pts = lb && lb.me ? lb.me.pts : 0;
+    setChip([cls, lb && lb.form ? `${pts} pts` : ""].filter(Boolean).join(" · "));
+  } catch (e) { console.warn(e); }
 }
 
 const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
@@ -154,7 +182,7 @@ export async function practiceView(user, sessionId) {
   }
   await runQuiz({
     title, questionIds: ids, saveKey: `resp-practice-${sessionId}`,
-    submit: (responses) => api.submitAnswers({ sessionId, responses }),
+    submit: async (responses) => { const r = await api.submitAnswers({ sessionId, responses }); if (!user.isTeacher) refreshStudentStatus(user); return r; },
   });
 }
 
@@ -166,7 +194,7 @@ export async function doAssignment(user, classId, assignmentId) {
   await runQuiz({
     title: data.title, subtitle: `Due ${fmtDate(data.dueAt)}`, questionIds: data.questionIds,
     showSource: false, saveKey: `resp-asg-${assignmentId}`,
-    submit: async (responses) => ({ ...(await api.submitAnswers({ classId, assignmentId, responses })), dueAt: toDate(data.dueAt) }),
+    submit: async (responses) => { const r = { ...(await api.submitAnswers({ classId, assignmentId, responses })), dueAt: toDate(data.dueAt) }; if (!user.isTeacher) refreshStudentStatus(user); return r; },
   });
 }
 

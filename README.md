@@ -141,6 +141,11 @@ updates itself whenever a class is saved or deleted.
   teacher-only `figureData` Cloud Function, built in the browser by `js/docx.js`). Nothing is saved on the platform.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
+**Top bar** (`js/chrome.js`): students get Home (with "N due" for assignments not yet submitted), Practise (random
+set + Redo my mistakes), Explain, Leaderboard and My results, plus "4A · 132 pts". Teachers get Classes, Assign,
+Questions (question bank, printable paper), Leaderboard and Explain, a Teacher | Student switch, and an initials button
+(name, Admin, Sign out). On phones the links move to a bottom tab bar and a ☰ menu. Icons: Tabler icons webfont (CDN).
+
 **Students**:
 - *Home* lists their assignments with due dates and scores.
 - *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
