@@ -196,11 +196,11 @@ function pngSize(bytes) {
 function splitMath(text) {
   const out = [];
   const t = text.replace(/\\\$/g, "\u0001");
-  const re = /\$\$([\s\S]+?)\$\$|\$([^$]+?)\$/g;
+  const re = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$]+?)\$/g;
   let last = 0, m;
   while ((m = re.exec(t))) {
     if (m.index > last) out.push({ text: t.slice(last, m.index).replace(/\u0001/g, "$") });
-    out.push({ math: (m[1] || m[2]).replace(/\u0001/g, "\\$") });
+    out.push({ math: (m[1] || m[2] || m[3] || m[4]).replace(/\u0001/g, "\\$") });
     last = re.lastIndex;
   }
   if (last < t.length) out.push({ text: t.slice(last).replace(/\u0001/g, "$") });
@@ -220,7 +220,7 @@ export function htmlToBlocks(html) {
   function walk(node, fmt) {
     for (const n of node.childNodes) {
       if (n.nodeType === 3) {
-        const txt = n.nodeValue.replace(/\s+/g, " ");
+        const txt = n.nodeValue.replace(/\s+/g, " ").replace(/\\textdegree\{\}/g, "°");
         if (!txt.trim() && (!cur || !cur.items.length)) continue;
         if (!cur) open();
         splitMath(txt).forEach((p) => cur.items.push(p.math !== undefined ? { math: p.math } : { text: p.text, ...fmt }));
