@@ -79,7 +79,7 @@ async function practicePanel() {
       location.hash = `#/practice/${r.sessionId}`;
     } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
   });
-  return el("div", { class: "panel" }, [el("h2", {}, "Practise"),
+  return el("div", { class: "panel" }, [el("h2", {}, "Random practice set"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
 }
