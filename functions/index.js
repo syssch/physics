@@ -8,6 +8,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
 
 initializeApp();
 const db = getFirestore();
@@ -297,6 +298,25 @@ exports.submitAnswers = onCall(async (request) => {
                 dueAt: meta.dueAt ? meta.dueAt.toMillis() : null };
   if (reveal) Object.assign(out, { answers, correct: result.correct, solutions });
   return out;
+});
+
+/**
+ * Teachers: the bytes of some question figures (base64), for building a Word paper in the browser.
+ * (Reading Storage files from the browser would need a CORS setup on the bucket; this avoids that.)
+ *   { names: ["SYSS-...png", ...] }  (up to 25 per call)
+ */
+exports.figureData = onCall(async (request) => {
+  const user = requireSchoolUser(request);
+  if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
+  const names = [...new Set(((request.data || {}).names || []).map(String))]
+    .filter((n) => /^[\w.\-]+\.(png|jpe?g|gif)$/i.test(n)).slice(0, 25);
+  const bucket = getStorage().bucket();
+  const out = {};
+  await Promise.all(names.map(async (n) => {
+    try { const [buf] = await bucket.file(`figures/${n}`).download(); out[n] = buf.toString("base64"); }
+    catch (e) { out[n] = null; }
+  }));
+  return { figures: out };
 });
 
 /** Answers, correctness and solutions for a past attempt, if the student may see them now. */

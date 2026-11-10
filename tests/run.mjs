@@ -125,12 +125,12 @@ ok(kin > 0 && kin < 30, `subtopic filter works (${kin} Kinematics)`);
   set(skSel, ""); await sleep(20);
 }
 $$(".pickrow input[type=checkbox]").slice(0, 3).forEach((c) => { c.checked = true; c.dispatchEvent(new w.Event("change")); });
-ok(/3 selected/.test($(".sticky h2").textContent), "3 selected");
+ok(/\(3\)/.test($(".sticky h2").textContent), "3 selected");
 byText(".pickrow button", "preview").click(); await sleep(20);
 ok($(".preview .qcard"), "preview renders");
 set($$(".builder select")[2], "");
 byText("button", "Add random from filter").click();
-ok(/8 selected/.test($(".sticky h2").textContent), "random add 5 more");
+ok(/\(8\)/.test($(".sticky h2").textContent), "random add 5 more");
 set($$(".formgrid input")[0], "Kinematics HW1");
 byText("button", "Create assignment").click();
 await waitFor(() => byText("h1", "Teacher dashboard"), "dashboard after create");
@@ -404,6 +404,32 @@ byText("button", "Download CSV").click();
   byText("button", "Print / Save as PDF").click();
   await waitFor(() => printed === 1, "print dialog", 10000);
   ok(printed === 1, "Print button opens the print dialog");
+  // Word download
+  let blob = null, dl = null;
+  const origCO = URL.createObjectURL, origRO = URL.revokeObjectURL;
+  w.URL.createObjectURL = URL.createObjectURL = (b) => { blob = b; return "blob:test"; }; w.URL.revokeObjectURL = URL.revokeObjectURL = () => {};
+  const origClick = w.HTMLAnchorElement.prototype.click;
+  w.HTMLAnchorElement.prototype.click = function () { if (this.download) dl = this.download; else origClick.call(this); };
+  byText("button", "Download Word (.docx)").click();
+  await waitFor(() => dl, "docx download", 8000);
+  w.HTMLAnchorElement.prototype.click = origClick; URL.createObjectURL = origCO; URL.revokeObjectURL = origRO;
+  ok(dl.endsWith(".docx") && blob && blob.type.includes("wordprocessingml"), "Word button downloads a .docx");
+  const zbytes = new Uint8Array(await blob.arrayBuffer());
+  const files = {};       // read the stored zip
+  for (let p = 0; p + 30 < zbytes.length && zbytes[p] === 0x50 && zbytes[p + 1] === 0x4b && zbytes[p + 2] === 3; ) {
+    const dv = new DataView(zbytes.buffer, p); const size = dv.getUint32(18, true), nlen = dv.getUint16(26, true);
+    const name = new TextDecoder().decode(zbytes.slice(p + 30, p + 30 + nlen));
+    files[name] = zbytes.slice(p + 30 + nlen, p + 30 + nlen + size); p += 30 + nlen + size;
+  }
+  ok(["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/_rels/document.xml.rels"].every((f) => files[f]), "docx has the Word package parts");
+  const docXml = new TextDecoder().decode(files["word/document.xml"]);
+  ok(!new w.DOMParser().parseFromString(docXml, "application/xml").querySelector("parsererror"), "document.xml is well-formed XML");
+  const nFig = new Set(order.flatMap((id) => bundle.questions.find((q) => q.id === id).figures)).size;
+  ok(Object.keys(files).filter((f) => f.startsWith("word/media/")).length >= nFig, "question figures are embedded");
+  const firstText = bundle.questions.find((q) => q.id === order[0]).textHtml.replace(/<[^>]+>/g, " ").replace(/\$[^$]*\$/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 3).join(" ");
+  ok(docXml.includes("Answer key") && docXml.includes("Worked solutions") && docXml.replace(/<[^>]+>/g, "").includes(firstText.replace(/&/g, "&amp;")), "docx contains the questions, key and solutions");
+  const hasMath = order.some((id) => /\$/.test(bundle.questions.find((q) => q.id === id).textHtml + JSON.stringify(bundle.questions.find((q) => q.id === id).optionsHtml)));
+  ok(!hasMath || docXml.includes("<m:oMath>"), "maths becomes Word equations");
   byText("button", "Back to edit").click();
   await waitFor(() => byText("h1", "Printable paper"), "back to editor");
   ok(!document.body.classList.contains("printmode") && $$(".sellist li").length === order.length, "back keeps the selection");
@@ -447,6 +473,10 @@ fake.setUser(S1); await sleep(50);
 await go("#/t/admin");
 await waitFor(() => byText("p.error", "Teachers only"), "teachers only");
 ok(true, "teacher pages blocked for students");
+await go("#/t/paper");
+await waitFor(() => byText("p.error", "Teachers only"), "paper builder teachers only");
+{ let err = ""; try { await api.figureData({ names: [bundle.questions.find((q) => q.figures.length).figures[0]] }); } catch (e) { err = e.message; }
+  ok(/Teachers only/.test(err), "students cannot download figure files for Word papers"); }
 
 console.log("12. Explain cards");
 await go("#/"); await sleep(50);

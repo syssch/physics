@@ -30,6 +30,7 @@ const call = (name) => async (data) => (await httpsCallable(functions, name)(dat
 export const api = {
   startPractice: call("startPractice"),
   startMistakes: call("startMistakes"),
+  figureData: call("figureData"),
   submitAnswers: call("submitAnswers"),
   getReview: call("getReview"),
   rebuildMembers: call("rebuildMembers"),

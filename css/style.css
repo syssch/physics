@@ -62,3 +62,12 @@ table.pq-table th { font-weight:normal; border-bottom:1px solid #000; }
   body.printmode .paper { border:none; padding:0; max-width:none; }
   body.printmode .pagebreak { border-top:none; margin-top:0; padding-top:0; }
 }
+/* selected-question list (assignment builder, printable paper) */
+.sellist { list-style:none; padding-left:0; }
+.sellist li { display:flex; align-items:flex-start; gap:.4rem; padding:.2rem 0; border-bottom:1px solid var(--line); }
+.sellist .selnum { min-width:2.1em; text-align:right; color:var(--muted, #666); font-variant-numeric:tabular-nums; }
+.sellist .seltext { flex:1; }
+.sellist .selbtns { display:flex; gap:.15rem; white-space:nowrap; }
+.iconbtn { background:none; border:1px solid var(--line); border-radius:5px; cursor:pointer; padding:0 .35rem; font:inherit; line-height:1.5; color:var(--accent); }
+.iconbtn:disabled { opacity:.3; cursor:default; }
+.iconbtn:hover:not(:disabled) { background:#eef3fb; }

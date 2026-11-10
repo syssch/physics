@@ -174,13 +174,14 @@ function questionPicker(questions, topics, books, selected) {
   const move = (i, d) => { const j = i + d; if (j < 0 || j >= selected.length) return; [selected[i], selected[j]] = [selected[j], selected[i]]; drawSelected(); };
 
   function drawSelected() {
-    selCount.textContent = `${selected.length} selected`;
+    selCount.textContent = `(${selected.length})`;
     selBox.replaceChildren(...selected.map((id, i) => {
       const q = questions.find((x) => x.id === id);
-      return el("li", {}, [el("span", {}, q ? `${q.topic} · ${sourceLabel(q)} ` : `${id} `),
-        el("button", { class: "linkbtn", type: "button", title: "Move up", onclick: () => move(i, -1) }, "↑"),
-        el("button", { class: "linkbtn", type: "button", title: "Move down", onclick: () => move(i, 1) }, "↓"),
-        el("button", { class: "linkbtn", type: "button", onclick: () => { selected.splice(selected.indexOf(id), 1); drawSelected(); drawList(); } }, "remove")]);
+      return el("li", {}, [el("span", { class: "selnum" }, `${i + 1}.`), el("span", { class: "seltext" }, q ? `${q.topic} · ${sourceLabel(q)}` : id),
+        el("span", { class: "selbtns" }, [
+          el("button", { class: "iconbtn", type: "button", title: "Move up", disabled: i === 0, onclick: () => move(i, -1) }, "↑"),
+          el("button", { class: "iconbtn", type: "button", title: "Move down", disabled: i === selected.length - 1, onclick: () => move(i, 1) }, "↓"),
+          el("button", { class: "iconbtn", type: "button", title: "Remove", onclick: () => { selected.splice(selected.indexOf(id), 1); drawSelected(); drawList(); } }, "✕")])]);
     }));
   }
   function drawList() {
@@ -347,7 +348,34 @@ export function showPaper(cfg, onBack) {
   const qs = cfg.questions;
   const printBtn = el("button", { class: "btn primary", type: "button" }, "Print / Save as PDF");
   const back = el("button", { class: "btn", type: "button", onclick: onBack }, "← Back to edit");
-  const bar = el("div", { class: "printbar noprint" }, [back, printBtn,
+  const wordBtn = el("button", { class: "btn", type: "button" }, "Download Word (.docx)");
+  wordBtn.addEventListener("click", async () => {
+    wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
+    try {
+      const { buildPaperDocx } = await import("./docx.js");
+      const names = [...new Set(qs.flatMap((q) => q.figures || []))];
+      const figures = new Map();
+      for (const part of chunk(names, 25)) {
+        const r = await api.figureData({ names: part });
+        Object.entries(r.figures || {}).forEach(([n, b64]) => {
+          if (!b64) return;
+          const bin = atob(b64), a = new Uint8Array(bin.length);
+          for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k);
+          figures.set(n, a);
+        });
+      }
+      const keys = new Map(qs.map((q) => [q.id, keyCache.get(q.id) || {}]));
+      const blob = buildPaperDocx({ ...cfg, questions: qs.map((q) => ({ ...q, sourceLabel: sourceLabel(q) })), keys, figures });
+      const name = `${(cfg.title || "paper").replace(/[\\/:*?"<>|]+/g, "").trim().replace(/\s+/g, "_") || "paper"}.docx`;
+      const link = el("a", { href: URL.createObjectURL(blob), download: name });
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 60000);
+      toast(names.length && figures.size < names.length ? `Word file ready, but ${names.length - figures.size} figure(s) could not be included.` : "Word file downloaded.",
+        names.length && figures.size < names.length ? "error" : "");
+    } catch (e) { toast(errMsg(e), "error"); }
+    wordBtn.disabled = false; wordBtn.textContent = "Download Word (.docx)";
+  });
+  const bar = el("div", { class: "printbar noprint" }, [back, printBtn, wordBtn,
     el("span", { class: "muted" }, "In the print dialog choose \"Save as PDF\" to keep a copy; turning off \"Headers and footers\" gives a cleaner page.")]);
   const paper = el("div", { class: "paper" });
   paper.append(el("div", { class: "paper-cover" }, [

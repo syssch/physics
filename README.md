@@ -137,7 +137,8 @@ updates itself whenever a class is saved or deleted.
   or click *Print* beside any assignment on the dashboard to start from its questions. Set a title, subtitle and time
   allowed, and choose: Name/Class/No. lines, answer boxes, each question's source, an answer key page, worked
   solutions pages, shuffled order. *Preview & print* shows an A4 layout; print it or choose "Save as PDF" in the print
-  dialog. Nothing is saved on the platform.
+  dialog, or *Download Word (.docx)* for an editable file (maths become real Word equations; figures are fetched by the
+  teacher-only `figureData` Cloud Function, built in the browser by `js/docx.js`). Nothing is saved on the platform.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
 **Students**:

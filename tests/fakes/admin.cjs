@@ -34,6 +34,9 @@ const db = { collection: (p) => collRef(p), doc: (p) => docRef(p), getAll: async
 module.exports = {
   "firebase-admin/app": { initializeApp: () => ({}) },
   "firebase-admin/firestore": { getFirestore: () => db, FieldValue: { serverTimestamp: () => g.SERVER_TS, arrayUnion: (...x) => ({ __arrayUnion: x }) }, Timestamp: g.Timestamp },
+  "firebase-admin/storage": { getStorage: () => ({ bucket: () => ({ file: (p) => ({
+    download: async () => { if (!g.files.has(p)) throw new Error("No such object"); const v = g.files.get(p);
+      return [Buffer.isBuffer(v) ? v : Buffer.from(String(v))]; } }) }) }) },
   "firebase-functions/v2/firestore": { onDocumentWritten: (path, fn) => ({ run: fn, __trigger: path }) },
   "firebase-functions/v2/https": { onCall: (fn) => ({ run: fn }), HttpsError },
   "firebase-functions/v2": { setGlobalOptions: () => {} },
