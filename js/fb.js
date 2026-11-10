@@ -31,6 +31,8 @@ export const api = {
   startPractice: call("startPractice"),
   startMistakes: call("startMistakes"),
   figureData: call("figureData"),
+  getLeaderboard: call("getLeaderboard"),
+  rebuildLeaderboards: call("rebuildLeaderboards"),
   submitAnswers: call("submitAnswers"),
   getReview: call("getReview"),
   rebuildMembers: call("rebuildMembers"),

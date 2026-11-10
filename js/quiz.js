@@ -61,6 +61,8 @@ export function showReview({ title, questions, responses, result, backHref = "#/
     el("div", { class: "muted" }, result.total ? `${Math.round((100 * result.score) / result.total)}%` : ""),
   ]));
   if (note) page.append(el("p", { class: "muted" }, note));
+  if (result.points) page.append(el("p", { class: "points" }, `+${result.points} leaderboard point${result.points === 1 ? "" : "s"}`
+    + (result.points > result.score ? ` (including a ${result.points - result.score}-point accuracy bonus)` : "")));
   if (!result.revealed) {
     page.append(el("p", { class: "notice" },
       result.reveal === "manual" ? "Answers and solutions will be shown when your teacher releases them."

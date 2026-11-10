@@ -296,8 +296,132 @@ exports.submitAnswers = onCall(async (request) => {
 
   const out = { attemptId: attemptRef.id, score: result.score, total: result.total, revealed: reveal, reveal: revealMode,
                 dueAt: meta.dueAt ? meta.dueAt.toMillis() : null };
+  if (meta.mode === "practice") {                 // leaderboards count practice only
+    const pts = setPoints(result.score, result.total);
+    try { if (await addPoints(user, pts, Date.now())) out.points = pts; } catch (e) { console.error("leaderboard", e); }
+  }
   if (reveal) Object.assign(out, { answers, correct: result.correct, solutions });
   return out;
+});
+
+// ------------------------------------------------------------------ leaderboards (practice only)
+/**
+ * Points for one submitted practice set (practice or "Redo my mistakes"): 1 per correct answer, plus an accuracy
+ * bonus for sets of at least 5 questions: +5 for 90% or more correct, +2 for 75–89%.
+ */
+function setPoints(score, total) {
+  let p = score;
+  if (total >= 5) { const a = score / total; if (a >= 0.9) p += 5; else if (a >= 0.75) p += 2; }
+  return p;
+}
+/** Hong Kong time period keys: ISO week ("2026-W46"), month ("2026-11") and "all". */
+function periodKeys(ms = Date.now()) {
+  const d = new Date(ms + 8 * 3600 * 1000);
+  const y = d.getUTCFullYear(), m = d.getUTCMonth();
+  const t = new Date(Date.UTC(y, m, d.getUTCDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const wy = t.getUTCFullYear();
+  const wk = Math.ceil(((t - Date.UTC(wy, 0, 1)) / 86400000 + 1) / 7);
+  return { week: `${wy}-W${String(wk).padStart(2, "0")}`, month: `${y}-${String(m + 1).padStart(2, "0")}`, all: "all" };
+}
+const lbDocId = (form, period, key) => period === "all" ? `${form}_all` : `${form}_${period}_${key}`;
+/** The student's form (F1–F6) and class, from the first class whose name starts with a form number ("4A", "F.4 Phy"). */
+async function studentForm(email) {
+  const cls = await db.collection("classes").where("studentEmails", "array-contains", email).get();
+  for (const c of cls.docs) {
+    const m = /^\s*(?:F\.?\s*)?([1-6])/i.exec(c.get("name") || "");
+    if (m) return { form: `F${m[1]}`, classId: c.id, className: (c.get("name") || "").trim() };
+  }
+  return null;
+}
+/** "4A Chan Tai Man": class + the name on the class list (or the Google name). */
+async function boardLabel(info, email, fallback) {
+  const r = await db.doc(`classRosters/${info.classId}`).get();
+  const row = (r.exists ? r.get("roster") || [] : []).find((x) => x.email === email);
+  const cls = info.className.split(/\s+/)[0];
+  return `${cls} ${(row && row.name) || fallback || email.split("@")[0]}`.trim();
+}
+async function addPoints(user, pts, ms) {
+  const info = await studentForm(user.email);
+  if (!info) return null;
+  const label = await boardLabel(info, user.email, user.name);
+  for (const [period, key] of Object.entries(periodKeys(ms))) {
+    await db.doc(`leaderboards/${lbDocId(info.form, period, key)}`).set({
+      form: info.form, period, key, updatedAt: FieldValue.serverTimestamp(),
+      scores: { [user.uid]: { pts: FieldValue.increment(pts), sets: FieldValue.increment(1), label, email: user.email } },
+    }, { merge: true });
+  }
+  return info.form;
+}
+function ranked(scores) {
+  const rows = Object.entries(scores || {}).map(([uid, v]) => ({ uid, label: v.label, pts: v.pts || 0, sets: v.sets || 0 }))
+    .filter((r) => r.pts > 0).sort((a, b) => b.pts - a.pts || a.label.localeCompare(b.label));
+  let last = null, rank = 0;
+  rows.forEach((r, i) => { if (r.pts !== last) { rank = i + 1; last = r.pts; } r.rank = rank; });
+  return rows;
+}
+
+/**
+ * Leaderboard for one form and period ("week" | "month" | "all").
+ * Students: their own form, top 10 plus their own rank. Teachers: any form, the full list (with email).
+ */
+exports.getLeaderboard = onCall(async (request) => {
+  const user = await requireMember(request);
+  const data = request.data || {};
+  const period = ["week", "month", "all"].includes(data.period) ? data.period : "week";
+  const teacher = await isTeacher(user.email);
+  let form;
+  if (teacher && data.form) form = /^F[1-6]$/.test(String(data.form)) ? String(data.form) : null;
+  else { const info = await studentForm(user.email); form = info && info.form; }
+  if (!form) return { form: null, period, rows: [], me: null };
+  const keys = periodKeys();
+  const snap = await db.doc(`leaderboards/${lbDocId(form, period, keys[period])}`).get();
+  const all = ranked(snap.exists ? snap.get("scores") : {});
+  const mine = all.find((r) => r.uid === user.uid) || null;
+  const strip = (r) => ({ rank: r.rank, label: r.label, pts: r.pts, me: r.uid === user.uid });
+  if (teacher) {
+    const sc = snap.exists ? snap.get("scores") : {};
+    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
+  }
+  return { form, period, key: keys[period], rows: all.slice(0, 10).map(strip), me: mine ? { rank: mine.rank, pts: mine.pts } : null, total: all.length };
+});
+
+/** Teachers: rebuild every leaderboard from the saved practice results (e.g. after changing classes). */
+exports.rebuildLeaderboards = onCall(async (request) => {
+  const user = requireSchoolUser(request);
+  if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
+  const now = periodKeys();
+  const atts = await db.collection("attempts").where("mode", "==", "practice").get();
+  const forms = new Map(), docs = new Map();
+  for (const d of atts.docs) {
+    const a = d.data();
+    if (!a.email || !a.uid) continue;
+    if (!forms.has(a.email)) {
+      const info = await studentForm(a.email);
+      forms.set(a.email, info ? { info, label: await boardLabel(info, a.email, a.name) } : null);
+    }
+    const f = forms.get(a.email);
+    if (!f) continue;
+    const ms = a.submittedAt && a.submittedAt.toMillis ? a.submittedAt.toMillis() : Date.now();
+    const keys = periodKeys(ms);
+    for (const period of ["week", "month", "all"]) {
+      if (period !== "all" && keys[period] !== now[period]) continue;      // only the current week / month
+      const id = lbDocId(f.info.form, period, keys[period]);
+      if (!docs.has(id)) docs.set(id, { form: f.info.form, period, key: keys[period], scores: {} });
+      const sc = docs.get(id).scores;
+      sc[a.uid] = sc[a.uid] || { pts: 0, sets: 0, label: f.label, email: a.email };
+      sc[a.uid].pts += setPoints(a.score || 0, a.total || 0);
+      sc[a.uid].sets += 1;
+    }
+  }
+  const old = await db.collection("leaderboards").get();
+  for (const d of old.docs) {
+    const v = d.data();
+    if (v.period === "all" || v.key === now[v.period]) await d.ref.delete();   // past weeks/months are kept as history
+  }
+  for (const [id, v] of docs) await db.doc(`leaderboards/${id}`).set({ ...v, updatedAt: FieldValue.serverTimestamp() });
+  return { boards: docs.size, students: [...forms.values()].filter(Boolean).length };
 });
 
 /**

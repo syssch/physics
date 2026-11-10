@@ -87,6 +87,11 @@ service cloud.firestore {
       allow delete: if isTeacher();
       allow create, update: if false;
     }
+    // Leaderboard totals (written only by Cloud Functions); students get their view through getLeaderboard.
+    match /leaderboards/{id} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
     match /sessions/{sessionId} {
       allow read: if isSchool() && resource.data.uid == request.auth.uid;
       allow write: if false;

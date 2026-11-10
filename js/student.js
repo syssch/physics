@@ -28,6 +28,7 @@ export async function studentHome(user) {
   // Practice
   page.append(await practicePanel());
   page.append(mistakesPanel());
+  page.append(leaderboardPanel());
   // History
   const hist = el("div", { class: "panel" }, [el("h2", {}, "Recent results")]);
   page.append(hist);
@@ -83,6 +84,35 @@ async function practicePanel() {
   return el("div", { class: "panel" }, [el("h2", {}, "Practise"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
+}
+
+const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
+export const POINTS_HELP = "Points come from practice sets (including Redo my mistakes): 1 point per correct answer, plus a bonus for sets of 5 or more questions — +5 for 90% or more correct, +2 for 75–89%. Assignments don't count.";
+
+/** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
+function leaderboardPanel() {
+  const head = el("h2", {}, "Leaderboard");
+  const tabs = el("div", { class: "tabs" });
+  const body = el("div", {}, el("p", { class: "muted" }, "Loading…"));
+  const panel = el("div", { class: "panel leaderboard" }, [head, tabs, body, el("p", { class: "muted small" }, POINTS_HELP)]);
+  async function show(period) {
+    [...tabs.children].forEach((b) => b.classList.toggle("on", b.dataset.p === period));
+    body.replaceChildren(el("p", { class: "muted" }, "Loading…"));
+    try {
+      const r = await api.getLeaderboard({ period });
+      if (!r.form) { panel.remove(); return; }
+      head.textContent = `${r.form} leaderboard`;
+      if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${period === "week" ? "this week" : "this month"} — be the first!`)); return; }
+      const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points"].map((h) => el("th", {}, h)))]);
+      r.rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
+      const mine = r.me ? (r.rows.some((x) => x.me) ? null : el("p", {}, `You: #${r.me.rank} of ${r.total}, ${r.me.pts} points`))
+        : el("p", { class: "muted" }, "You have no points in this period yet.");
+      body.replaceChildren(t, ...(mine ? [mine] : []));
+    } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
+  }
+  PERIODS.forEach(([p, label]) => { const b = el("button", { class: "tab", type: "button", "data-p": p, onclick: () => show(p) }, label); tabs.append(b); });
+  show("week");
+  return panel;
 }
 
 /** "Redo my mistakes": a practice set of questions answered wrongly (or left blank) last time. */

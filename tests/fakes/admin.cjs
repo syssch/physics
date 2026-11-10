@@ -3,10 +3,13 @@ const g = globalThis.__fake;
 class HttpsError extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 const snapOf = (path, data) => ({ id: path.split("/").pop(), exists: data !== undefined, ref: docRef(path),
   get: (f) => (data || {})[f], data: () => data });
+const plain = (v) => v && typeof v === "object" && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype && !v.__arrayUnion && !v.__inc && !v.__serverTs;
 function applyOps(cur, d) {
   const out = { ...(cur || {}) };
   for (const [k, v] of Object.entries(d)) {
     if (v && v.__arrayUnion) out[k] = [...new Set([...(out[k] || []), ...v.__arrayUnion])];
+    else if (v && v.__inc !== undefined) out[k] = (typeof out[k] === "number" ? out[k] : 0) + v.__inc;
+    else if (plain(v)) out[k] = applyOps(plain(out[k]) ? out[k] : {}, v);      // set(..., {merge: true}) merges maps
     else out[k] = g.resolve(v);
   }
   return out;
@@ -33,7 +36,7 @@ function collRef(path, filters = [], orders = [], lim = 0) {
 const db = { collection: (p) => collRef(p), doc: (p) => docRef(p), getAll: async (...refs) => Promise.all(refs.map((r) => r.get())) };
 module.exports = {
   "firebase-admin/app": { initializeApp: () => ({}) },
-  "firebase-admin/firestore": { getFirestore: () => db, FieldValue: { serverTimestamp: () => g.SERVER_TS, arrayUnion: (...x) => ({ __arrayUnion: x }) }, Timestamp: g.Timestamp },
+  "firebase-admin/firestore": { getFirestore: () => db, FieldValue: { serverTimestamp: () => g.SERVER_TS, arrayUnion: (...x) => ({ __arrayUnion: x }), increment: (n) => ({ __inc: n }) }, Timestamp: g.Timestamp },
   "firebase-admin/storage": { getStorage: () => ({ bucket: () => ({ file: (p) => ({
     download: async () => { if (!g.files.has(p)) throw new Error("No such object"); const v = g.files.get(p);
       return [Buffer.isBuffer(v) ? v : Buffer.from(String(v))]; } }) }) }) },

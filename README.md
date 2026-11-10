@@ -151,6 +151,12 @@ updates itself whenever a class is saved or deleted.
   whose answers the student can already see count (an assignment with hidden answers adds nothing until it is released),
   and questions in open assignments are left out. Built by the `startMistakes` Cloud Function from the student's
   `attempts`; the redo attempt is saved like practice, titled "Redo my mistakes".
+- *Leaderboard* (home page): the student's form (from the class name, e.g. 4A → F4) for this week, this month and all
+  time (Hong Kong time; weeks start on Monday). Points come from practice sets only, including Redo my mistakes: 1 per
+  correct answer, plus +5 for 90%+ or +2 for 75–89% in sets of 5 or more questions. Students see the top 10 (class +
+  name from the class list) and their own rank. Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
+  `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
+  shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each.
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
   comments. Home shows a *card of the day* (the first unread card in the student's chosen chapters; it stays the same all

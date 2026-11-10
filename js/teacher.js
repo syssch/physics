@@ -30,6 +30,7 @@ export async function teacherHome(user) {
       el("a", { class: "btn", href: "#/t/class/new" }, "New class"),
       el("a", { class: "btn", href: "#/t/bank" }, "Browse questions"),
       el("a", { class: "btn", href: "#/t/paper" }, "Printable paper"),
+      el("a", { class: "btn", href: "#/t/leaderboard" }, "Leaderboard"),
       el("a", { class: "btn", href: "#/t/explain" }, "Explain reading"),
       el("a", { class: "btn", href: "#/t/admin" }, "Admin"),
     ]),
@@ -416,6 +417,41 @@ export function showPaper(cfg, onBack) {
   mount(el("div", {}, [bar, paper]));
   typeset(paper);
   window.scrollTo(0, 0);
+}
+
+// ---------------------------------------------------------------- leaderboard
+const LB_PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
+export async function leaderboardView(user) {
+  const formSel = el("select", {}, ["F3", "F4", "F5", "F6"].map((f) => el("option", { value: f, selected: f === (store.get("lbForm") || "F4") }, f)));
+  let period = "week";
+  const tabs = el("div", { class: "tabs" });
+  const body = el("div", {});
+  const rebuild = el("button", { class: "btn small", type: "button", title: "Recount the current week, month and all-time totals from all saved practice results" }, "Recount from results");
+  async function draw() {
+    store.set("lbForm", formSel.value);
+    [...tabs.children].forEach((b) => b.classList.toggle("on", b.dataset.p === period));
+    body.replaceChildren(loading());
+    try {
+      const r = await api.getLeaderboard({ form: formSel.value, period });
+      if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, "No practice points in this period yet.")); return; }
+      const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points", "Practice sets", "Email"].map((h) => el("th", {}, h)))]);
+      r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets)), el("td", { class: "muted" }, x.email || "")])));
+      body.replaceChildren(el("p", { class: "muted" }, `${r.form} · ${period === "all" ? "all time" : r.key} · ${r.rows.length} student(s) with points. Students see the top 10 and their own rank.`), t);
+    } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
+  }
+  LB_PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => { period = p; draw(); } }, label)));
+  formSel.addEventListener("change", draw);
+  rebuild.addEventListener("click", async () => {
+    if (!confirm("Recount this week's, this month's and the all-time leaderboards from all saved practice results?")) return;
+    rebuild.disabled = true;
+    try { const r = await api.rebuildLeaderboards({}); toast(`Recounted: ${r.students} student(s).`); draw(); }
+    catch (e) { toast(errMsg(e), "error"); }
+    rebuild.disabled = false;
+  });
+  mount(el("section", {}, [el("h1", {}, "Leaderboard"),
+    el("p", { class: "muted" }, "Points come from practice sets only (including Redo my mistakes): 1 point per correct answer, plus +5 for 90%+ or +2 for 75–89% in sets of 5 or more questions. A student's form comes from their class name (e.g. 4A → F4)."),
+    el("div", { class: "row" }, [el("label", {}, ["Form ", formSel]), tabs, rebuild]), body]));
+  draw();
 }
 
 // ---------------------------------------------------------------- results

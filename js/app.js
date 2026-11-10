@@ -4,7 +4,7 @@ import { el, mount, toast, errMsg } from "./ui.js";
 import { isSchoolEmail } from "./config.js";
 import { studentHome, practiceView, doAssignment, reviewView, historyView } from "./student.js";
 import { explainLibrary, explainCard, explainProgressView } from "./explain.js";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder } from "./teacher.js";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView } from "./teacher.js";
 
 let user = null;
 
@@ -58,6 +58,7 @@ const routes = [
   [/^#\/t\/assign(?:\/([\w-]+))?$/, (m) => assignmentBuilder(user, m[1]), true],
   [/^#\/t\/results\/([\w-]+)\/([\w-]+)$/, (m) => resultsView(user, m[1], m[2]), true],
   [/^#\/t\/bank$/, () => bankView(user), true],
+  [/^#\/t\/leaderboard$/, () => leaderboardView(user), true],
   [/^#\/t\/paper(?:\/([\w-]+)\/([\w-]+))?$/, (m) => paperBuilder(user, m[1], m[2]), true],
   [/^#\/t\/admin$/, () => adminView(user), true],
 ];

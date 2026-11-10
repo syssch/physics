@@ -314,6 +314,44 @@ console.log("8b. redo my mistakes");
   ok($(".mistakes .row").style.display === "none", "nothing to redo: the panel says so and hides the button");
 }
 
+console.log("8c. leaderboard");
+{
+  const bonus = (a) => a.total >= 5 ? (a.score / a.total >= 0.9 ? 5 : a.score / a.total >= 0.75 ? 2 : 0) : 0;
+  const pAtts = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/practice_") && d.uid === "s1").map(([, d]) => d);
+  const expPts = pAtts.reduce((t, a) => t + a.score + bonus(a), 0);
+  const lbs = [...fake.store.entries()].filter(([p]) => p.startsWith("leaderboards/"));
+  ok(lbs.length === 3 && lbs.every(([, d]) => d.form === "F4"), "practice points go to the F4 week, month and all-time boards");
+  ok(fake.store.get("leaderboards/F4_all").scores.s1.pts === expPts, `all-time points match the practice results (${expPts})`);
+  ok(lbs.every(([, d]) => d.scores.s1.sets === pAtts.length), "each practice set counted once; assignments not counted");
+  const before = fake.store.get("leaderboards/F4_all").scores.s1.pts;
+  const r = await api.startPractice({ count: 5 });
+  const res = await api.submitAnswers({ sessionId: r.sessionId, responses: Object.fromEntries(r.questionIds.map((q) => [q, bundle.answers[q]])) });
+  ok(res.points === 10 && fake.store.get("leaderboards/F4_all").scores.s1.pts === before + 10, "perfect 5-question set: 5 points + 5 bonus");
+  const r2 = await api.startPractice({ count: 5 });
+  const res2 = await api.submitAnswers({ sessionId: r2.sessionId, responses: {} });
+  ok(res2.points === undefined || res2.points === 0, "a blank set earns nothing");
+  await go("#/history"); await go("#/");
+  await waitFor(() => byText(".leaderboard h2", "F4 leaderboard") && $(".leaderboard table"), "student leaderboard");
+  ok($(".leaderboard tr.me") && byText(".leaderboard tr.me", "4A"), "student sees the board with their own row highlighted");
+  const lb = await api.getLeaderboard({ period: "all" });
+  ok(lb.rows.length <= 10 && lb.rows.every((x) => !("email" in x)) && lb.me && lb.me.pts === before + 10, "students get the top 10 and their own rank, without emails");
+  ok((await api.getLeaderboard({ period: "all", form: "F5" })).form === "F4", "students only see their own form");
+  byText(".leaderboard .tab", "This month").click();
+  await waitFor(() => $(".leaderboard .tab.on") && $(".leaderboard .tab.on").textContent === "This month" && $(".leaderboard table"), "month tab");
+  ok(true, "period tabs switch between week, month and all time");
+  let denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "leaderboards", "F4_all")); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "students cannot read the raw leaderboard data");
+  // teacher view + recount
+  fake.setUser(T); await sleep(50);
+  await go("#/t/leaderboard");
+  await waitFor(() => byText("h1", "Leaderboard") && $("table.board"), "teacher leaderboard");
+  ok(byText("table.board", "s001@syss.edu.hk") && byText("table.board", String(before + 10)), "teacher sees the full list with emails");
+  fake.store.get("leaderboards/F4_all").scores.s1.pts = 1;           // corrupt, then recount from the results
+  const rb = await api.rebuildLeaderboards({});
+  ok(rb.students >= 1 && fake.store.get("leaderboards/F4_all").scores.s1.pts === before + 10, "recount rebuilds totals from saved practice results");
+  fake.setUser(S1); await sleep(50);
+}
+
 console.log("9. second student + teacher results");
 fake.setUser(S2); await sleep(50); await go("#/");
 await waitFor(() => byText("a.btn", "Start"), "s2 home");
