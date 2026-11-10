@@ -200,3 +200,10 @@ cd tests && npm install && node run.mjs
 ```
 
 If you change `firestore.rules`, update `tests/fakes/rules.mjs` to match.
+
+## Updating the site's code
+
+After changing anything in `js/` or `css/`, run `python3 tools/bump_version.py` before committing. It adds a version
+tag (`?v=202611102231`) to every script and stylesheet address, so browsers load the new files at once instead of
+using copies they saved earlier (GitHub Pages lets browsers keep files for 10 minutes, and module scripts can stick
+longer).

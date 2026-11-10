@@ -1,5 +1,5 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js";
-import { getQuestions, renderQuestion } from "./questions.js";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102231";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611102231";
 
 /**
  * Run a set of questions.

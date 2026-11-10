@@ -188,7 +188,8 @@ let denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "answerKeys", q
 ok(denied, "student cannot read answer keys");
 denied = false; try { await fs.setDoc(fs.doc({ __db: true }, "attempts", "fake"), { uid: "s1", score: 99 }); } catch (e) { denied = /permission/.test(e.message); }
 ok(denied, "student cannot write attempts");
-const { api } = await import(`${ROOT}/learning-platform/js/fb.js`);
+const VER = (readFileSync(`${ROOT}/learning-platform/js/app.js`, "utf8").match(/fb\.js(\?v=\w+)?"/) || [])[1] || "";
+const { api } = await import(`${ROOT}/learning-platform/js/fb.js${VER}`);   // same module instance as the app
 let again = ""; try { await api.submitAnswers({ classId, assignmentId: a1, responses: {} }); } catch (e) { again = e.message; }
 ok(/already submitted/.test(again), "cannot submit twice");
 let notIn = ""; fake.user = { uid: "s9", email: "s009@syss.edu.hk", name: "x" };

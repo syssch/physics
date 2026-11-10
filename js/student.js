@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js";
+import { db, api } from "./fb.js?v=202611102231";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js";
-import { runQuiz, showReview } from "./quiz.js";
-import { explainPanel } from "./explain.js";
-import { setDue, setChip } from "./chrome.js";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611102231";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611102231";
+import { runQuiz, showReview } from "./quiz.js?v=202611102231";
+import { explainPanel } from "./explain.js?v=202611102231";
+import { setDue, setChip } from "./chrome.js?v=202611102231";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -142,7 +142,13 @@ function leaderboardPanel(user) {
       }
       head.textContent = `${r.form} leaderboard` + (formSel ? " (teacher preview: what students see)" : "");
       const rows = r.rows.slice(0, 10);
-      if (!rows.length) { body.replaceChildren(el("p", { class: "muted" }, period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${period === "week" ? "this week" : "this month"} — be the first!`)); return; }
+      if (!rows.length) {
+        const when = period === "all" ? "yet" : period === "week" ? "this week" : "this month";
+        body.replaceChildren(el("p", { class: "muted" }, formSel
+          ? `No ${r.form} student has practice points ${when}. Try another form or "All time". If students practised before the leaderboard was switched on, click "Recount from results" on the teacher Leaderboard page.`
+          : period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${when} — be the first!`));
+        return;
+      }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points"].map((h) => el("th", {}, h)))]);
       rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
       const mine = formSel ? null : r.me ? (rows.some((x) => x.me) ? null : el("p", {}, `You: #${r.me.rank} of ${r.total}, ${r.me.pts} points`))
