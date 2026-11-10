@@ -80,3 +80,9 @@ table.board td:first-child, table.board th:first-child { width:2.5em; text-align
 table.board tr.me td { background:#fff6d6; font-weight:600; }
 .leaderboard .small, p.small { font-size:.85em; }
 p.points { font-weight:600; color:var(--good); }
+/* filter rows: long option names (subtopics, skills) must not push a menu past the panel edge */
+select { max-width:100%; text-overflow:ellipsis; }
+.row > select, .row > input[type=search] { min-width:0; max-width:min(100%, 19rem); }
+@media (max-width: 760px) {
+  .panel .row > select, .panel .row > input[type=search], .panel .row > .btn { flex:1 1 100%; max-width:100%; }
+}
