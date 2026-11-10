@@ -552,10 +552,58 @@ exports.getReview = onCall(async (request) => {
     if (a.exists) { reveal = canReveal(a); revealMode = a.get("reveal") || "after_submit"; }
   }
   const questionIds = at.get("questionIds");
-  const base = { score: at.get("score"), total: at.get("total"), responses: at.get("responses"),
+  const base = { attemptId, score: at.get("score"), total: at.get("total"), responses: at.get("responses"),
                  questionIds, title: at.get("title"), revealed: reveal, reveal: revealMode,
                  dueAt: at.get("dueAt") ? at.get("dueAt").toMillis() : null };
   if (!reveal) return base;
   const { answers, solutions } = await loadKeys(questionIds);
   return { ...base, answers, solutions, correct: mark(questionIds, at.get("responses") || {}, answers).correct };
+});
+
+// ------------------------------------------------------------------ student feedback
+/**
+ * A student, looking back at a marked set, either reports a problem with a question or asks for it to be explained
+ * in the next lesson. One document per student, question and kind (asking again replaces the old one), shown to
+ * teachers of the student's class (the assignment's class, or all their classes for practice sets).
+ * data: { attemptId, qid, kind: "error"|"explain", type?, note?, remove? }
+ */
+const FEEDBACK_TYPES = ["key", "wording", "figure", "solution", "other"];
+exports.sendFeedback = onCall(async (request) => {
+  const user = await requireMember(request);
+  const d = request.data || {};
+  const kind = ["error", "explain"].includes(d.kind) ? d.kind : null;
+  const qid = String(d.qid || "");
+  if (!kind || !d.attemptId || !/^[\w.\-]+$/.test(qid)) throw new HttpsError("invalid-argument", "Missing question or kind.");
+  const at = await db.doc(`attempts/${String(d.attemptId)}`).get();
+  if (!at.exists || at.get("uid") !== user.uid) throw new HttpsError("not-found", "Result not found.");
+  const qids = at.get("questionIds") || [];
+  if (!qids.includes(qid)) throw new HttpsError("invalid-argument", "That question is not in this set.");
+  const ref = db.doc(`feedback/${kind}_${user.uid}_${qid}`);
+
+  if (d.remove) {                                   // take back a request the teacher has not dealt with yet
+    const cur = await ref.get();
+    if (cur.exists && cur.get("status") === "open") await ref.delete();
+    return { feedback: null };
+  }
+  let classIds = [];
+  if (at.get("mode") === "assignment") {
+    classIds = [at.get("classId")];
+    const a = await db.doc(`classes/${at.get("classId")}/assignments/${at.get("assignmentId")}`).get();
+    if (kind === "explain" && a.exists && !canReveal(a)) {
+      throw new HttpsError("failed-precondition", "You can ask for an explanation once the solutions are shown.");
+    }
+  } else {
+    const cls = await db.collection("classes").where("studentEmails", "array-contains", user.email).get();
+    classIds = cls.docs.map((c) => c.id);
+  }
+  const fb = {
+    kind, uid: user.uid, email: user.email, name: user.name, qid, qnum: qids.indexOf(qid) + 1,
+    attemptId: at.id, mode: at.get("mode") || "practice", assignmentId: at.get("assignmentId") || null,
+    title: at.get("title") || "", classIds,
+    type: kind === "error" ? (FEEDBACK_TYPES.includes(d.type) ? d.type : "other") : null,
+    note: String(d.note || "").trim().slice(0, 500),
+    status: "open", createdAt: FieldValue.serverTimestamp(),
+  };
+  await ref.set(fb);
+  return { feedback: { kind, type: fb.type, note: fb.note, status: "open" } };
 });

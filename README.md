@@ -142,10 +142,17 @@ updates itself whenever a class is saved or deleted.
   solutions pages, shuffled order. *Preview & print* shows an A4 layout; print it or choose "Save as PDF" in the print
   dialog, or *Download Word (.docx)* for an editable file (maths become real Word equations; figures are fetched by the
   teacher-only `figureData` Cloud Function, built in the browser by `js/docx.js`). Nothing is saved on the platform.
+- *Student feedback* (*Feedback* in the top bar, with the number not yet dealt with): students' "Explain in class"
+  requests, grouped by question with how many asked, who, and their notes (most requested first), and their problem
+  reports (type, note, student, where they saw it). Filter by class (practice-set feedback appears under all of the
+  student's classes). Open any item's question with its answer and solution. *Mark as explained* / *Mark fixed* /
+  *Dismiss* (and *Reopen*); the student sees the outcome on their review page. Fix a reported question in the question
+  bank app, re-export and import it as usual. Each assignment's *Results* page also counts requests and reports per
+  question and lists them under each question.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
 **Top bar** (`js/chrome.js`): students get Home (with "N due" for assignments not yet submitted), Practise (random
-set + Redo my mistakes), Explain, Leaderboard and My results, plus "4A · 132 pts". Teachers get Classes, Assign,
+set + Redo my mistakes), Explain, Leaderboard and My results, plus "4A · 132 pts". Teachers get Classes, Assign, Feedback,
 Questions (question bank, printable paper), Leaderboard and Explain, a Teacher | Student switch, and an initials button
 (name, Admin, Sign out). On phones the links move to a bottom tab bar and a ☰ menu. Icons: Tabler icons webfont (CDN).
 
@@ -168,6 +175,11 @@ Questions (question bank, printable paper), Leaderboard and Explain, a Teacher |
   `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
   shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each.
+- *Feedback on a question* (review page, under each question): *Report a problem* (answer key may be wrong, typo or unclear
+  wording, figure missing or wrong, solution wrong or unclear, something else, plus an optional note) at any time;
+  *Explain in class* (one tap, optional note, *Undo*) once the solutions are shown. Sent by the `sendFeedback` Cloud
+  Function, which checks the result is the student's and the question is in it; one request and one report per student
+  per question (sending again replaces it).
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
   comments. Home shows a *card of the day* (the first unread card in the student's chosen chapters; it stays the same all
   day). Cards are grouped by textbook book and chapter (e.g. "Book 2 · Ch 9 Momentum"). Students tick the chapters
@@ -193,6 +205,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `meta/explainCards` | all Explain cards in one document | anyone at school |
 | `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
+| `feedback/{kind}_{uid}_{qid}` | "explain" request or "error" report: question, type, note, class(es), assignment, `status` open/done/dismissed (written by `sendFeedback`; teachers may change only the status) | the student, teachers |
 
 ## Testing changes locally
 

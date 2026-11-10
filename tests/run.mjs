@@ -532,6 +532,112 @@ byText("button", "Download CSV").click();
   ok(!document.body.classList.contains("printmode"), "leaving the paper clears print mode");
 }
 
+console.log("9b. student feedback: report a problem / explain in class");
+{
+  const card = (id) => $$(".qcard").find((c) => c.id === `q-${id}`);
+  fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
+  await waitFor(() => $$(".qcard .fbk").length === 8, "feedback rows under each question");
+  ok($$(".fbk-explain").length === 8 && $$(".fbk-report").length === 8 && $(".fbk-help"), "revealed set: Explain in class + Report a problem on every question");
+  card(qids1[0]).querySelector(".fbk-explain").click();
+  const exPath = `feedback/explain_s1_${qids1[0]}`;
+  await waitFor(() => fake.store.has(exPath), "explain request stored");
+  const ex = fake.store.get(exPath);
+  ok(ex.status === "open" && ex.assignmentId === a1 && ex.classIds.length === 1 && ex.classIds[0] === classId && ex.qnum === 1, "request is tied to the assignment's class and question number");
+  await waitFor(() => card(qids1[0]).querySelector(".fbk-state.on"), "shows requested");
+  byText(`#q-${CSS_escape(qids1[0])} .linkbtn`, "Add a note").click(); await sleep(5);
+  set(card(qids1[0]).querySelector(".fbk-panel textarea"), "Why is the tension not mg?");
+  card(qids1[0]).querySelector(".fbk-panel .btn.primary").click();
+  await waitFor(() => fake.store.get(exPath).note === "Why is the tension not mg?", "note saved");
+  ok(true, "student can add a note to the request");
+  // report a problem on Q2
+  card(qids1[1]).querySelector(".fbk-report").click(); await sleep(5);
+  set(card(qids1[1]).querySelector(".fbk-panel select"), "figure");
+  set(card(qids1[1]).querySelector(".fbk-panel textarea"), "Label B is missing");
+  card(qids1[1]).querySelector(".fbk-panel .btn.primary").click();
+  const erPath = `feedback/error_s1_${qids1[1]}`;
+  await waitFor(() => fake.store.has(erPath), "report stored");
+  ok(fake.store.get(erPath).type === "figure" && fake.store.get(erPath).note === "Label B is missing", "report keeps its type and note");
+  // ask then undo on Q3
+  card(qids1[2]).querySelector(".fbk-explain").click();
+  await waitFor(() => fake.store.has(`feedback/explain_s1_${qids1[2]}`), "Q3 request");
+  await waitFor(() => byText(`#q-${CSS_escape(qids1[2])} .linkbtn`, "Undo"), "undo link");
+  byText(`#q-${CSS_escape(qids1[2])} .linkbtn`, "Undo").click();
+  await waitFor(() => !fake.store.has(`feedback/explain_s1_${qids1[2]}`), "undone");
+  ok(true, "a request can be taken back");
+  // reopening the review remembers the student's feedback
+  await go("#/history"); await go(`#/review/${a1}_s1`);
+  await waitFor(() => card(qids1[1]) && byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "Reported"), "remembered");
+  ok(byText(`#q-${CSS_escape(qids1[0])} .fbk-state`, "requested"), "review page shows earlier requests and reports");
+  // hidden-answer set: report only, and the server refuses explain requests
+  const wasReleased = fake.store.get(p2).released; fake.store.get(p2).released = false;
+  await go("#/history"); await go(`#/review/${a2}_s1`);
+  await waitFor(() => $$(".qcard .fbk").length === 2, "a2 feedback rows");
+  ok(!$(".fbk-explain") && $$(".fbk-report").length === 2, "before solutions are shown only Report a problem is offered");
+  const q2 = fake.store.get(p2).questionIds[0];
+  let msg = ""; try { await api.sendFeedback({ attemptId: `${a2}_s1`, qid: q2, kind: "explain" }); } catch (e) { msg = e.message; }
+  ok(/once the solutions are shown/.test(msg), "server refuses explain requests before the solutions are shown");
+  fake.store.get(p2).released = wasReleased;
+  // practice: shown to all the student's classes
+  const pid = pat[0].split("/")[1];
+  await api.sendFeedback({ attemptId: pid, qid: pat[1].questionIds[0], kind: "explain" });
+  const pf = fake.store.get(`feedback/explain_s1_${pat[1].questionIds[0]}`);
+  ok(pf.mode === "practice" && pf.classIds.includes(classId) && !pf.assignmentId, "practice-set request goes to the student's classes");
+  // security
+  msg = ""; try { await api.sendFeedback({ attemptId: `${a1}_s2`, qid: qids1[0], kind: "error" }); } catch (e) { msg = e.message; }
+  ok(/not found/i.test(msg), "cannot send feedback on someone else's result");
+  msg = ""; try { await api.sendFeedback({ attemptId: `${a1}_s1`, qid: "nope", kind: "error" }); } catch (e) { msg = e.message; }
+  ok(/not in this set/.test(msg), "only questions in the set");
+  denied = false; try { await fs.setDoc(fs.doc({ __db: true }, "feedback", "x"), { uid: "s1", kind: "error" }); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "students cannot write feedback directly");
+  fake.user = S2; denied = false;
+  try { await fs.getDoc(fs.doc({ __db: true }, "feedback", `explain_s1_${qids1[0]}`)); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "students cannot read other students' feedback");
+
+  // teacher
+  fake.setUser(T); await sleep(50); await go("#/t");
+  await waitFor(() => byText("#nav a", "Feedback"), "feedback nav");
+  await waitFor(() => byText("#nav a .navbadge", "3"), "feedback badge");
+  ok(true, "Feedback in the teacher bar shows the number of open items");
+  await go(`#/t/results/${classId}/${a1}`);
+  await waitFor(() => $("table.results"), "results");
+  ok($$("td.fbk-hot").length === 2 && byText("tr.fbk-row-count", "Explain in class"), "results grid counts requests and reports per question");
+  ok(byText(".fbk-sum", "asked to explain") && byText(".fbk-sum", "Why is the tension not mg?") && byText(".fbk-sum", "Figure missing or wrong"), "results page lists the requests and reports under each question");
+  await go("#/t/feedback");
+  await waitFor(() => byText("h1", "Student feedback") && $$(".fbk-item").length, "feedback page");
+  ok($$(".fbk-item").length === 3 && byText(".fbk-item", "Why is the tension not mg?") && byText(".fbk-item", "Label B is missing"), "page lists explain requests and problem reports");
+  const det = $(".fbk-item details.fbk-q"); det.open = true; det.dispatchEvent(new w.Event("toggle")); await sleep(5);
+  ok(det.querySelector(".qcard") && det.querySelector(".keyline"), "question preview with its answer");
+  // class filter: a class the student is not in shows nothing
+  fake.store.set("classes/other1", { name: "5Z", studentEmails: [] });
+  await go("#/t"); await go("#/t/feedback");
+  await waitFor(() => $$(".fbk-item").length === 3, "feedback page again");
+  set($(".fbk-filters select"), "other1");
+  ok($$(".fbk-item").length === 0, "class filter");
+  set($(".fbk-filters select"), classId);
+  ok($$(".fbk-item").length === 3, "the student's class shows their feedback");
+  const exItem = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
+  byText(".fbk-item button", "Mark as explained") && exItem.querySelector(".btn.primary").click();
+  await waitFor(() => fake.store.get(exPath).status === "done", "marked explained");
+  ok(fake.store.get(exPath).handledBy === T.email, "Mark as explained records the teacher");
+  const erItem = $$(".fbk-item").find((i) => i.textContent.includes("Label B"));
+  byText(`.fbk-item button`, "Mark fixed") && [...erItem.querySelectorAll("button")].find((b) => b.textContent === "Mark fixed").click();
+  await waitFor(() => fake.store.get(erPath).status === "done", "fixed");
+  await waitFor(() => $$(".fbk-item").length === 1, "open list shrinks");
+  ok(true, "dealt-with items leave the open list");
+  denied = false; try { await fs.updateDoc(fs.doc({ __db: true }, "feedback", erPath.split("/")[1]), { note: "changed" }); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "teachers can only change the status");
+  set($$(".fbk-filters select")[1], "closed");
+  ok($$(".fbk-item").length === 2 && byText(".fbk-item button", "Reopen"), "done items can be shown and reopened");
+  set($(".fbk-filters select"), "");
+  // the student sees the outcome
+  fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
+  await waitFor(() => byText(`#q-${CSS_escape(qids1[0])} .fbk-state`, "Explained in class"), "student sees explained");
+  ok(byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "fixed"), "student sees the report was fixed");
+  fake.setUser(T); await sleep(50); await go("#/t");
+  await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+  sessionStorage.removeItem("fbkClass");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");
@@ -696,6 +802,7 @@ await waitFor(() => $("table.results"), "results");
 const s2row = $$("table.results tr").find((tr) => /Ho Siu Ming|s002/.test(tr.children[0].textContent));
 s2row.querySelector("button.linkbtn").click();
 await waitFor(() => !fake.store.has(`attempts/${a1}_s2`), "reset");
+await waitFor(() => $("table.results") && byText("table.results tr", "not submitted"), "results redrawn after reset");
 ok(true, "teacher can reset a student's submission");
 { // the student redoes it: only the difference in points is added, and the assignment still counts once
   const sc0 = { ...fake.store.get("leaderboards/F4_all").scores.s2 };

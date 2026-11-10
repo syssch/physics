@@ -1,5 +1,6 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102333";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611102333";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611110744";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611110744";
+import { attachFeedbackBars } from "./feedback.js?v=202611110744";
 
 /**
  * Run a set of questions.
@@ -72,10 +73,16 @@ export function showReview({ title, questions, responses, result, backHref = "#/
       result.reveal === "manual" ? "Answers and solutions will be shown when your teacher releases them."
         : `Answers and solutions will be shown after the due date${result.dueAt ? ` (${fmtDate(result.dueAt)})` : ""}.`));
   }
+  if (result.attemptId) {
+    page.append(el("p", { class: "muted small fbk-help" }, result.revealed
+      ? "Not sure about a question after reading the solution? Tap \"Explain in class\" and your teacher will go through it. Spotted a mistake? Tap \"Report a problem\"."
+      : "Spotted a mistake in a question? Tap \"Report a problem\"."));
+  }
   questions.forEach((q, i) => page.append(renderQuestion(q, {
     number: i + 1, selected: (responses || {})[q.id],
     review: result.revealed ? { answer: result.answers[q.id], correct: result.correct[q.id], solution: (result.solutions || {})[q.id] } : { answer: null },
   })));
   page.append(el("p", {}, el("a", { class: "btn", href: backHref }, "Back")));
   mount(page);
+  attachFeedbackBars(page, { attemptId: result.attemptId, revealed: !!result.revealed, questions });
 }

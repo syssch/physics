@@ -1,5 +1,5 @@
 import { fake } from "./core.mjs";
-export const getAuth = () => ({ __auth: true });
+export const getAuth = () => ({ __auth: true, get currentUser() { return fake.user ? toUser(fake.user) : null; } });
 export const connectAuthEmulator = () => {};
 export class GoogleAuthProvider { setCustomParameters(p) { this.p = p; } }
 export function onAuthStateChanged(auth, cb) { fake.listeners.push(cb); setTimeout(() => cb(fake.user ? toUser(fake.user) : null), 0); }

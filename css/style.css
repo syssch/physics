@@ -96,3 +96,27 @@ select { max-width:100%; text-overflow:ellipsis; }
 .pt-item strong { font-size:1.05rem; color:var(--fg); }
 .pt-item span { font-size:.88rem; color:var(--muted); line-height:1.35; }
 [hidden] { display:none !important; }
+
+/* student feedback: buttons under each marked question, and the teacher's feedback page */
+.fbk { margin-top:.7rem; padding-top:.6rem; border-top:1px dashed var(--line); }
+.fbk-row { display:flex; flex-wrap:wrap; gap:.5rem .8rem; align-items:center; font-size:.9rem; }
+.fbk .btn .ti, .fbk-state .ti, .fbk-sum .ti, .panel h2 .ti { margin-right:.25rem; }
+.fbk-report { color:var(--muted); }
+.fbk-state { display:inline-flex; align-items:center; color:var(--muted); }
+.fbk-state.on { color:var(--accent); font-weight:600; }
+.fbk-state.good { color:var(--good); font-weight:600; }
+.fbk-panel { margin-top:.5rem; display:grid; gap:.45rem; max-width:34rem; }
+.fbk-panel label { display:grid; gap:.2rem; font-size:.9rem; }
+.fbk-panel textarea, .fbk-panel select { width:100%; font:inherit; font-size:.92rem; }
+.fbk-item { border-top:1px solid var(--line); padding:.7rem 0; }
+.fbk-head { display:flex; flex-wrap:wrap; gap:.4rem .8rem; align-items:center; }
+.fbk-head > .btn, .fbk-head > .row { margin-left:auto; }
+.fbk-who { margin:.4rem 0 .2rem; padding-left:1.2rem; }
+.fbk-note { color:var(--fg); font-style:italic; margin:.15rem 0; }
+.fbk-q { margin-top:.4rem; } .fbk-q > summary { cursor:pointer; color:var(--accent); font-size:.9rem; }
+.fbk-q .qcard { margin-top:.5rem; }
+.fbk-sum { margin-top:.6rem; padding:.5rem .7rem; background:var(--accent-soft); border-radius:8px; font-size:.9rem; display:grid; gap:.25rem; }
+.fbk-filters { display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; }
+.fbk-filters label { display:grid; gap:.2rem; font-size:.9rem; }
+td.fbk-hot { background:var(--accent-soft); color:var(--accent); font-weight:700; }
+.muted.small, p.small { font-size:.85em; }

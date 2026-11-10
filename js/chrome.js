@@ -1,9 +1,9 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { el } from "./ui.js?v=202611102333";
+import { el } from "./ui.js?v=202611110744";
 
 const STUDENT_NAV = [
-  { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: true },
+  { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
   { href: "#/practise", icon: "pencil", label: "Practise", match: /^#\/practi[cs]e/ },
   { href: "#/explain", icon: "book", label: "Explain", match: /^#\/explain/ },
   { href: "#/leaderboard", icon: "trophy", label: "Leaderboard", short: "Board", match: /^#\/leaderboard/ },
@@ -12,6 +12,7 @@ const STUDENT_NAV = [
 const TEACHER_NAV = [
   { href: "#/t", icon: "layout-dashboard", label: "Classes", match: /^(#?\/?|#\/t|#\/t\/(class|results)\/.*)$/ },
   { href: "#/t/assign", icon: "clipboard-list", label: "Assign", match: /^#\/t\/assign/ },
+  { href: "#/t/feedback", icon: "message-question", label: "Feedback", match: /^#\/t\/feedback/, badge: "feedback" },
   { label: "Questions", icon: "database", match: /^#\/t\/(bank|paper)/, items: [
     { href: "#/t/bank", icon: "search", label: "Browse question bank", short: "Bank" },
     { href: "#/t/paper", icon: "printer", label: "Printable paper", short: "Paper" },
@@ -21,7 +22,7 @@ const TEACHER_NAV = [
 ];
 
 const icon = (name) => el("i", { class: `ti ti-${name}`, "aria-hidden": "true" });
-const state = { user: null, mode: null, onSignOut: null, due: 0, chip: "" };
+const state = { user: null, mode: null, onSignOut: null, badges: { due: 0, feedback: 0 }, chip: "" };
 const $ = (id) => document.getElementById(id);
 
 export const isTeacherMode = (user) => !!(user && user.isTeacher && !sessionStorage.getItem("asStudent"));
@@ -49,7 +50,7 @@ function navItem(item) {
     return wrap;
   }
   const a = el("a", { href: item.href, class: "navlink", "data-match": item.match.source }, [icon(item.icon), item.label]);
-  if (item.badge) a.append(el("span", { class: "navbadge", hidden: true }));
+  if (item.badge) a.append(el("span", { class: "navbadge", "data-key": item.badge, hidden: true }));
   return a;
 }
 
@@ -57,7 +58,7 @@ function tabItems(nav) {
   return nav.flatMap((n) => n.items ? n.items.map((s) => ({ ...s, match: new RegExp(`^${s.href.replace(/[/#]/g, "\\$&")}`) })) : [n]).slice(0, 5)
     .map((n) => {
       const a = el("a", { href: n.href, "data-match": n.match.source }, [icon(n.icon), el("span", {}, n.short || n.label)]);
-      if (n.badge) a.append(el("span", { class: "navbadge", hidden: true }));
+      if (n.badge) a.append(el("span", { class: "navbadge", "data-key": n.badge, hidden: true }));
       return a;
     });
 }
@@ -96,10 +97,10 @@ function render() {
 
 function applyBadge() {
   document.querySelectorAll(".navbadge").forEach((b) => {
-    b.hidden = !state.due;
-    b.textContent = state.due ? `${state.due} due` : "";
+    const n = state.badges[b.dataset.key] || 0;
+    b.hidden = !n;
+    b.textContent = !n ? "" : b.closest("#tabbar") || b.dataset.key !== "due" ? String(n) : `${n} due`;
   });
-  document.querySelectorAll("#tabbar .navbadge").forEach((b) => { b.textContent = state.due ? String(state.due) : ""; });
 }
 
 function highlight() {
@@ -131,13 +132,15 @@ export function updateChrome() {
 }
 
 export function clearChrome() {
-  state.user = null; state.mode = null; state.chip = ""; state.due = 0;
+  state.user = null; state.mode = null; state.chip = ""; state.badges = { due: 0, feedback: 0 };
   document.body.classList.remove("signed-in", "menu-open");
   $("nav").replaceChildren(); $("user").replaceChildren();
   if ($("tabbar")) $("tabbar").replaceChildren();
 }
 
 /** Number of assignments waiting (shown on Home). */
-export function setDue(n) { state.due = n || 0; applyBadge(); }
+export function setDue(n) { setBadge("due", n); }
+/** Number shown on a nav item ("due" on Home, "feedback" on the teacher's Feedback). */
+export function setBadge(key, n) { state.badges[key] = n || 0; applyBadge(); }
 /** "4A · 132 pts" on the right of the bar (students). */
 export function setChip(text) { if (state.chip === text) return; state.chip = text || ""; if (state.user) render(); }

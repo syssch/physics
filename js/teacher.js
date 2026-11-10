@@ -1,12 +1,13 @@
-import { db, storage, api } from "./fb.js?v=202611102333";
+import { db, storage, api } from "./fb.js?v=202611110744";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611102333";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611102333";
-import { isSchoolEmail } from "./config.js?v=202611102333";
-import { importExplainBundle } from "./explain.js?v=202611102333";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611102333";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611110744";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611110744";
+import { isSchoolEmail } from "./config.js?v=202611110744";
+import { importExplainBundle } from "./explain.js?v=202611110744";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611110744";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611110744";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -28,6 +29,7 @@ export async function teacherHome(user) {
     el("div", { class: "row" }, [
       el("a", { class: "btn primary", href: "#/t/assign" }, "New assignment"),
       el("a", { class: "btn", href: "#/t/class/new" }, "New class"),
+      el("a", { class: "btn", href: "#/t/feedback" }, "Student feedback"),
     ]),
   ]);
   if (!classes.length) page.append(el("p", { class: "muted" }, "No classes yet. Create a class and add your students' school emails."));
@@ -348,7 +350,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611102333");
+      const { buildPaperDocx } = await import("./docx.js?v=202611110744");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -467,9 +469,10 @@ export async function resultsView(user, classId, assignmentId) {
   if (!cSnap.exists() || !aSnap.exists()) return mount(el("p", { class: "error" }, "Not found."));
   const cls = await attachRoster(cSnap.data(), classId), a = aSnap.data();
   const qids = a.questionIds;
-  const [questions, attemptsSnap] = await Promise.all([
+  const [questions, attemptsSnap, fbk] = await Promise.all([
     getQuestions(qids),
     getDocs(query(collection(db, "attempts"), where("assignmentId", "==", assignmentId))),
+    assignmentFeedback(assignmentId).catch((e) => { console.warn(e); return new Map(); }),
   ]);
   const answers = {}, solutions = {};
   for (const part of chunk(qids, 30)) {
@@ -512,6 +515,15 @@ export async function resultsView(user, classId, assignmentId) {
   }
   table.append(el("tr", { class: "foot" }, [el("td", {}, "Correct"), el("td", {}, submitted ? `avg ${(totalScore / submitted).toFixed(1)}` : ""), el("td", {}, `${submitted}/${students.length} submitted`)]
     .concat(qids.map((id, i) => el("td", {}, submitted ? `${pct(correctCount[i], submitted)}%` : "")))));
+  if (fbk.size) {
+    const n = (id, kind) => (fbk.get(id) || []).filter((f) => f.kind === kind).length;
+    table.append(el("tr", { class: "foot fbk-row-count" }, [el("td", {}, "Explain in class"), el("td", {}), el("td", { class: "muted" }, "requests")]
+      .concat(qids.map((id) => el("td", { class: n(id, "explain") ? "fbk-hot" : "" }, n(id, "explain") ? String(n(id, "explain")) : "")))));
+    if (qids.some((id) => n(id, "error"))) {
+      table.append(el("tr", { class: "foot fbk-row-count" }, [el("td", {}, "Problem reports"), el("td", {}), el("td", {})]
+        .concat(qids.map((id) => el("td", { class: n(id, "error") ? "fbk-hot" : "" }, n(id, "error") ? String(n(id, "error")) : "")))));
+    }
+  }
 
   const csv = el("button", { class: "btn small", type: "button" }, "Download CSV");
   csv.addEventListener("click", () => {
@@ -535,6 +547,8 @@ export async function resultsView(user, classId, assignmentId) {
     const bars = el("div", { class: "dist" }, keys.map((k) => el("span", { class: k === answers[q.id] ? "key" : "" }, `${k}: ${d[k] || 0}`)));
     qBox.append(renderQuestion(q, { number: i + 1, review: { answer: answers[q.id], correct: true, solution: solutions[q.id] } }));
     qBox.lastChild.append(el("div", { class: "muted" }, [`Chosen by students — `, bars]));
+    const sum = feedbackSummary(fbk.get(q.id), cls);
+    if (sum) qBox.lastChild.append(sum);
   });
   qBox.querySelectorAll(".fb").forEach((n) => n.remove());
 

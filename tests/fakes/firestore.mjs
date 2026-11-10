@@ -40,7 +40,7 @@ export async function setDoc(ref, data) { const r = resolve(data); checkWrite(re
 export async function addDoc(coll, data) { const ref = doc(coll); await setDoc(ref, data); return ref; }
 export async function updateDoc(ref, data) {
   const cur = fake.store.get(ref.path); if (!cur) throw new Error("not-found " + ref.path);
-  const r = { ...cur, ...resolve(data) }; checkWrite(ref.path, r); fake.store.set(ref.path, r); await after(ref.path, cur);
+  const r = { ...cur, ...resolve(data) }; checkWrite(ref.path, r, "update", cur); fake.store.set(ref.path, r); await after(ref.path, cur);
 }
 export async function deleteDoc(ref) { const b = fake.store.get(ref.path); checkWrite(ref.path, b, "delete"); fake.store.delete(ref.path); await after(ref.path, b); }
 export function writeBatch() {
