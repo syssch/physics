@@ -27,6 +27,7 @@ export async function studentHome(user) {
   page.append(await explainPanel(user));
   // Practice
   page.append(await practicePanel());
+  page.append(mistakesPanel());
   // History
   const hist = el("div", { class: "panel" }, [el("h2", {}, "Recent results")]);
   page.append(hist);
@@ -84,18 +85,45 @@ async function practicePanel() {
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
 }
 
+/** "Redo my mistakes": a practice set of questions answered wrongly (or left blank) last time. */
+function mistakesPanel() {
+  const info = el("p", { class: "muted" }, "Checking your past answers…");
+  const bookSel = el("select", {}, [el("option", { value: "" }, "All books")]);
+  const countSel = el("select", {}, [5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
+  const go = el("button", { class: "btn primary", type: "button", disabled: true }, "Redo my mistakes");
+  const row = el("div", { class: "row" }, [bookSel, countSel, go]);
+  row.style.display = "none";
+  api.startMistakes({ preview: true }).then((r) => {
+    if (!r.available) { info.textContent = "No mistakes to redo right now. Questions you get wrong in practice (and in assignments, once their answers are shown) will appear here."; return; }
+    info.textContent = `${r.available} question${r.available === 1 ? "" : "s"} you got wrong (or left blank) last time. A question leaves this list once you answer it correctly.`;
+    Object.entries(r.byTopic || {}).sort().forEach(([t, n]) => bookSel.append(el("option", { value: t }, `${t} (${n})`)));
+    row.style.display = ""; go.disabled = false;
+  }).catch((e) => { info.textContent = errMsg(e); });
+  go.addEventListener("click", async () => {
+    go.disabled = true;
+    try {
+      const r = await api.startMistakes({ topic: bookSel.value || null, count: Number(countSel.value) });
+      sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
+      sessionStorage.setItem(`session-title-${r.sessionId}`, "Redo my mistakes");
+      location.hash = `#/practice/${r.sessionId}`;
+    } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
+  });
+  return el("div", { class: "panel mistakes" }, [el("h2", {}, "Redo my mistakes"), info, row]);
+}
+
 export async function practiceView(user, sessionId) {
   mount(loading());
-  let ids = null;
+  let ids = null, title = sessionStorage.getItem(`session-title-${sessionId}`) || "Practice";
   try { ids = JSON.parse(sessionStorage.getItem(`session-${sessionId}`)); } catch {}
   if (!ids) {
     const s = await getDoc(doc(db, "sessions", sessionId));
     if (!s.exists()) return mount(el("p", { class: "error" }, "Practice set not found."));
     if (s.data().submitted) { location.hash = `#/review/practice_${sessionId}`; return; }
     ids = s.data().questionIds;
+    if (s.data().title) title = s.data().title;
   }
   await runQuiz({
-    title: "Practice", questionIds: ids, saveKey: `resp-practice-${sessionId}`,
+    title, questionIds: ids, saveKey: `resp-practice-${sessionId}`,
     submit: (responses) => api.submitAnswers({ sessionId, responses }),
   });
 }

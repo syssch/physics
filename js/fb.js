@@ -29,6 +29,7 @@ export { signOut, onAuthStateChanged };
 const call = (name) => async (data) => (await httpsCallable(functions, name)(data)).data;
 export const api = {
   startPractice: call("startPractice"),
+  startMistakes: call("startMistakes"),
   submitAnswers: call("submitAnswers"),
   getReview: call("getReview"),
   rebuildMembers: call("rebuildMembers"),

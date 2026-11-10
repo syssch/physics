@@ -259,6 +259,61 @@ await go("#/history");
 await waitFor(() => byText("h1", "My results"), "history");
 ok($$("table.grid tr").length === 5, "history lists 4 attempts");
 
+console.log("8b. redo my mistakes");
+{
+  // what the server should offer: last visible answer per question is wrong/blank; hidden assignments don't count
+  const canSee = (d) => {
+    if (d.mode !== "assignment") return true;
+    const a = fake.store.get(`classes/${d.classId}/assignments/${d.assignmentId}`);
+    if (!a) return false;
+    if (a.released === true) return true;
+    const mode = a.reveal || "after_submit";
+    return mode === "after_submit" || (mode === "after_due" && (!a.dueAt || a.dueAt.toMillis() <= Date.now()));
+  };
+  const expected = () => {
+    const last = new Map();
+    [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.uid === "s1")
+      .map(([, d]) => d).sort((a, b) => a.submittedAt.toMillis() - b.submittedAt.toMillis())
+      .forEach((d) => { if (canSee(d)) d.questionIds.forEach((q) => last.set(q, (d.responses || {})[q] || "")); });
+    return new Set([...last].filter(([q, r]) => r !== bundle.answers[q]).map(([q]) => q));
+  };
+  const hiddenOnly = new Set();
+  [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.uid === "s1" && !canSee(d)).forEach(([, d]) => d.questionIds.forEach((q) => hiddenOnly.add(q)));
+  expected().forEach((q) => hiddenOnly.delete(q));
+  const openIds = new Set();
+  [...fake.store.entries()].filter(([p, d]) => /^classes\/[^/]+\/assignments\//.test(p) && d.dueAt && d.dueAt.toMillis() > Date.now()
+    && (fake.store.get(p.split("/assignments/")[0]).studentEmails || []).includes("s001@syss.edu.hk")).forEach(([, d]) => d.questionIds.forEach((q) => openIds.add(q)));
+  const pv = await api.startMistakes({ preview: true });
+  const exp = [...expected()].filter((q) => !openIds.has(q));
+  ok(pv.available === exp.length && pv.available > 0, `preview counts the questions to redo (${pv.available})`);
+  ok(Object.values(pv.byTopic).reduce((a, b) => a + b, 0) === pv.available, "preview splits them by book");
+  const r = await api.startMistakes({ count: 20 });
+  ok(r.questionIds.length === Math.min(20, exp.length) && r.questionIds.every((q) => exp.includes(q)), "set contains only questions answered wrongly last time");
+  ok(!r.questionIds.some((q) => openIds.has(q)), "set leaves out questions in open assignments");
+  ok(!r.questionIds.some((q) => hiddenOnly.has(q) && !exp.includes(q)), "answers still hidden in an assignment are not used");
+  const book = Object.keys(pv.byTopic)[0];
+  const rb = await api.startMistakes({ topic: book, count: 20 });
+  ok(rb.questionIds.every((q) => bundle.questions.find((x) => x.id === q).topic === book), "set can be limited to one book");
+  // through the page
+  await go("#/");
+  await waitFor(() => { const b = byText("button", "Redo my mistakes"); return b && !b.disabled; }, "redo button");
+  byText("button", "Redo my mistakes").click();
+  await waitFor(() => byText("h1", "Redo my mistakes") && $$(".qcard").length, "redo quiz page");
+  ok($$(".qcard").length === Math.min(10, pv.available), "redo page shows the set");
+  await go("#/");
+  // answer the set correctly: those questions drop off the list
+  const right = Object.fromEntries(r.questionIds.map((q) => [q, bundle.answers[q]]));
+  const res = await api.submitAnswers({ sessionId: r.sessionId, responses: right });
+  ok(res.score === r.questionIds.length, "redo set is marked like practice");
+  const at = fake.store.get(`attempts/practice_${r.sessionId}`);
+  ok(at.title === "Redo my mistakes" && at.kind === "mistakes", "redo attempt is saved with its own title");
+  const pv2 = await api.startMistakes({ preview: true });
+  ok(pv2.available === pv.available - r.questionIds.length, "questions answered correctly leave the list");
+  await go("#/history"); await go("#/");
+  await waitFor(() => byText(".mistakes p", "No mistakes to redo"), "empty redo panel");
+  ok($(".mistakes .row").style.display === "none", "nothing to redo: the panel says so and hides the button");
+}
+
 console.log("9. second student + teacher results");
 fake.setUser(S2); await sleep(50); await go("#/");
 await waitFor(() => byText("a.btn", "Start"), "s2 home");

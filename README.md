@@ -140,6 +140,11 @@ updates itself whenever a class is saved or deleted.
 - *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
+- *Redo my mistakes*: a practice set (5–20 questions, optionally one book) made of the questions the student got wrong
+  or left blank the last time they answered them. A question leaves the list once it is answered correctly. Only results
+  whose answers the student can already see count (an assignment with hidden answers adds nothing until it is released),
+  and questions in open assignments are left out. Built by the `startMistakes` Cloud Function from the student's
+  `attempts`; the redo attempt is saved like practice, titled "Redo my mistakes".
 - *My results*: every past attempt, with a review page for each.
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'
   comments. Home shows a *card of the day* (the first unread card in the student's chosen chapters; it stays the same all

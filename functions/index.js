@@ -181,6 +181,65 @@ exports.startPractice = onCall(async (request) => {
 });
 
 /**
+ * "Redo my mistakes": a practice set made of questions the student got wrong (or left blank) the last
+ * time they answered them. Only attempts whose answers the student may already see count, so an
+ * assignment whose answers are still hidden gives nothing away. Questions in open assignments stay out.
+ *   { count?, topic?, preview? }  preview: just return how many questions are waiting (overall and per book).
+ */
+exports.startMistakes = onCall(async (request) => {
+  const user = await requireMember(request);
+  const data = request.data || {};
+  const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt(data.count, 10) || 10));
+
+  const snap = await db.collection("attempts").where("uid", "==", user.uid).get();
+  const atts = snap.docs.map((d) => d.data())
+    .sort((a, b) => ((a.submittedAt && a.submittedAt.toMillis ? a.submittedAt.toMillis() : 0) -
+                     (b.submittedAt && b.submittedAt.toMillis ? b.submittedAt.toMillis() : 0)));
+  const asgCache = new Map();
+  const latest = new Map();          // question id -> the student's most recent visible response ("" = blank)
+  for (const a of atts) {
+    if (a.mode === "assignment") {
+      const key = `${a.classId}/${a.assignmentId}`;
+      if (!asgCache.has(key)) asgCache.set(key, await db.doc(`classes/${a.classId}/assignments/${a.assignmentId}`).get());
+      const asg = asgCache.get(key);
+      if (!asg.exists || !canReveal(asg)) continue;
+    }
+    for (const q of a.questionIds || []) latest.set(q, (a.responses || {})[q] || "");
+  }
+  const { answers } = await loadKeys([...latest.keys()]);
+  let wrong = [...latest.keys()].filter((q) => answers[q] && latest.get(q) !== answers[q]);
+
+  // only questions still on the platform; book (topic) from the practice index
+  const idx = await db.doc("meta/questionIndex").get();
+  let ix = null;
+  if (idx.exists && typeof idx.get("data") === "string") { try { ix = JSON.parse(idx.get("data")); } catch (e) { ix = null; } }
+  else if (idx.exists && idx.get("questions")) ix = idx.get("questions");
+  if (!ix && wrong.length) {        // older data without the index: read just these questions
+    ix = {};
+    (await db.getAll(...wrong.map((q) => db.doc(`questions/${q}`)))).forEach((d) => {
+      if (d.exists && d.get("active") !== false) ix[d.id] = { t: d.get("topic") };
+    });
+  }
+  if (ix) wrong = wrong.filter((q) => ix[q]);
+  const blocked = await openAssignmentQuestionIds(user.email);
+  wrong = wrong.filter((q) => !blocked.has(q));
+
+  if (data.preview) {
+    const byTopic = {};
+    if (ix) wrong.forEach((q) => { const t = ix[q].t || "Other"; byTopic[t] = (byTopic[t] || 0) + 1; });
+    return { available: wrong.length, byTopic };
+  }
+  const pool = data.topic && ix ? wrong.filter((q) => ix[q].t === String(data.topic)) : wrong;
+  if (!pool.length) throw new HttpsError("not-found", "No mistakes to redo right now. Well done!");
+  const questionIds = shuffle(pool).slice(0, count);
+  const ref = await db.collection("sessions").add({
+    uid: user.uid, email: user.email, mode: "mistakes", title: "Redo my mistakes",
+    topic: data.topic ? String(data.topic) : null, questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
+  });
+  return { sessionId: ref.id, questionIds, available: wrong.length };
+});
+
+/**
  * Submit answers.
  *   practice:   { sessionId, responses }
  *   assignment: { classId, assignmentId, responses }
@@ -198,7 +257,10 @@ exports.submitAnswers = onCall(async (request) => {
     if (s.get("submitted")) throw new HttpsError("failed-precondition", "This practice set was already submitted.");
     questionIds = s.get("questionIds");
     attemptRef = db.doc(`attempts/practice_${data.sessionId}`);
-    meta = { mode: "practice", sessionId: data.sessionId, title: s.get("topic") ? `Practice: ${s.get("topic")}` : "Practice: mixed topics" };
+    meta = { mode: "practice", sessionId: data.sessionId,
+             title: s.get("title") ? s.get("title") + (s.get("topic") ? `: ${s.get("topic")}` : "")
+               : s.get("topic") ? `Practice: ${s.get("topic")}` : "Practice: mixed topics" };
+    if (s.get("mode") === "mistakes") meta.kind = "mistakes";
     reveal = true;
     await sRef.update({ submitted: true });
   } else if (data.classId && data.assignmentId) {
