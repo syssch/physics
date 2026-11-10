@@ -93,7 +93,7 @@ export async function practisePage(user) {
 
 /** Leaderboard page for the student's form. */
 export async function leaderboardPage(user) {
-  mount(el("section", {}, [el("h1", {}, "Leaderboard"), leaderboardPanel()]));
+  mount(el("section", {}, [el("h1", {}, "Leaderboard"), leaderboardPanel(user)]));
 }
 
 /** Top-bar status for students: assignments waiting, and "4A · 132 pts". */
@@ -118,27 +118,40 @@ const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All ti
 export const POINTS_HELP = "Points come from practice sets (including Redo my mistakes): 1 point per correct answer, plus a bonus for sets of 5 or more questions — +5 for 90% or more correct, +2 for 75–89%. Assignments don't count.";
 
 /** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
-function leaderboardPanel() {
+function leaderboardPanel(user) {
   const head = el("h2", {}, "Leaderboard");
   const tabs = el("div", { class: "tabs" });
   const body = el("div", {}, el("p", { class: "muted" }, "Loading…"));
-  const panel = el("div", { class: "panel leaderboard" }, [head, tabs, body, el("p", { class: "muted small" }, POINTS_HELP)]);
-  async function show(period) {
+  // teachers previewing the student view have no form of their own: let them pick one
+  const formSel = user && user.isTeacher
+    ? el("select", { "aria-label": "Form" }, ["F3", "F4", "F5", "F6"].map((f) => el("option", { value: f, selected: f === (localStorage.getItem("lbForm") || "F4") }, f)))
+    : null;
+  const panel = el("div", { class: "panel leaderboard" }, [head, el("div", { class: "row" }, [tabs, formSel]), body, el("p", { class: "muted small" }, POINTS_HELP)]);
+  let period = "week";
+  async function show(p) {
+    period = p;
     [...tabs.children].forEach((b) => b.classList.toggle("on", b.dataset.p === period));
     body.replaceChildren(el("p", { class: "muted" }, "Loading…"));
     try {
-      const r = await api.getLeaderboard({ period });
-      if (!r.form) { panel.remove(); return; }
-      head.textContent = `${r.form} leaderboard`;
-      if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${period === "week" ? "this week" : "this month"} — be the first!`)); return; }
+      if (formSel) { try { localStorage.setItem("lbForm", formSel.value); } catch (e) {} }
+      const r = await api.getLeaderboard(formSel ? { period, form: formSel.value } : { period });
+      if (!r.form) {
+        head.textContent = "Leaderboard";
+        body.replaceChildren(el("p", { class: "muted" }, "The leaderboard is by form (F3–F6), worked out from your class name — but none of your classes starts with a form number (like 4A). Ask your physics teacher to check your class."));
+        return;
+      }
+      head.textContent = `${r.form} leaderboard` + (formSel ? " (teacher preview: what students see)" : "");
+      const rows = r.rows.slice(0, 10);
+      if (!rows.length) { body.replaceChildren(el("p", { class: "muted" }, period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${period === "week" ? "this week" : "this month"} — be the first!`)); return; }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points"].map((h) => el("th", {}, h)))]);
-      r.rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
-      const mine = r.me ? (r.rows.some((x) => x.me) ? null : el("p", {}, `You: #${r.me.rank} of ${r.total}, ${r.me.pts} points`))
+      rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
+      const mine = formSel ? null : r.me ? (rows.some((x) => x.me) ? null : el("p", {}, `You: #${r.me.rank} of ${r.total}, ${r.me.pts} points`))
         : el("p", { class: "muted" }, "You have no points in this period yet.");
       body.replaceChildren(t, ...(mine ? [mine] : []));
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }
-  PERIODS.forEach(([p, label]) => { const b = el("button", { class: "tab", type: "button", "data-p": p, onclick: () => show(p) }, label); tabs.append(b); });
+  PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => show(p) }, label)));
+  if (formSel) formSel.addEventListener("change", () => show(period));
   show("week");
   return panel;
 }
