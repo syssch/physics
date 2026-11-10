@@ -253,7 +253,74 @@ export function htmlToBlocks(html) {
     }
   }
   walk(doc.body.firstChild, {});
-  return blocks.filter((b) => b.kind === "img" || b.items.some((x) => x.br || x.math || (x.text && x.text.trim())));
+  blocks.forEach((b) => { if (b.items) b.items = radicals(b.items); });
+  return blocks.filter((b) => b.kind === "img" || b.items.some((x) => x.br || x.math || x.omml || (x.text && x.text.trim())));
+}
+
+
+/** Formatted text items (italic letters, subscripts, superscripts) -> OMML. */
+function itemsToOmml(items) {
+  const out = [];
+  for (const x of items) {
+    if (x.math !== undefined) { out.push(latexToOmml(x.math)); continue; }
+    if (x.text === undefined || x.text === "") continue;
+    const t = x.text.replace(/\s+/g, " ");
+    if ((x.sub || x.sup) && out.length) {
+      const base = out.pop();
+      out.push(x.sub ? `<m:sSub><m:e>${base}</m:e><m:sub>${mrun(t, "p")}</m:sub></m:sSub>` : `<m:sSup><m:e>${base}</m:e><m:sup>${mrun(t, "p")}</m:sup></m:sSup>`);
+    } else out.push(mrun(t, x.i ? undefined : "p"));
+  }
+  return out.join("");
+}
+const radXml = (inner) => `<m:rad><m:radPr><m:degHide m:val="1"/></m:radPr><m:deg/><m:e>${inner}</m:e></m:rad>`;
+
+/**
+ * Plain-text square roots written as "√2", "√(GM/R)" or "√<em>v</em><sub>1</sub>" become Word equations.
+ */
+function radicals(items) {
+  const out = [];
+  const q = items.map((x) => ({ ...x }));
+  while (q.length) {
+    const x = q.shift();
+    const k = x.text !== undefined && !x.sub && !x.sup ? x.text.indexOf("√") : -1;
+    if (k < 0) { out.push(x); continue; }
+    if (k > 0) out.push({ ...x, text: x.text.slice(0, k) });
+    let post = x.text.slice(k + 1);
+    const rad = [];
+    if (post.startsWith("(")) {                      // √( ... ) — may run across several items
+      let depth = 0, done = false;
+      let cur = { ...x, text: post }, src = [cur, ...q.splice(0)];
+      const rest = [];
+      for (let n = 0; n < src.length; n++) {
+        const it = src[n];
+        if (done || it.text === undefined) { (done ? rest : rad).push(it); continue; }
+        let j = 0, buf = "";
+        for (; j < it.text.length; j++) {
+          const ch = it.text[j];
+          if (ch === "(") { if (depth++ === 0) continue; }
+          else if (ch === ")") { if (--depth === 0) { done = true; break; } }
+          buf += ch;
+        }
+        if (buf) rad.push({ ...it, text: buf });
+        if (done && j + 1 < it.text.length) rest.push({ ...it, text: it.text.slice(j + 1) });
+      }
+      out.push({ omml: radXml(itemsToOmml(rad)) });
+      q.push(...rest);
+      continue;
+    }
+    const m = /^([0-9.]+|[A-Za-z])/.exec(post);
+    if (m) { rad.push({ ...x, text: m[1] }); post = post.slice(m[1].length); }
+    else if (!post.trim() && q.length && q[0].text !== undefined && q[0].text.trim()) {
+      const nx = q.shift(); const mm = /^\s*([0-9.]+|[A-Za-z]+)/.exec(nx.text);
+      if (mm) { rad.push({ ...nx, text: mm[1] }); const r = nx.text.slice(mm[0].length); if (r) q.unshift({ ...nx, text: r }); }
+      else q.unshift(nx);
+    }
+    if (rad.length && !post && q.length && (q[0].sub || q[0].sup)) rad.push(q.shift());   // √v₁
+    if (!rad.length) { out.push({ ...x, text: "√" + post }); continue; }
+    out.push({ omml: radXml(itemsToOmml(rad)) });
+    if (post) q.unshift({ ...x, text: post });
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------ document builder
@@ -266,6 +333,7 @@ class DocBuilder {
     return items.map((x) => {
       if (x.br) return "<w:r><w:br/></w:r>";
       if (x.math !== undefined) return `<m:oMath>${latexToOmml(x.math)}</m:oMath>`;
+      if (x.omml !== undefined) return `<m:oMath>${x.omml}</m:oMath>`;
       if (x.tab) return "<w:r><w:tab/></w:r>";
       const pr = (x.b ? "<w:b/>" : "") + (x.i ? "<w:i/>" : "") + (x.u ? '<w:u w:val="single"/>' : "") +
         (x.sup ? '<w:vertAlign w:val="superscript"/>' : x.sub ? '<w:vertAlign w:val="subscript"/>' : "") + (x.size ? `<w:sz w:val="${x.size}"/>` : "");
