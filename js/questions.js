@@ -144,7 +144,7 @@ export async function getTopics() {
 }
 
 const figUrls = new Map();
-function figureImg(name) {
+export function figureImg(name) {
   const img = el("img", { class: "figure", alt: "Figure for this question" });
   const url = figUrls.get(name) || getDownloadURL(ref(storage, `figures/${name}`));
   figUrls.set(name, url);
@@ -218,4 +218,33 @@ export function renderQuestion(q, opts = {}) {
     }
   }
   return card;
+}
+
+/**
+ * Static rendering of one question for a printed paper (no buttons, compact options).
+ * opts: { showSource }
+ */
+export function renderPrintQuestion(q, number, opts = {}) {
+  const box = el("div", { class: "pq" });
+  box.append(el("div", { class: "pq-head" }, [el("span", { class: "pq-num" }, `${number}.`),
+    el("div", { class: "pq-text", html: q.textHtml || "" }),
+    opts.showSource ? el("span", { class: "pq-src" }, sourceLabel(q)) : null]));
+  const figs = el("div", { class: "pq-figs" }, (q.figures || []).map((f) => figureImg(f)));
+  if ((q.figures || []).length) box.append(figs);
+  const keys = q.optionKeys || ["A", "B", "C", "D"];
+  if (q.optionsType === "table" && q.optionsHtml && q.optionsHtml.rows) {
+    const t = el("table", { class: "pq-table" });
+    t.append(el("tr", {}, [el("th", {}, "")].concat((q.optionsHtml.headers || []).map((h) => el("th", { html: h })))));
+    keys.forEach((k) => t.append(el("tr", {}, [el("td", { class: "pq-key" }, k)].concat(((q.optionsHtml.rows || {})[k] || []).map((c) => el("td", { html: c }))))));
+    box.append(t);
+  } else {
+    const texts = keys.map((k) => (q.optionsHtml || {})[k] || "");
+    const plain = texts.map((h) => h.replace(/<[^>]+>/g, "").replace(/\$[^$]*\$/g, "xxxx").trim());
+    const hasImg = texts.some((h) => /<img|<table/i.test(h));
+    const longest = Math.max(...plain.map((t) => t.length));
+    const cols = hasImg ? 2 : longest <= 12 ? 4 : longest <= 32 ? 2 : 1;
+    box.append(el("div", { class: `pq-opts cols${cols}` }, keys.map((k, i) =>
+      el("div", { class: "pq-opt" }, [el("span", { class: "pq-key" }, `${k}.`), el("span", { html: texts[i] })]))));
+  }
+  return box;
 }

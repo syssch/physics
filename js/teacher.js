@@ -3,7 +3,7 @@ import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, sourceLabel } from "./questions.js";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js";
 import { isSchoolEmail } from "./config.js";
 import { importExplainBundle } from "./explain.js";
 import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js";
@@ -29,6 +29,7 @@ export async function teacherHome(user) {
       el("a", { class: "btn primary", href: "#/t/assign" }, "New assignment"),
       el("a", { class: "btn", href: "#/t/class/new" }, "New class"),
       el("a", { class: "btn", href: "#/t/bank" }, "Browse questions"),
+      el("a", { class: "btn", href: "#/t/paper" }, "Printable paper"),
       el("a", { class: "btn", href: "#/t/explain" }, "Explain reading"),
       el("a", { class: "btn", href: "#/t/admin" }, "Admin"),
     ]),
@@ -48,7 +49,8 @@ export async function teacherHome(user) {
     else {
       const t = el("table", { class: "grid" }, [el("tr", {}, ["Assignment", "Questions", "Due", ""].map((h) => el("th", {}, h)))]);
       asg.forEach((a) => t.append(el("tr", {}, [el("td", {}, a.title), el("td", {}, String(a.questionIds.length)),
-        el("td", {}, fmtDate(a.dueAt)), el("td", {}, el("a", { href: `#/t/results/${c.id}/${a.id}` }, "Results"))])));
+        el("td", {}, fmtDate(a.dueAt)), el("td", {}, [el("a", { href: `#/t/results/${c.id}/${a.id}` }, "Results"), " · ",
+          el("a", { href: `#/t/paper/${c.id}/${a.id}`, title: "Make a printable paper from this assignment" }, "Print")])])));
       box.append(t);
     }
     page.append(box);
@@ -160,34 +162,24 @@ export async function bankView(user) {
   draw();
 }
 
-// ---------------------------------------------------------------- assignment builder
-export async function assignmentBuilder(user, presetClassId) {
-  mount(loading());
-  const [classes, questions, topics, books] = await Promise.all([listClasses(), getAllQuestions(), getTopics(), getBooks()]);
-  if (!classes.length) return mount(el("section", {}, [el("p", {}, "Create a class first."), el("a", { class: "btn", href: "#/t/class/new" }, "New class")]));
-  const selected = [];
-  const classSel = el("select", {}, classes.map((c) => el("option", { value: c.id, selected: c.id === presetClassId }, c.name)));
-  const title = el("input", { type: "text", placeholder: "e.g. Kinematics homework 1" });
-  const due = new Date(); due.setDate(due.getDate() + 7); due.setHours(23, 59, 0, 0);
-  const pad = (n) => String(n).padStart(2, "0");
-  const dueInput = el("input", { type: "datetime-local",
-    value: `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}` });
-  const reveal = el("select", {}, [el("option", { value: "after_submit" }, "Show answers & solutions right after submitting"),
-    el("option", { value: "after_due" }, "Show answers & solutions after the due date"),
-    el("option", { value: "manual" }, "Hide until I release them")]);
-
+// Question picker shared by the assignment builder and the paper builder: filters, list with previews,
+// "add random", and the ordered list of selected questions (can be reordered).
+function questionPicker(questions, topics, books, selected) {
   const selBox = el("ol", { class: "sellist" });
   const selCount = el("strong", {});
   const listBox = el("div", { class: "picklist" });
   const shown = el("p", { class: "muted" });
   const f = questionFilters(questions, topics, () => drawList(), books);
   const randN = el("input", { type: "number", min: 1, max: 40, value: 5, style: "width:5em" });
+  const move = (i, d) => { const j = i + d; if (j < 0 || j >= selected.length) return; [selected[i], selected[j]] = [selected[j], selected[i]]; drawSelected(); };
 
   function drawSelected() {
     selCount.textContent = `${selected.length} selected`;
-    selBox.replaceChildren(...selected.map((id) => {
+    selBox.replaceChildren(...selected.map((id, i) => {
       const q = questions.find((x) => x.id === id);
-      return el("li", {}, [el("span", {}, `${q.topic} · ${sourceLabel(q)} `),
+      return el("li", {}, [el("span", {}, q ? `${q.topic} · ${sourceLabel(q)} ` : `${id} `),
+        el("button", { class: "linkbtn", type: "button", title: "Move up", onclick: () => move(i, -1) }, "↑"),
+        el("button", { class: "linkbtn", type: "button", title: "Move down", onclick: () => move(i, 1) }, "↓"),
         el("button", { class: "linkbtn", type: "button", onclick: () => { selected.splice(selected.indexOf(id), 1); drawSelected(); drawList(); } }, "remove")]);
     }));
   }
@@ -223,6 +215,34 @@ export async function assignmentBuilder(user, presetClassId) {
     selected.push(...pool.slice(0, Number(randN.value) || 5));
     drawSelected(); drawList();
   });
+  drawSelected(); drawList();
+  return {
+    drawSelected, drawList,
+    layout: (...actions) => el("div", { class: "builder" }, [
+      el("div", { class: "panel" }, [el("h2", {}, "Choose questions"), f.node,
+        el("div", { class: "row" }, [shown, randN, randBtn]), listBox]),
+      el("div", { class: "panel sticky" }, [el("h2", {}, ["Selected ", selCount]), selBox, ...actions]),
+    ]),
+  };
+}
+
+// ---------------------------------------------------------------- assignment builder
+export async function assignmentBuilder(user, presetClassId) {
+  mount(loading());
+  const [classes, questions, topics, books] = await Promise.all([listClasses(), getAllQuestions(), getTopics(), getBooks()]);
+  if (!classes.length) return mount(el("section", {}, [el("p", {}, "Create a class first."), el("a", { class: "btn", href: "#/t/class/new" }, "New class")]));
+  const selected = [];
+  const classSel = el("select", {}, classes.map((c) => el("option", { value: c.id, selected: c.id === presetClassId }, c.name)));
+  const title = el("input", { type: "text", placeholder: "e.g. Kinematics homework 1" });
+  const due = new Date(); due.setDate(due.getDate() + 7); due.setHours(23, 59, 0, 0);
+  const pad = (n) => String(n).padStart(2, "0");
+  const dueInput = el("input", { type: "datetime-local",
+    value: `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}` });
+  const reveal = el("select", {}, [el("option", { value: "after_submit" }, "Show answers & solutions right after submitting"),
+    el("option", { value: "after_due" }, "Show answers & solutions after the due date"),
+    el("option", { value: "manual" }, "Hide until I release them")]);
+
+  const pk = questionPicker(questions, topics, books, selected);
 
   const save = el("button", { class: "btn primary", type: "button" }, "Create assignment");
   save.addEventListener("click", async () => {
@@ -247,13 +267,127 @@ export async function assignmentBuilder(user, presetClassId) {
       el("label", {}, ["Class", classSel]), el("label", {}, ["Title", title]),
       el("label", {}, ["Due", dueInput]), el("label", {}, ["Answers & solutions", reveal]),
     ]),
-    el("div", { class: "builder" }, [
-      el("div", { class: "panel" }, [el("h2", {}, "Choose questions"), f.node,
-        el("div", { class: "row" }, [shown, randN, randBtn]), listBox]),
-      el("div", { class: "panel sticky" }, [el("h2", {}, ["Selected ", selCount]), selBox, save]),
-    ]),
+    pk.layout(save),
   ]));
-  drawSelected(); drawList();
+}
+
+// ---------------------------------------------------------------- printable paper
+/**
+ * Paper builder: pick questions (or start from an assignment), set the cover details and what to include,
+ * then preview a print layout and print it / save it as PDF from the browser. Nothing is saved.
+ */
+export async function paperBuilder(user, classId, assignmentId) {
+  mount(loading());
+  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks()]);
+  const selected = [];
+  const title = el("input", { type: "text", placeholder: "e.g. F.5 Physics Quiz 1 — Electricity" });
+  const subtitle = el("input", { type: "text", placeholder: "e.g. Multiple-choice questions (optional)" });
+  const minutes = el("input", { type: "number", min: 0, max: 300, placeholder: "minutes", style: "width:7em" });
+  if (classId && assignmentId) {
+    const a = await getDoc(doc(db, "classes", classId, "assignments", assignmentId));
+    if (a.exists()) { selected.push(...(a.data().questionIds || [])); title.value = a.data().title || ""; }
+  }
+  const box = (label, on, hint) => {
+    const i = el("input", { type: "checkbox", checked: on });
+    return { input: i, node: el("label", { class: "check", title: hint || "" }, [i, " " + label]) };
+  };
+  const opt = {
+    nameLines: box("Name / Class / No. lines", true),
+    answerGrid: box("Answer boxes on the first page", true),
+    source: box("Show each question's source paper", false),
+    key: box("Answer key (separate page)", true),
+    solutions: box("Worked solutions (separate pages)", false),
+    shuffle: box("Shuffle question order", false, "A new order each time you press Preview"),
+  };
+  const pk = questionPicker(questions, topics, books, selected);
+  const previewBtn = el("button", { class: "btn primary", type: "button" }, "Preview & print");
+  const editor = el("section", {}, [
+    el("h1", {}, "Printable paper"),
+    el("p", { class: "muted" }, "Choose questions, then preview the paper and print it or save it as a PDF. Nothing is saved on the platform."),
+    el("div", { class: "formgrid" }, [
+      el("label", {}, ["Title", title]), el("label", {}, ["Subtitle", subtitle]),
+      el("label", {}, ["Time allowed", minutes]),
+    ]),
+    el("div", { class: "row paperopts" }, Object.values(opt).map((o) => o.node)),
+    pk.layout(previewBtn),
+  ]);
+  previewBtn.addEventListener("click", async () => {
+    if (!selected.length) return toast("Pick at least one question.", "error");
+    previewBtn.disabled = true;
+    try {
+      const ids = [...selected];
+      if (opt.shuffle.input.checked) for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+      if (opt.key.input.checked || opt.solutions.input.checked) await loadKeys(ids);
+      const byId = new Map(questions.map((q) => [q.id, q]));
+      const qs = ids.map((id) => byId.get(id)).filter(Boolean);
+      showPaper({
+        title: title.value.trim() || "Physics — Multiple-choice questions", subtitle: subtitle.value.trim(),
+        minutes: Number(minutes.value) || 0, questions: qs,
+        nameLines: opt.nameLines.input.checked, answerGrid: opt.answerGrid.input.checked, source: opt.source.input.checked,
+        key: opt.key.input.checked, solutions: opt.solutions.input.checked,
+      }, () => { document.body.classList.remove("printmode"); mount(editor); });
+    } catch (e) { toast(errMsg(e), "error"); }
+    previewBtn.disabled = false;
+  });
+  mount(editor);
+}
+
+function letterGrid(n, fill) {
+  const t = el("table", { class: "paper-grid" });
+  for (let r = 0; r < n; r += 10) {
+    const nums = el("tr", {}), cells = el("tr", {});
+    for (let i = r; i < Math.min(n, r + 10); i++) { nums.append(el("th", {}, String(i + 1))); cells.append(el("td", {}, fill ? fill(i) : "")); }
+    t.append(nums, cells);
+  }
+  return t;
+}
+
+/** The print layout. cfg: { title, subtitle, minutes, questions, nameLines, answerGrid, source, key, solutions } */
+export function showPaper(cfg, onBack) {
+  const qs = cfg.questions;
+  const printBtn = el("button", { class: "btn primary", type: "button" }, "Print / Save as PDF");
+  const back = el("button", { class: "btn", type: "button", onclick: onBack }, "← Back to edit");
+  const bar = el("div", { class: "printbar noprint" }, [back, printBtn,
+    el("span", { class: "muted" }, "In the print dialog choose \"Save as PDF\" to keep a copy; turning off \"Headers and footers\" gives a cleaner page.")]);
+  const paper = el("div", { class: "paper" });
+  paper.append(el("div", { class: "paper-cover" }, [
+    el("div", { class: "paper-school" }, "Sing Yin Secondary School · Physics"),
+    el("h1", { class: "paper-title" }, cfg.title),
+    cfg.subtitle ? el("div", { class: "paper-sub" }, cfg.subtitle) : null,
+    el("div", { class: "paper-meta" }, [`${qs.length} question${qs.length === 1 ? "" : "s"}`, cfg.minutes ? ` · Time allowed: ${cfg.minutes} minutes` : ""].join("")),
+    cfg.nameLines ? el("div", { class: "paper-name" }, ["Name", "Class", "No.", "Date"].map((k) => el("span", {}, [k + ": ", el("i", {})]))) : null,
+    el("p", { class: "paper-instr" }, "Choose the best answer for each question." + (cfg.answerGrid ? " Write your answers in the boxes below." : "")),
+    cfg.answerGrid ? letterGrid(qs.length) : null,
+  ]));
+  qs.forEach((q, i) => paper.append(renderPrintQuestion(q, i + 1, { showSource: cfg.source })));
+  paper.append(el("p", { class: "paper-end" }, "— END OF PAPER —"));
+  if (cfg.key) {
+    paper.append(el("section", { class: "paper-key pagebreak" }, [el("h2", {}, `Answer key — ${cfg.title}`),
+      letterGrid(qs.length, (i) => (keyCache.get(qs[i].id) || {}).answer || "—"),
+      cfg.source ? el("ol", { class: "paper-srclist" }, qs.map((q) => el("li", {}, sourceLabel(q)))) : null]));
+  }
+  if (cfg.solutions) {
+    const sec = el("section", { class: "paper-sols pagebreak" }, [el("h2", {}, `Worked solutions — ${cfg.title}`)]);
+    qs.forEach((q, i) => {
+      const k = keyCache.get(q.id) || {};
+      sec.append(el("div", { class: "paper-sol" }, [el("div", { class: "paper-sol-head" }, `${i + 1}. Answer: ${k.answer || "—"}`),
+        k.solution ? el("div", { class: "soltext", html: k.solution }) : el("p", { class: "muted" }, "No worked solution yet.")]));
+    });
+    paper.append(sec);
+  }
+  printBtn.addEventListener("click", async () => {
+    printBtn.disabled = true;
+    const imgs = [...paper.querySelectorAll("img")];
+    await Promise.race([Promise.all(imgs.map((im) => im.complete && im.src ? null : new Promise((r) => { im.addEventListener("load", r, { once: true }); im.addEventListener("error", r, { once: true }); }))),
+      new Promise((r) => setTimeout(r, 8000))]);
+    if (window.MathJax?.typesetPromise) await window.MathJax.typesetPromise([paper]).catch(() => {});
+    printBtn.disabled = false;
+    window.print();
+  });
+  document.body.classList.add("printmode");
+  mount(el("div", {}, [bar, paper]));
+  typeset(paper);
+  window.scrollTo(0, 0);
 }
 
 // ---------------------------------------------------------------- results

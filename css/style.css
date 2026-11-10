@@ -7,3 +7,58 @@
 /* teacher question bank: "Show answers & solutions" toggle */
 label.check { display:inline-flex; flex-direction:row; align-items:center; gap:.4rem; margin:.5rem 0; font-weight:600; cursor:pointer; }
 label.check input { width:auto; margin:0; }
+/* printable paper (teacher) */
+.paperopts { margin:.4rem 0 .8rem; gap:.2rem 1.2rem; }
+.printbar { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; margin:0 0 1rem; }
+.printbar .muted { font-size:.9em; }
+.paper { background:#fff; color:#000; max-width:800px; margin:0 auto; padding:2rem 2.2rem; border:1px solid var(--line);
+  font-family:"Times New Roman", Times, "Noto Serif TC", serif; font-size:15px; line-height:1.45; }
+.paper-cover { border-bottom:1.5px solid #000; padding-bottom:.8rem; margin-bottom:1rem; }
+.paper-school { text-align:center; font-size:.95em; letter-spacing:.03em; }
+.paper-title { text-align:center; font-size:1.45em; margin:.2rem 0; }
+.paper-sub, .paper-meta { text-align:center; }
+.paper-meta { font-size:.95em; margin-bottom:.6rem; }
+.paper-name { display:flex; gap:1.2rem; margin:.8rem 0 .4rem; }
+.paper-name span { flex:1; display:flex; align-items:flex-end; white-space:nowrap; }
+.paper-name span:nth-child(2), .paper-name span:nth-child(3) { flex:.5; }
+.paper-name i { flex:1; border-bottom:1px solid #000; margin-left:.3rem; height:1.1em; }
+.paper-instr { margin:.6rem 0 .4rem; font-style:italic; }
+table.paper-grid { border-collapse:collapse; margin:.3rem 0 .4rem; }
+table.paper-grid th, table.paper-grid td { border:1px solid #000; width:2.6em; text-align:center; padding:1px 0; font-weight:normal; }
+table.paper-grid th { font-size:.8em; background:#f2f2f2; }
+table.paper-grid td { height:1.8em; font-weight:bold; }
+.pq { break-inside:avoid; page-break-inside:avoid; margin:0 0 1.1rem; }
+.pq-head { display:flex; gap:.5rem; align-items:baseline; }
+.pq-num { font-weight:bold; min-width:1.8em; }
+.pq-text { flex:1; }
+.pq-text p { margin:0 0 .3rem; }
+.pq-src { font-size:.75em; color:#555; white-space:nowrap; }
+.pq-figs { margin:.3rem 0 .3rem 2.3em; }
+.pq-figs img.figure { max-width:min(75%, 380px); max-height:230px; margin:.2rem 0; }
+.pq-opts { display:grid; gap:.15rem 1rem; margin-left:2.3em; }
+.pq-opts.cols4 { grid-template-columns:repeat(4, 1fr); }
+.pq-opts.cols2 { grid-template-columns:repeat(2, 1fr); }
+.pq-opts.cols1 { grid-template-columns:1fr; }
+.pq-opt { display:flex; gap:.4rem; align-items:baseline; }
+.pq-opt p { margin:0; }
+.pq-key { font-weight:bold; }
+table.pq-table { border-collapse:collapse; margin:.2rem 0 0 2.3em; }
+table.pq-table th, table.pq-table td { padding:1px 12px; text-align:left; }
+table.pq-table th { font-weight:normal; border-bottom:1px solid #000; }
+.paper-end { text-align:center; margin:1.4rem 0 0; font-weight:bold; letter-spacing:.05em; }
+.pagebreak { break-before:page; page-break-before:always; margin-top:2rem; border-top:2px dashed #bbb; padding-top:1rem; }
+.paper h2 { font-size:1.15em; }
+.paper-srclist { columns:2; font-size:.85em; }
+.paper-sol { break-inside:avoid; margin:0 0 1rem; }
+.paper-sol-head { font-weight:bold; }
+.paper-sol .soltext p { margin:.2rem 0; }
+.paper-sol .why-not { color:#333; font-size:.95em; }
+.paper-sol .sol-fig img { max-height:240px; max-width:100%; margin:.2rem .6rem .2rem 0; vertical-align:top; }
+@media print {
+  @page { size:A4; margin:15mm 14mm; }
+  body.printmode .topbar, body.printmode .noprint, body.printmode #toast { display:none !important; }
+  body.printmode { background:#fff; }
+  body.printmode main { padding:0; max-width:none; margin:0; }
+  body.printmode .paper { border:none; padding:0; max-width:none; }
+  body.printmode .pagebreak { border-top:none; margin-top:0; padding-top:0; }
+}

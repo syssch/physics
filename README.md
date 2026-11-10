@@ -133,6 +133,11 @@ updates itself whenever a class is saved or deleted.
   *Check access* tells you whether a given student can sign in. At the start of a new school year, paste the
   new lists with "Replace" (and delete classes that no longer exist) so leavers lose access.
 - *Admin*: also add or remove teachers, and import questions and Explain cards.
+- *Printable paper*: pick questions (same filters as the assignment builder, with "add random" and ↑/↓ to reorder),
+  or click *Print* beside any assignment on the dashboard to start from its questions. Set a title, subtitle and time
+  allowed, and choose: Name/Class/No. lines, answer boxes, each question's source, an answer key page, worked
+  solutions pages, shuffled order. *Preview & print* shows an A4 layout; print it or choose "Save as PDF" in the print
+  dialog. Nothing is saved on the platform.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
 **Students**:

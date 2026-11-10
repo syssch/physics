@@ -4,7 +4,7 @@ import { el, mount, toast, errMsg } from "./ui.js";
 import { isSchoolEmail } from "./config.js";
 import { studentHome, practiceView, doAssignment, reviewView, historyView } from "./student.js";
 import { explainLibrary, explainCard, explainProgressView } from "./explain.js";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView } from "./teacher.js";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder } from "./teacher.js";
 
 let user = null;
 
@@ -58,6 +58,7 @@ const routes = [
   [/^#\/t\/assign(?:\/([\w-]+))?$/, (m) => assignmentBuilder(user, m[1]), true],
   [/^#\/t\/results\/([\w-]+)\/([\w-]+)$/, (m) => resultsView(user, m[1], m[2]), true],
   [/^#\/t\/bank$/, () => bankView(user), true],
+  [/^#\/t\/paper(?:\/([\w-]+)\/([\w-]+))?$/, (m) => paperBuilder(user, m[1], m[2]), true],
   [/^#\/t\/admin$/, () => adminView(user), true],
 ];
 
@@ -65,6 +66,7 @@ async function route() {
   if (!user) return;
   const h = location.hash || "#/";
   if (h.startsWith("#q-")) return;   // in-page anchor
+  document.body.classList.remove("printmode");
   for (const [re, fn, teacherOnly] of routes) {
     const m = h.match(re);
     if (!m) continue;

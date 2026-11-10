@@ -372,6 +372,56 @@ byText("button", "Download CSV").click();
   await waitFor(() => $(".pickrow .preview .keyline"), "preview answer");
   ok($(".pickrow .preview .qcard"), "builder preview shows answer and solution");
 }
+{ // printable paper
+  let printed = 0; w.print = () => { printed++; }; window.print = w.print;
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+  ok(byText("a.btn", "Printable paper"), "dashboard links to the paper builder");
+  const printLink = $$("a").find((a) => a.textContent === "Print" && a.getAttribute("href").startsWith("#/t/paper/"));
+  ok(printLink, "each assignment has a Print link");
+  const [, , , cid, aid] = printLink.getAttribute("href").split("/");
+  const asgIds = fake.store.get(`classes/${cid}/assignments/${aid}`).questionIds;
+  await go(printLink.getAttribute("href"));
+  await waitFor(() => byText("h1", "Printable paper") && $$(".sellist li").length, "paper builder from assignment");
+  ok($$(".sellist li").length === asgIds.length && $(".formgrid input").value === fake.store.get(`classes/${cid}/assignments/${aid}`).title, "starts with the assignment's questions and title");
+  // reorder: move the second question up
+  if (asgIds.length > 1) { $$(".sellist li")[1].querySelector("button[title='Move up']").click(); await sleep(10); }
+  const order = asgIds.length > 1 ? [asgIds[1], asgIds[0], ...asgIds.slice(2)] : asgIds;
+  // turn on worked solutions
+  const sol = $$(".paperopts label").find((l) => l.textContent.includes("Worked solutions")).querySelector("input");
+  sol.checked = true;
+  byText("button", "Preview & print").click();
+  await waitFor(() => $(".paper") && $$(".pq").length === order.length, "paper preview");
+  ok(document.body.classList.contains("printmode") && $(".printbar"), "preview is in print mode with a toolbar");
+  ok($(".paper-title").textContent === fake.store.get(`classes/${cid}/assignments/${aid}`).title, "paper has the title");
+  ok($(".paper-name") && $$(".paper-cover table.paper-grid td").length === order.length, "cover has name lines and an answer box per question");
+  ok($$(".pq-num").map((e) => e.textContent).join(",") === order.map((_, i) => `${i + 1}.`).join(","), "questions are numbered in the chosen order");
+  ok(!$$(".pq .opt, .pq button").length && $$(".pq .pq-opt, .pq table.pq-table").length, "options are printed as text, not buttons");
+  ok(!$(".pq-src"), "sources hidden by default");
+  const keyCells = $$(".paper-key table.paper-grid td").map((td) => td.textContent);
+  ok(keyCells.join("") === order.map((id) => bundle.answers[id]).join(""), "answer key lists the right letters in paper order");
+  ok($$(".paper-sol").length === order.length && $(".paper-sols .soltext"), "worked solutions section");
+  ok($$(".pagebreak").length === 2, "key and solutions start on new pages");
+  byText("button", "Print / Save as PDF").click();
+  await waitFor(() => printed === 1, "print dialog", 10000);
+  ok(printed === 1, "Print button opens the print dialog");
+  byText("button", "Back to edit").click();
+  await waitFor(() => byText("h1", "Printable paper"), "back to editor");
+  ok(!document.body.classList.contains("printmode") && $$(".sellist li").length === order.length, "back keeps the selection");
+  // fresh paper from the bank, sources on, no key
+  await go("#/t/paper");
+  await waitFor(() => byText("h1", "Printable paper") && $$(".pickrow").length, "empty paper builder");
+  ok(!$$(".sellist li").length, "new paper starts empty");
+  byText("button", "Preview & print").click(); await sleep(20);
+  ok(!$(".paper"), "needs at least one question");
+  byText("button", "Add random from filter").click(); await sleep(20);
+  const cb = (t) => $$(".paperopts label").find((l) => l.textContent.includes(t)).querySelector("input");
+  cb("source paper").checked = true; cb("Answer key").checked = false; cb("Answer boxes").checked = false;
+  byText("button", "Preview & print").click();
+  await waitFor(() => $$(".pq").length === 5, "random paper");
+  ok($$(".pq-src").length === 5 && !$(".paper-key") && !$(".paper-cover table.paper-grid"), "options respected (sources on, no key, no answer boxes)");
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+  ok(!document.body.classList.contains("printmode"), "leaving the paper clears print mode");
+}
 
 console.log("10. admin");
 await go("#/t/admin");
