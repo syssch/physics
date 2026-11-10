@@ -717,6 +717,32 @@ await waitFor(() => byText("button", "Delete all my results"), "history with del
 byText("button", "Delete all my results").click();
 await waitFor(() => ![...fake.store.entries()].some(([p, d]) => p.startsWith("attempts/") && d.uid === "t1"), "deleted own");
 ok(true, "teacher can delete their own results");
+{ // edit and delete an assignment (submissions are kept)
+  const aPath = `classes/${cls1}/assignments/${a1}`;
+  await go(`#/t/results/${cls1}/${a1}`);
+  await waitFor(() => byText("button", "Edit"), "results with edit");
+  byText("button", "Edit").click(); await sleep(10);
+  const box = $(".editbox");
+  ok(!box.hidden, "Edit opens the form");
+  set(box.querySelector("input[type=text]"), "Kinematics HW1 (edited)");
+  set(box.querySelector("select"), "manual");
+  byText(".editbox button", "Save changes").click();
+  await waitFor(() => fake.store.get(aPath).title === "Kinematics HW1 (edited)", "edited");
+  ok(fake.store.get(aPath).reveal === "manual" && fake.store.get(aPath).questionIds.length, "title and answer setting changed; questions unchanged");
+  await waitFor(() => byText("h1", "Kinematics HW1 (edited)"), "page shows new title");
+  const keep = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.assignmentId === a1).length;
+  w.confirm = () => true;
+  byText("button", "Delete assignment").click();
+  await waitFor(() => !fake.store.has(aPath), "deleted");
+  ok(keep > 0 && [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.assignmentId === a1).length === keep, "deleting an assignment keeps the submitted results");
+  fake.setUser(S1); await sleep(50); await go("#/history"); await go("#/");
+  await waitFor(() => byText("h1", "Hello"), "student home");
+  await sleep(100);
+  ok(!$$("#app .panel")[0].textContent.includes("Kinematics HW1") && byText("#app .panel", "Recent results"), "deleted assignment no longer in the student's assignment list (result still in Recent results)");
+  const rv = await api.getReview({ attemptId: `${a1}_s1` });
+  ok(rv.revealed && rv.score !== undefined, "the student can still review their result");
+  fake.setUser(T); await sleep(50);
+}
 
 console.log("15. full SYSS import (all ready questions) and the practice index");
 {

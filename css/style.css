@@ -95,3 +95,4 @@ select { max-width:100%; text-overflow:ellipsis; }
 .pt-item .ti { grid-row:1 / span 2; font-size:1.4rem; color:var(--accent); margin-top:.1rem; }
 .pt-item strong { font-size:1.05rem; color:var(--fg); }
 .pt-item span { font-size:.88rem; color:var(--muted); line-height:1.35; }
+[hidden] { display:none !important; }

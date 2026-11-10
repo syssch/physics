@@ -1,12 +1,12 @@
-import { db, storage, api } from "./fb.js?v=202611102320";
+import { db, storage, api } from "./fb.js?v=202611102333";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611102320";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611102320";
-import { isSchoolEmail } from "./config.js?v=202611102320";
-import { importExplainBundle } from "./explain.js?v=202611102320";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611102320";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611102333";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611102333";
+import { isSchoolEmail } from "./config.js?v=202611102333";
+import { importExplainBundle } from "./explain.js?v=202611102333";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611102333";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -348,7 +348,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611102320");
+      const { buildPaperDocx } = await import("./docx.js?v=202611102333");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -547,9 +547,41 @@ export async function resultsView(user, classId, assignmentId) {
       resultsView(user, classId, assignmentId);
     } catch (e) { toast(errMsg(e), "error"); }
   });
+  // edit title / due date / answer release, or delete the assignment (submissions are kept)
+  const aRef = doc(db, "classes", classId, "assignments", assignmentId);
+  const pad = (n) => String(n).padStart(2, "0");
+  const dd = toDate(a.dueAt) || new Date();
+  const tIn = el("input", { type: "text", value: a.title });
+  const dueIn = el("input", { type: "datetime-local", value: `${dd.getFullYear()}-${pad(dd.getMonth() + 1)}-${pad(dd.getDate())}T${pad(dd.getHours())}:${pad(dd.getMinutes())}` });
+  const revIn = el("select", {}, [["after_submit", "Show answers & solutions right after submitting"], ["after_due", "Show answers & solutions after the due date"], ["manual", "Hide until I release them"]]
+    .map(([v, l]) => el("option", { value: v, selected: (a.reveal || "after_submit") === v }, l)));
+  const saveEdit = el("button", { class: "btn primary", type: "button" }, "Save changes");
+  const editBox = el("div", { class: "panel editbox", hidden: true }, [el("h2", {}, "Edit assignment"),
+    el("div", { class: "formgrid" }, [el("label", {}, ["Title", tIn]), el("label", {}, ["Due", dueIn]), el("label", {}, ["Answers & solutions", revIn])]),
+    el("p", { class: "muted" }, "The questions can't be changed once the assignment is set, so results stay comparable. To use different questions, create a new assignment."),
+    el("div", { class: "row" }, [saveEdit, el("button", { class: "btn", type: "button", onclick: () => { editBox.hidden = true; } }, "Cancel")])]);
+  saveEdit.addEventListener("click", async () => {
+    const due = new Date(dueIn.value);
+    if (!tIn.value.trim()) return toast("Please give the assignment a title.", "error");
+    if (isNaN(due)) return toast("Please set a due date.", "error");
+    saveEdit.disabled = true;
+    try {
+      await updateDoc(aRef, { title: tIn.value.trim(), dueAt: Timestamp.fromDate(due), reveal: revIn.value, editedBy: user.email, editedAt: serverTimestamp() });
+      toast("Assignment updated.");
+      resultsView(user, classId, assignmentId);
+    } catch (e) { toast(errMsg(e), "error"); saveEdit.disabled = false; }
+  });
+  const editBtn = el("button", { class: "btn small", type: "button", onclick: () => { editBox.hidden = !editBox.hidden; } }, "Edit");
+  const delBtn = el("button", { class: "btn small danger", type: "button" }, "Delete assignment");
+  delBtn.addEventListener("click", async () => {
+    if (!confirm(`Delete "${a.title}"? It disappears from students' Home pages and from your dashboard. Students keep their scores in My results, and leaderboard points already earned stay.`)) return;
+    try { await deleteDoc(aRef); toast("Assignment deleted. Submitted results are kept."); location.hash = "#/t"; }
+    catch (e) { toast(errMsg(e), "error"); }
+  });
   mount(el("section", {}, [
     el("h1", {}, a.title), el("p", { class: "muted" }, `${cls.name} · due ${fmtDate(a.dueAt)} · answers & solutions ${revealLabel(a)}${shownNow ? " — students can see them now" : " — hidden from students for now"}`),
-    el("div", { class: "row" }, [csv, a.reveal === "after_submit" ? null : release, el("a", { class: "btn small", href: "#/t" }, "Back")].filter(Boolean)),
+    el("div", { class: "row" }, [csv, a.reveal === "after_submit" ? null : release, editBtn, delBtn, el("a", { class: "btn small", href: "#/t" }, "Back")].filter(Boolean)),
+    editBox,
     el("div", { class: "scroll" }, table), qBox,
   ]));
 }

@@ -122,6 +122,9 @@ updates itself whenever a class is saved or deleted.
 - *New assignment*: pick the class, title, due date, and whether answers are shown right after
   submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), skill tested, form or text, tick
   questions, or add random ones from the current filter.
+- *Edit / Delete assignment* (on its Results page): change the title, due date or when answers are shown (questions can't
+  be changed once set). Deleting removes it from students' Home pages and the dashboard; submitted results, My results
+  and leaderboard points are kept, and its answers count as shown.
 - *Results*: shows each student's answer to each question (green is right, red is wrong), the
   percentage correct per question, and how many students chose each option. You can download a
   CSV.

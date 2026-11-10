@@ -203,7 +203,7 @@ exports.startMistakes = onCall(async (request) => {
       const key = `${a.classId}/${a.assignmentId}`;
       if (!asgCache.has(key)) asgCache.set(key, await db.doc(`classes/${a.classId}/assignments/${a.assignmentId}`).get());
       const asg = asgCache.get(key);
-      if (!asg.exists || !canReveal(asg)) continue;
+      if (asg.exists && !canReveal(asg)) continue;          // a deleted assignment counts as finished (answers shown)
     }
     for (const q of a.questionIds || []) latest.set(q, (a.responses || {})[q] || "");
   }
