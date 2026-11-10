@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js?v=202611102231";
+import { db, api } from "./fb.js?v=202611102301";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611102231";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611102231";
-import { runQuiz, showReview } from "./quiz.js?v=202611102231";
-import { explainPanel } from "./explain.js?v=202611102231";
-import { setDue, setChip } from "./chrome.js?v=202611102231";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611102301";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611102301";
+import { runQuiz, showReview } from "./quiz.js?v=202611102301";
+import { explainPanel } from "./explain.js?v=202611102301";
+import { setDue, setChip } from "./chrome.js?v=202611102301";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -25,6 +25,7 @@ export async function studentHome(user) {
   // Assignments
   const asg = el("div", { class: "panel" }, [el("h2", {}, "Assignments")]);
   page.append(asg);
+  page.append(pointsPanel());
   page.append(await explainPanel(user));
   // History
   const hist = el("div", { class: "panel" }, [el("h2", {}, "Recent results")]);
@@ -69,7 +70,7 @@ export async function studentHome(user) {
 async function practicePanel() {
   const syl = syllabusFilters(await getBooks());
   const sk = skillFilter();
-  const countSel = el("select", {}, [5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
+  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button" }, "Start practice");
   go.addEventListener("click", async () => {
     go.disabled = true;
@@ -82,6 +83,22 @@ async function practicePanel() {
   return el("div", { class: "panel" }, [el("h2", {}, "Random practice set"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
+}
+
+/** Home: how leaderboard points are earned. */
+function pointsPanel() {
+  const item = (icon, pts, what) => el("div", { class: "pt-item" }, [
+    el("i", { class: `ti ti-${icon}`, "aria-hidden": "true" }), el("strong", {}, pts), el("span", {}, what)]);
+  return el("div", { class: "panel points-panel" }, [
+    el("div", { class: "panelhead" }, [el("h2", {}, "Earn leaderboard points"), el("a", { class: "btn small", href: "#/leaderboard" }, "See leaderboard")]),
+    el("div", { class: "pt-grid" }, [
+      item("pencil", "100", "for each correct answer in a practice set (including Redo my mistakes)"),
+      item("target-arrow", "+500 / +200", "accuracy bonus for 90%+ / 75–89% correct in a set of 5 or more questions"),
+      item("book", "300", "for reading your Explain card of the day (once a day)"),
+      item("calendar-check", "+500", "check-in bonus when you practise or read your card on 3 different days in a week (Mon–Sun)"),
+    ]),
+    el("p", { class: "muted small" }, "Assignments don't count towards the leaderboard. Rankings are by form, for this week, this month and all time."),
+  ]);
 }
 
 /** Practise page: a random set by book / chapter / subtopic / skill, and "Redo my mistakes". */
@@ -115,7 +132,7 @@ export async function refreshStudentStatus(user) {
 }
 
 const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
-export const POINTS_HELP = "Points come from practice sets (including Redo my mistakes): 1 point per correct answer, plus a bonus for sets of 5 or more questions — +5 for 90% or more correct, +2 for 75–89%. Assignments don't count.";
+export const POINTS_HELP = "How to earn points: 100 per correct answer in practice (including Redo my mistakes), plus +500 for 90%+ or +200 for 75–89% in sets of 5 or more questions · 300 for reading your Explain card of the day (once a day) · +500 check-in bonus once a week when you practise or read your card on 3 different days (Monday–Sunday). Assignments don't count.";
 
 /** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
 function leaderboardPanel(user) {
@@ -166,7 +183,7 @@ function leaderboardPanel(user) {
 function mistakesPanel() {
   const info = el("p", { class: "muted" }, "Checking your past answers…");
   const bookSel = el("select", {}, [el("option", { value: "" }, "All books")]);
-  const countSel = el("select", {}, [5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
+  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button", disabled: true }, "Redo my mistakes");
   const row = el("div", { class: "row" }, [bookSel, countSel, go]);
   row.style.display = "none";

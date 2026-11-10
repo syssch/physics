@@ -1,5 +1,5 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102231";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611102231";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611102301";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611102301";
 
 /**
  * Run a set of questions.
@@ -61,8 +61,12 @@ export function showReview({ title, questions, responses, result, backHref = "#/
     el("div", { class: "muted" }, result.total ? `${Math.round((100 * result.score) / result.total)}%` : ""),
   ]));
   if (note) page.append(el("p", { class: "muted" }, note));
-  if (result.points) page.append(el("p", { class: "points" }, `+${result.points} leaderboard point${result.points === 1 ? "" : "s"}`
-    + (result.points > result.score ? ` (including a ${result.points - result.score}-point accuracy bonus)` : "")));
+  if (result.points || result.checkinBonus) {
+    const acc = (result.points || 0) - result.score * 100;
+    page.append(el("p", { class: "points" }, `+${result.points || 0} leaderboard points`
+      + (acc > 0 ? ` (including a ${acc}-point accuracy bonus)` : "")
+      + (result.checkinBonus ? ` · +${result.checkinBonus} check-in bonus for practising on 3 days this week!` : "")));
+  }
   if (!result.revealed) {
     page.append(el("p", { class: "notice" },
       result.reveal === "manual" ? "Answers and solutions will be shown when your teacher releases them."

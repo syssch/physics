@@ -4,7 +4,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { getStorage, connectStorageEmulator } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-functions.js";
-import { firebaseConfig, FUNCTIONS_REGION, USE_EMULATORS } from "./config.js?v=202611102231";
+import { firebaseConfig, FUNCTIONS_REGION, USE_EMULATORS } from "./config.js?v=202611102301";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -32,6 +32,7 @@ export const api = {
   startMistakes: call("startMistakes"),
   figureData: call("figureData"),
   getLeaderboard: call("getLeaderboard"),
+  explainRead: call("explainRead"),
   rebuildLeaderboards: call("rebuildLeaderboards"),
   submitAnswers: call("submitAnswers"),
   getReview: call("getReview"),

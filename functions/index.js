@@ -296,25 +296,34 @@ exports.submitAnswers = onCall(async (request) => {
 
   const out = { attemptId: attemptRef.id, score: result.score, total: result.total, revealed: reveal, reveal: revealMode,
                 dueAt: meta.dueAt ? meta.dueAt.toMillis() : null };
-  if (meta.mode === "practice") {                 // leaderboards count practice only
-    const pts = setPoints(result.score, result.total);
-    try { if (await addPoints(user, pts, Date.now())) out.points = pts; } catch (e) { console.error("leaderboard", e); }
+  if (meta.mode === "practice") {                 // leaderboards count practice (not assignments)
+    try {
+      const pts = setPoints(result.score, result.total);
+      if (await addPoints(user, pts, Date.now(), { sets: 1 })) {
+        out.points = pts;
+        out.checkinBonus = await recordCheckin(user, Date.now(), "practice");
+      }
+    } catch (e) { console.error("leaderboard", e); }
   }
   if (reveal) Object.assign(out, { answers, correct: result.correct, solutions });
   return out;
 });
 
-// ------------------------------------------------------------------ leaderboards (practice only)
+// ------------------------------------------------------------------ leaderboards
 /**
- * Points for one submitted practice set (practice or "Redo my mistakes"): 1 per correct answer, plus an accuracy
- * bonus for sets of at least 5 questions: +5 for 90% or more correct, +2 for 75–89%.
+ * Points (all in Hong Kong time):
+ *  - practice set (incl. Redo my mistakes): 100 per correct answer; sets of 5+ questions also get +500 for 90%+ correct
+ *    or +200 for 75–89%. Assignments don't count.
+ *  - Explain: 300 for marking the card of the day as read, once a day.
+ *  - Check-in bonus: +500 once a week (Mon–Sun) on the 3rd day with any practice set or card of the day.
  */
+const PTS = { correct: 100, bonus90: 500, bonus75: 200, explain: 300, checkin: 500, checkinDays: 3 };
 function setPoints(score, total) {
-  let p = score;
-  if (total >= 5) { const a = score / total; if (a >= 0.9) p += 5; else if (a >= 0.75) p += 2; }
+  let p = score * PTS.correct;
+  if (total >= 5) { const a = score / total; if (a >= 0.9) p += PTS.bonus90; else if (a >= 0.75) p += PTS.bonus75; }
   return p;
 }
-/** Hong Kong time period keys: ISO week ("2026-W46"), month ("2026-11") and "all". */
+/** Hong Kong time period keys: ISO week ("2026-W46"), month ("2026-11"), day ("2026-11-10") and "all". */
 function periodKeys(ms = Date.now()) {
   const d = new Date(ms + 8 * 3600 * 1000);
   const y = d.getUTCFullYear(), m = d.getUTCMonth();
@@ -325,6 +334,7 @@ function periodKeys(ms = Date.now()) {
   const wk = Math.ceil(((t - Date.UTC(wy, 0, 1)) / 86400000 + 1) / 7);
   return { week: `${wy}-W${String(wk).padStart(2, "0")}`, month: `${y}-${String(m + 1).padStart(2, "0")}`, all: "all" };
 }
+function dayKey(ms = Date.now()) { return new Date(ms + 8 * 3600 * 1000).toISOString().slice(0, 10); }
 const lbDocId = (form, period, key) => period === "all" ? `${form}_all` : `${form}_${period}_${key}`;
 /** The student's form (F1–F6) and class, from the first class whose name starts with a form number ("4A", "F.4 Phy"). */
 async function studentForm(email) {
@@ -342,20 +352,57 @@ async function boardLabel(info, email, fallback) {
   const cls = info.className.split(/\s+/)[0];
   return `${cls} ${(row && row.name) || fallback || email.split("@")[0]}`.trim();
 }
-async function addPoints(user, pts, ms) {
+/** Add points to the student's form boards (week, month, all time). counts: { sets, cards, bonus }. */
+async function addPoints(user, pts, ms, counts = {}) {
   const info = await studentForm(user.email);
   if (!info) return null;
   const label = await boardLabel(info, user.email, user.name);
+  const entry = { pts: FieldValue.increment(pts), label, email: user.email };
+  for (const k of ["sets", "cards", "bonus"]) if (counts[k]) entry[k] = FieldValue.increment(counts[k]);
   for (const [period, key] of Object.entries(periodKeys(ms))) {
     await db.doc(`leaderboards/${lbDocId(info.form, period, key)}`).set({
-      form: info.form, period, key, updatedAt: FieldValue.serverTimestamp(),
-      scores: { [user.uid]: { pts: FieldValue.increment(pts), sets: FieldValue.increment(1), label, email: user.email } },
+      form: info.form, period, key, updatedAt: FieldValue.serverTimestamp(), scores: { [user.uid]: entry },
     }, { merge: true });
   }
   return info.form;
 }
+/**
+ * Record today's activity (activity/{uid}_{day}); on the 3rd active day of the week, award the check-in bonus once.
+ * Returns the bonus points awarded now (0 or 500).
+ */
+async function recordCheckin(user, ms, kind) {
+  const day = dayKey(ms), week = periodKeys(ms).week;
+  const ref = db.doc(`activity/${user.uid}_${day}`);
+  const snap = await ref.get();
+  await ref.set({ uid: user.uid, email: user.email, day, week, [kind]: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  if (snap.exists) return 0;                                        // not a new day
+  const days = await db.collection("activity").where("uid", "==", user.uid).where("week", "==", week).get();
+  if (days.size < PTS.checkinDays) return 0;
+  const bref = db.doc(`checkinBonus/${user.uid}_${week}`);
+  if ((await bref.get()).exists) return 0;
+  await bref.set({ uid: user.uid, week, day, at: FieldValue.serverTimestamp() });
+  await addPoints(user, PTS.checkin, ms, { bonus: 1 });
+  return PTS.checkin;
+}
+
+/** Explain: 300 points the first time each day the student marks their card of the day as read. */
+exports.explainRead = onCall(async (request) => {
+  const user = await requireMember(request);
+  const cardId = String((request.data || {}).cardId || "");
+  const prog = await db.doc(`explainProgress/${user.uid}`).get();
+  const today = prog.exists ? prog.get("today") : null;
+  const read = prog.exists ? prog.get("read") || {} : {};
+  if (!cardId || !today || today.cardId !== cardId || !read[cardId]) return { points: 0, reason: "not-card-of-the-day" };
+  const day = dayKey();
+  const act = await db.doc(`activity/${user.uid}_${day}`).get();
+  if (act.exists && act.get("explain")) return { points: 0, reason: "already-today" };
+  if (!(await addPoints(user, PTS.explain, Date.now(), { cards: 1 }))) return { points: 0, reason: "no-form" };
+  await db.doc(`activity/${user.uid}_${day}`).set({ explainCard: cardId }, { merge: true });
+  const checkinBonus = await recordCheckin(user, Date.now(), "explain");
+  return { points: PTS.explain, checkinBonus };
+});
 function ranked(scores) {
-  const rows = Object.entries(scores || {}).map(([uid, v]) => ({ uid, label: v.label, pts: v.pts || 0, sets: v.sets || 0 }))
+  const rows = Object.entries(scores || {}).map(([uid, v]) => ({ uid, label: v.label, pts: v.pts || 0, sets: v.sets || 0, cards: v.cards || 0, bonus: v.bonus || 0 }))
     .filter((r) => r.pts > 0).sort((a, b) => b.pts - a.pts || a.label.localeCompare(b.label));
   let last = null, rank = 0;
   rows.forEach((r, i) => { if (r.pts !== last) { rank = i + 1; last = r.pts; } r.rank = rank; });
@@ -382,37 +429,68 @@ exports.getLeaderboard = onCall(async (request) => {
   const strip = (r) => ({ rank: r.rank, label: r.label, pts: r.pts, me: r.uid === user.uid });
   if (teacher) {
     const sc = snap.exists ? snap.get("scores") : {};
-    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
+    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, cards: r.cards, bonus: r.bonus, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
   }
   return { form, period, key: keys[period], rows: all.slice(0, 10).map(strip), me: mine ? { rank: mine.rank, pts: mine.pts } : null, total: all.length };
 });
 
-/** Teachers: rebuild every leaderboard from the saved practice results (e.g. after changing classes). */
+/** Teachers: rebuild the current week's, month's and all-time boards from saved practice results and Explain activity. */
 exports.rebuildLeaderboards = onCall(async (request) => {
   const user = requireSchoolUser(request);
   if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
   const now = periodKeys();
-  const atts = await db.collection("attempts").where("mode", "==", "practice").get();
-  const forms = new Map(), docs = new Map();
-  for (const d of atts.docs) {
-    const a = d.data();
-    if (!a.email || !a.uid) continue;
-    if (!forms.has(a.email)) {
-      const info = await studentForm(a.email);
-      forms.set(a.email, info ? { info, label: await boardLabel(info, a.email, a.name) } : null);
+  const forms = new Map(), docs = new Map(), days = new Map();   // days: uid -> week -> Set(day)
+  const who = async (uid, email, name) => {
+    if (!forms.has(email)) {
+      const info = await studentForm(email);
+      forms.set(email, info ? { info, label: await boardLabel(info, email, name) } : null);
     }
-    const f = forms.get(a.email);
-    if (!f) continue;
-    const ms = a.submittedAt && a.submittedAt.toMillis ? a.submittedAt.toMillis() : Date.now();
+    return forms.get(email);
+  };
+  const credit = (f, uid, email, ms, pts, counts) => {
     const keys = periodKeys(ms);
     for (const period of ["week", "month", "all"]) {
       if (period !== "all" && keys[period] !== now[period]) continue;      // only the current week / month
       const id = lbDocId(f.info.form, period, keys[period]);
       if (!docs.has(id)) docs.set(id, { form: f.info.form, period, key: keys[period], scores: {} });
       const sc = docs.get(id).scores;
-      sc[a.uid] = sc[a.uid] || { pts: 0, sets: 0, label: f.label, email: a.email };
-      sc[a.uid].pts += setPoints(a.score || 0, a.total || 0);
-      sc[a.uid].sets += 1;
+      sc[uid] = sc[uid] || { pts: 0, sets: 0, cards: 0, bonus: 0, label: f.label, email };
+      sc[uid].pts += pts;
+      for (const k of Object.keys(counts)) sc[uid][k] += counts[k];
+    }
+  };
+  const active = (uid, email, ms) => {
+    const w = periodKeys(ms).week, d = dayKey(ms);
+    if (!days.has(uid)) days.set(uid, { email, weeks: new Map() });
+    const weeks = days.get(uid).weeks;
+    if (!weeks.has(w)) weeks.set(w, new Map());
+    if (!weeks.get(w).has(d)) weeks.get(w).set(d, ms);
+  };
+  for (const d of (await db.collection("attempts").where("mode", "==", "practice").get()).docs) {
+    const a = d.data();
+    if (!a.email || !a.uid) continue;
+    const f = await who(a.uid, a.email, a.name);
+    if (!f) continue;
+    const ms = a.submittedAt && a.submittedAt.toMillis ? a.submittedAt.toMillis() : Date.now();
+    credit(f, a.uid, a.email, ms, setPoints(a.score || 0, a.total || 0), { sets: 1 });
+    active(a.uid, a.email, ms);
+  }
+  for (const d of (await db.collection("activity").get()).docs) {
+    const a = d.data();
+    if (!a.explain || !a.email) continue;
+    const f = await who(a.uid, a.email, "");
+    if (!f) continue;
+    const ms = Date.parse(`${a.day}T12:00:00+08:00`);
+    credit(f, a.uid, a.email, ms, PTS.explain, { cards: 1 });
+    active(a.uid, a.email, ms);
+  }
+  for (const [uid, { email, weeks }] of days) {
+    const f = forms.get(email);
+    if (!f) continue;
+    for (const [, ds] of weeks) {
+      if (ds.size < PTS.checkinDays) continue;
+      const third = [...ds.values()].sort((x, y) => x - y)[PTS.checkinDays - 1];
+      credit(f, uid, email, third, PTS.checkin, { bonus: 1 });
     }
   }
   const old = await db.collection("leaderboards").get();

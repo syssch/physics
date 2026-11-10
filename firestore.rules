@@ -92,6 +92,15 @@ service cloud.firestore {
       allow read: if isTeacher();
       allow write: if false;
     }
+    // Daily activity (for check-in bonuses) and weekly bonus markers: Cloud Functions only.
+    match /activity/{id} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
+    match /checkinBonus/{id} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
     match /sessions/{sessionId} {
       allow read: if isSchool() && resource.data.uid == request.auth.uid;
       allow write: if false;

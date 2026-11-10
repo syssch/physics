@@ -86,3 +86,12 @@ select { max-width:100%; text-overflow:ellipsis; }
 @media (max-width: 760px) {
   .panel .row > select, .panel .row > input[type=search], .panel .row > .btn { flex:1 1 100%; max-width:100%; }
 }
+/* home: how to earn points */
+.points-panel .panelhead { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
+.points-panel .panelhead h2 { margin:0; }
+.pt-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:.6rem; margin:.7rem 0 .3rem; }
+.pt-item { display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; column-gap:.55rem; align-items:start;
+  background:var(--bg); border-radius:10px; padding:.6rem .7rem; }
+.pt-item .ti { grid-row:1 / span 2; font-size:1.4rem; color:var(--accent); margin-top:.1rem; }
+.pt-item strong { font-size:1.05rem; color:var(--fg); }
+.pt-item span { font-size:.88rem; color:var(--muted); line-height:1.35; }
