@@ -11,7 +11,7 @@ multiple-choice questions by topic. Teachers create classes and assignments and 
   can't be read with the developer tools.
 
 The question data is **not** in this repository. It is uploaded from the teacher's computer
-through the Admin page (see step 5).
+through the Admin page (see step 5). 
 
 ---
 
