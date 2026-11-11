@@ -253,7 +253,7 @@ If you change `firestore.rules`, update `tests/fakes/rules.mjs` to match.
 ### Working with other AI coding agents
 
 `AGENTS.md` (read by Codex, Cursor, Copilot, Gemini CLI and others), `CLAUDE.md` (Claude Code) and
-`.github/copilot-instructions.md` tell an agent the rules, the code map, the feature checklist and how to test. Review
+`.github/copilot-instructions.md` tell an agent the rules, the code map, the feature checklist and how to test. Every change is logged in `CHANGELOG.md`, with whether it needs only a push or also `deploy.command`. Review
 an agent's changes in GitHub Desktop before pushing, and never give it Firebase or GitHub credentials — deploy with
 `deploy.command` yourself.
 

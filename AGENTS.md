@@ -15,8 +15,8 @@ Read `README.md` for the full feature description.
   reveal rule allows (`canReveal()` in `functions/index.js` is the single source of truth).
 - `firestore.rules` and its JS mirror `tests/fakes/rules.mjs` must always change **together**.
 - After any change in `js/` or `css/`: run `python3 tools/bump_version.py` (adds `?v=` cache busting to imports).
-- Finish every change with: tests passing with no console errors, `README.md` updated, and a note saying whether
-  the maintainer only needs to push (site files) or also run `deploy.command` (functions / rules / indexes).
+- Finish every change with: tests passing with no console errors, the **handoff update** below, and a note saying
+  whether the maintainer only needs to push (site files) or also run `deploy.command` (functions / rules / indexes).
 
 ## Stack
 
@@ -41,7 +41,8 @@ Read `README.md` for the full feature description.
 | `js/studentrecord.js` | Students list per class, one student's record |
 | `js/feedback.js` | "Explain in class" / "Report a problem" (students) and the Feedback page (teachers) |
 | `js/qstats.js` | first-attempt choice statistics |
-| `js/explain.js`, `js/docx.js`, `js/roster.js`, `js/syllabus.js` | Explain cards, Word export, class lists, syllabus data |
+| `js/explain.js` | Explain cards; `readStats()` (cards read / this week / last) used by progress pages |
+| `js/docx.js`, `js/roster.js`, `js/syllabus.js` | Word export, class lists, syllabus data |
 | `functions/index.js` | callables: `startPractice`, `startMistakes`, `submitAnswers`, `getReview`, `getLeaderboard`, `rebuildLeaderboards`, `explainRead`, `figureData`, `sendFeedback`, `myProgress`, `rebuildMembers`; trigger `syncMembers` |
 
 Firestore collections and who can read them are listed in `README.md` ("Firestore layout"). Collections written only
@@ -70,7 +71,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; ~255 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 258 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`
@@ -86,3 +87,14 @@ cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes;
 - The admin fake replaces stored objects on `set`: re-read after each call. Wait for async re-renders before switching
   the signed-in user in tests.
 - Storage downloads hit CORS in the browser → figures for Word export come through the teacher-only `figureData` callable.
+
+## Handoff update — after every change
+
+Keep the repo ready for the next agent. Update whatever the change affects:
+
+1. `CHANGELOG.md` — newest entry on top: what changed, files, **push only** or **deploy.command + push**, test count.
+2. `README.md` — feature description ("Using it"), Firestore layout, rate limits, testing.
+3. This file and `.github/copilot-instructions.md` — code map, callables, behaviours, conventions, test count.
+4. `tests/fixtures/` — regenerate with `tools/make_test_fixtures.py` (maintainer's computer) if data shapes change.
+5. No real question data, answer keys or credentials in any of these files.
+

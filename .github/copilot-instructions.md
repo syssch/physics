@@ -10,3 +10,5 @@ Follow `AGENTS.md` at the repository root. The essentials:
 - After changing `js/` or `css/`, run `python3 tools/bump_version.py`.
 - Every change: add/extend a section in `tests/run.mjs`, run `cd tests && npm install && node run.mjs` (must pass with no
   console errors), update `README.md`, and say whether a Firebase deploy (`deploy.command`) is needed.
+- After every change, also update `CHANGELOG.md` (with "push only" or "deploy.command + push"), `README.md`, `AGENTS.md`
+  and this file as needed, so the next agent can pick up the project.
