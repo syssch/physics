@@ -81,8 +81,9 @@ Until this is done, test with teacher accounts or a few adult accounts.
    python3 platform_prep/export_for_platform.py --all-ready  # every ready SYSS question -> platform_prep/export/all_ready/
    # python3 platform_prep/export_for_platform.py            # (just the 100 trial questions -> export/trial/)
    ```
-   "Ready" means the question has no figure, or its figures were checked against the original paper;
-   exact duplicates are left out. Questions with unchecked or missing figures are added as their papers are checked:
+   "Ready" means the question has no figure, or its figures were checked against the original paper, and it
+   **stands alone** — it doesn't refer to another question ("Refer to Q.4", "the previous question", "For questions 6
+   and 7"); such questions are blocked until rewritten with the information they need. Exact duplicates are left out. Questions with unchecked or missing figures are added as their papers are checked:
    `platform_prep/figure_check.py` compares each stored figure with the original paper and proposes fresh crops,
    and `platform_prep/apply_figure_checks.py` applies the reviewed result and records the paper in
    `platform_prep/figure_checks.json` (the list of checked papers).

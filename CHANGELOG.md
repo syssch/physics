@@ -5,6 +5,11 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-11
 
+- **Questions now stand alone** (question data, not code): 9 questions that said "Refer to Question 4", "Q.3" or
+  "the previous question" were rewritten with the setting (and figure) they need; "(For questions 6 and 7)" labels
+  removed from 6 shared-stem questions; 4 solutions updated. `platform_prep/platform_readiness.py` now blocks any
+  question that refers to another question. *Re-import `all_ready/bundle.json` (Admin → Import questions); no push or
+  deploy needed for this item.*
 - **Handoff files for AI agents** — `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`; synthetic test data in
   `tests/fixtures/` (`tools/make_test_fixtures.py`); tests default to fixtures, `--real` for the real exports; GitHub
   Actions runs the tests on every push/PR (`.github/workflows/tests.yml`). *Push.* Tests: 258.
