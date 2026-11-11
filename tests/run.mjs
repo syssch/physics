@@ -668,6 +668,46 @@ console.log("9c. rate limits for reasonable use");
   await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+console.log("9d. student record (teacher)");
+{
+  const mine = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.email === S1.email).map(([, d]) => d);
+  await go("#/t"); await waitFor(() => $(`a[href="#/t/students/${classId}"]`), "Students link on the dashboard");
+  await go(`#/t/students/${classId}`);
+  await waitFor(() => $("table.students"), "students list");
+  const clsDoc = fake.store.get(`classes/${classId}`);
+  ok($$("table.students tr").length === 1 + clsDoc.studentEmails.length, "one row per student in the class");
+  const s1row = $$("table.students tr").find((tr) => tr.querySelector("a") && decodeURIComponent(tr.querySelector("a").getAttribute("href")).endsWith(S1.email));
+  ok(s1row && s1row.children[1].textContent === String(mine.length), "row shows the student's number of sets");
+  ok(byText("table.students tr", "never") || clsDoc.studentEmails.length === 2, "students who have done nothing show 'never'");
+  // from the Results grid
+  await go(`#/t/results/${classId}/${a2}`);
+  await waitFor(() => $("table.results"), "results");
+  const link = $$("table.results a").find((a) => (a.getAttribute("href") || "").startsWith("#/t/student/") && decodeURIComponent(a.getAttribute("href")).endsWith(S1.email));
+  ok(link, "student names on the Results grid link to their record");
+  await go(link.getAttribute("href"));
+  await waitFor(() => $(".statgrid"), "record page");
+  ok($(".statval").textContent === String(mine.length) && byText(".statcard", "practice") , "summary: number of sets by type");
+  const rowsA = $$("table.attempts tr").filter((tr) => !tr.classList.contains("attempt-detail")).length - 1;
+  ok(rowsA === mine.length && byText("table.attempts td", "Assignment") && byText("table.attempts td", "Practice"), "every set listed (practice and assignments)");
+  ok($("table.areas") && byText("table.areas th", "Book"), "strengths and weak areas by book");
+  // open the a1 attempt
+  const a1row = $$("table.attempts tr").find((tr) => tr.textContent.includes("Kinematics") || tr.textContent.includes(fake.store.get(`attempts/${a1}_s1`).title));
+  a1row.querySelector("button.linkbtn").click(); await sleep(20);
+  const det = a1row.nextElementSibling;
+  ok(!det.hidden && det.querySelectorAll(".qcard").length === fake.store.get(`attempts/${a1}_s1`).questionIds.length, "View shows every question of the set");
+  ok(det.querySelectorAll(".opt.right").length && det.querySelector(".opt.wrong") && /Student's answer/.test(det.textContent) && det.querySelector(".solution"), "with the student's answers, the key and solutions");
+  const wrongPanel = $$(".panel").find((p) => /Currently wrong/.test(p.textContent));
+  const n = Number((wrongPanel.querySelector("h2").textContent.match(/\((\d+)\)/) || [])[1]);
+  ok(n > 0 && wrongPanel.querySelectorAll("tr").length === n + 1, "questions currently wrong are listed");
+  ok(byText(".panel h2", "Feedback sent") && byText(".panel li", "Explain in class"), "the student's feedback is shown");
+  // students cannot open it
+  fake.setUser(S1); await sleep(50); await go(link.getAttribute("href"));
+  await waitFor(() => byText("p.error", "Teachers only"), "refused");
+  ok(true, "students cannot open a student record");
+  fake.setUser(T); await sleep(50); await go("#/t");
+  await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");

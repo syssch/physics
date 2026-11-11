@@ -120,3 +120,16 @@ select { max-width:100%; text-overflow:ellipsis; }
 .fbk-filters label { display:grid; gap:.2rem; font-size:.9rem; }
 td.fbk-hot { background:var(--accent-soft); color:var(--accent); font-weight:700; }
 .muted.small, p.small { font-size:.85em; }
+
+/* teacher: students list and a student's record */
+.statgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:.7rem; margin:1rem 0; }
+.statcard { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:.7rem .9rem; }
+.statval { font-size:1.45rem; font-weight:700; color:var(--accent); line-height:1.2; }
+.statlabel { font-size:.88rem; color:var(--fg); }
+.areas2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1rem; }
+table.areas td.barcell { width:35%; min-width:90px; }
+.bar { display:block; height:.6rem; border-radius:999px; }
+.bar.low { background:var(--bad); } .bar.mid { background:var(--warn); } .bar.high { background:var(--good); }
+tr.attempt-detail > td { background:var(--bg); padding:.6rem; }
+.attempt-review .qcard { margin-bottom:.7rem; }
+table.students td, table.attempts td { vertical-align:middle; }

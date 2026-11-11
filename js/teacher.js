@@ -1,13 +1,14 @@
-import { db, storage, api } from "./fb.js?v=202611110929";
+import { db, storage, api } from "./fb.js?v=202611112112";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611110929";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611110929";
-import { isSchoolEmail } from "./config.js?v=202611110929";
-import { importExplainBundle } from "./explain.js?v=202611110929";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611110929";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611110929";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611112112";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611112112";
+import { isSchoolEmail } from "./config.js?v=202611112112";
+import { importExplainBundle } from "./explain.js?v=202611112112";
+import { recordHref } from "./studentrecord.js?v=202611112112";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611112112";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611112112";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -40,6 +41,7 @@ export async function teacherHome(user) {
         el("span", { class: "muted" }, `${(c.studentEmails || []).length} students`),
         el("a", { class: "btn small", href: `#/t/class/${c.id}` }, "Edit class"),
         el("a", { class: "btn small", href: `#/t/assign/${c.id}` }, "Assign"),
+        el("a", { class: "btn small", href: `#/t/students/${c.id}` }, "Students"),
       ]),
     ]);
     const asg = await listAssignments(c.id);
@@ -350,7 +352,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611110929");
+      const { buildPaperDocx } = await import("./docx.js?v=202611112112");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -492,7 +494,7 @@ export async function resultsView(user, classId, assignmentId) {
   let submitted = 0, totalScore = 0;
   for (const email of students) {
     const at = byEmail.get(email);
-    const cells = [el("td", { class: "nowrap" }, studentLabel(cls, email, at && at.name))];
+    const cells = [el("td", { class: "nowrap" }, el("a", { href: recordHref(classId, email), title: "Full record for this student" }, studentLabel(cls, email, at && at.name)))];
     if (!at) { cells.push(el("td", { class: "muted" }, "—"), el("td", { class: "muted" }, "not submitted")); qids.forEach(() => cells.push(el("td", {}))); }
     else {
       submitted++; totalScore += at.score;

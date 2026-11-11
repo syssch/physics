@@ -142,6 +142,13 @@ updates itself whenever a class is saved or deleted.
   solutions pages, shuffled order. *Preview & print* shows an A4 layout; print it or choose "Save as PDF" in the print
   dialog, or *Download Word (.docx)* for an editable file (maths become real Word equations; figures are fetched by the
   teacher-only `figureData` Cloud Function, built in the browser by `js/docx.js`). Nothing is saved on the platform.
+- *Students* (button on each class on the dashboard, `#/t/students/<class>`): every student in the class with sets done,
+  sets in the last 7 days, questions answered, % correct, assignments submitted and last active. Click a name (here or on
+  any Results grid) for the student's *record* (`js/studentrecord.js`): summary (sets by type, % correct, assignments
+  submitted / late / overdue, last active), % correct by book and by chapter (weakest first, marked against the current
+  answer keys), every practice set, Redo my mistakes and assignment with *View* (each question with the student's answer,
+  the key and solution), questions whose latest answer is wrong, overdue assignments and the student's feedback. CSV of the
+  sets list. Reads `attempts` by email (no extra index needed).
 - *Student feedback* (*Feedback* in the top bar, with the number not yet dealt with): students' "Explain in class"
   requests, grouped by question with how many asked, who, and their notes (most requested first), and their problem
   reports (type, note, student, where they saw it). Filter by class (practice-set feedback appears under all of the

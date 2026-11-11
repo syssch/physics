@@ -1,6 +1,6 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { el } from "./ui.js?v=202611110929";
+import { el } from "./ui.js?v=202611112112";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
@@ -10,7 +10,7 @@ const STUDENT_NAV = [
   { href: "#/history", icon: "history", label: "My results", short: "Results", match: /^#\/(history|review)/ },
 ];
 const TEACHER_NAV = [
-  { href: "#/t", icon: "layout-dashboard", label: "Classes", match: /^(#?\/?|#\/t|#\/t\/(class|results)\/.*)$/ },
+  { href: "#/t", icon: "layout-dashboard", label: "Classes", match: /^(#?\/?|#\/t|#\/t\/(class|results|students?)(\/.*)?)$/ },
   { href: "#/t/assign", icon: "clipboard-list", label: "Assign", match: /^#\/t\/assign/ },
   { href: "#/t/feedback", icon: "message-question", label: "Feedback", match: /^#\/t\/feedback/, badge: "feedback" },
   { label: "Questions", icon: "database", match: /^#\/t\/(bank|paper)/, items: [
