@@ -15,7 +15,7 @@ export function checkRead(path, data) {
       case "users": return isSchool() && (s[1] === me().uid || isTeacher());
       case "questions": case "meta": return isMember();
       case "members": return isSchool() && (s[1] === myEmail() || isTeacher());
-      case "answerKeys": case "classRosters": return isTeacher();
+      case "answerKeys": case "classRosters": case "rateLimits": return isTeacher();
       case "classes":
         if (s.length === 2) return isTeacher() || (isSchool() && data && (data.studentEmails || []).includes(myEmail()));
         return isTeacher() || (isSchool() && (fake.store.get(`classes/${s[1]}`)?.studentEmails || []).includes(myEmail()));

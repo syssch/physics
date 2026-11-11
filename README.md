@@ -185,6 +185,12 @@ Questions (question bank, printable paper), Leaderboard and Explain, a Teacher |
   day). Cards are grouped by textbook book and chapter (e.g. "Book 2 · Ch 9 Momentum"). Students tick the chapters
   they have learnt, can open any card, and tap *Mark as read*.
 
+**Rate limits** (`RATE_LIMITS` in `functions/index.js`; teachers are not limited): per student, per 10 minutes / per
+Hong Kong day — practice sets started (incl. Redo my mistakes) 20 / 150, sets submitted 20 / 150, result reviews 60 / 600,
+leaderboard views 60 / 600, Explain cards marked 20 / 100, feedback messages 30 / 150. Past a limit the student sees
+"Slow down a little … try again in N minutes" (or "today's limit … resets at midnight"). Counters: `rateLimits/{uid}`.
+All functions also run at most 10 instances at once (`maxInstances`).
+
 Each assignment can be submitted once. Late submissions are accepted and marked "late".
 Unfinished answers are saved in the browser, so reloading the page doesn't lose them.
 
@@ -204,6 +210,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `meta/questionIndex` | each question's book, chapters, subtopics, skills (no answers) — used to pick practice questions | anyone at school |
 | `meta/explainCards` | all Explain cards in one document | anyone at school |
 | `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
+| `rateLimits/{uid}` | per-student usage counters for the rate limits (Cloud Functions only) | teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
 | `feedback/{kind}_{uid}_{qid}` | "explain" request or "error" report: question, type, note, class(es), assignment, `status` open/done/dismissed (written by `sendFeedback`; teachers may change only the status) | the student, teachers |
 

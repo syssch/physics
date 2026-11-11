@@ -304,7 +304,7 @@ console.log("8b. redo my mistakes");
   await waitFor(() => { const b = byText("button", "Redo my mistakes"); return b && !b.disabled; }, "redo button");
   byText("button", "Redo my mistakes").click();
   await waitFor(() => byText("h1", "Redo my mistakes") && $$(".qcard").length, "redo quiz page");
-  ok($$(".qcard").length === Math.min(10, pv.available), "redo page shows the set");
+  ok($$(".qcard").length === Math.min(3, pv.available), "redo page shows the set (3 questions by default)");
   await go("#/");
   // answer the set correctly: those questions drop off the list
   const right = Object.fromEntries(r.questionIds.map((q) => [q, bundle.answers[q]]));
@@ -636,6 +636,36 @@ console.log("9b. student feedback: report a problem / explain in class");
   fake.setUser(T); await sleep(50); await go("#/t");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
   sessionStorage.removeItem("fbkClass");
+}
+
+console.log("9c. rate limits for reasonable use");
+{
+  fake.keepRateLimits = true;
+  fake.setUser(S1); await sleep(50); await go("#/history");
+  let n = 0, err = null;
+  for (let i = 0; i < 25 && !err; i++) { try { await api.startPractice({ count: 3 }); n++; } catch (e) { err = e; } }
+  ok(n === 20 && err && err.code === "resource-exhausted" && /Slow down/.test(err.message) && /try again in 10 minutes/.test(err.message), "21st practice set within 10 minutes is refused with a friendly message");
+  await go("#/practise");
+  await waitFor(() => byText("button", "Start practice"), "practice panel");
+  byText("button", "Start practice").click();
+  await waitFor(() => /Slow down/.test($("#toast").textContent), "toast");
+  ok(true, "the student sees the message on screen");
+  const rl = () => fake.store.get("rateLimits/s1");
+  rl().start.winStart -= 11 * 60000;                     // ten minutes later
+  ok(await api.startPractice({ count: 3 }).then(() => true, () => false), "allowed again after the 10-minute window");
+  rl().start.dayCount = 150;
+  err = null; try { await api.startPractice({ count: 3 }); } catch (e) { err = e; }
+  ok(err && /today's limit \(150/.test(err.message), "daily cap");
+  rl().start.day = "2000-01-01";
+  ok(await api.startPractice({ count: 3 }).then(() => true, () => false), "daily cap resets the next day");
+  ok(await api.getLeaderboard({ period: "week" }).then(() => true, () => false), "limits are per action (leaderboard still works)");
+  let fsDenied = false; try { await fs.getDoc(fs.doc({ __db: true }, "rateLimits", "s1")); } catch (e) { fsDenied = /permission/.test(e.message); }
+  ok(fsDenied, "students cannot read or reset the counters");
+  fake.setUser(T); await sleep(50);
+  let tn = 0; for (let i = 0; i < 25; i++) { try { await api.startPractice({ count: 3 }); tn++; } catch (e) { break; } }
+  ok(tn === 25 && !fake.store.has("rateLimits/t1"), "teachers are not limited");
+  fake.keepRateLimits = false;
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
 console.log("10. admin");

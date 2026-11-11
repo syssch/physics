@@ -33,7 +33,10 @@ function collRef(path, filters = [], orders = [], lim = 0) {
     get: async () => { const docs = g.runQuery(path, filters, orders, lim).map((d) => snapOf(d.path, d.data));
       return { docs, size: docs.length, empty: !docs.length, forEach: (fn) => docs.forEach(fn) }; } };
 }
-const db = { collection: (p) => collRef(p), doc: (p) => docRef(p), getAll: async (...refs) => Promise.all(refs.map((r) => r.get())) };
+const db = { collection: (p) => collRef(p), doc: (p) => docRef(p), getAll: async (...refs) => Promise.all(refs.map((r) => r.get())),
+  runTransaction: async (fn) => { const ops = []; const tx = { get: (r) => r.get(), set: (r, d, o) => ops.push(() => r.set(d, o)),
+    update: (r, d) => ops.push(() => r.update(d)), delete: (r) => ops.push(() => r.delete()) };
+    const out = await fn(tx); for (const o of ops) await o(); return out; } };
 module.exports = {
   "firebase-admin/app": { initializeApp: () => ({}) },
   "firebase-admin/firestore": { getFirestore: () => db, FieldValue: { serverTimestamp: () => g.SERVER_TS, arrayUnion: (...x) => ({ __arrayUnion: x }), increment: (n) => ({ __inc: n }) }, Timestamp: g.Timestamp },

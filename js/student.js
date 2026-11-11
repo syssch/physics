@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js?v=202611110744";
+import { db, api } from "./fb.js?v=202611110929";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611110744";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611110744";
-import { runQuiz, showReview } from "./quiz.js?v=202611110744";
-import { explainPanel } from "./explain.js?v=202611110744";
-import { setDue, setChip } from "./chrome.js?v=202611110744";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611110929";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611110929";
+import { runQuiz, showReview } from "./quiz.js?v=202611110929";
+import { explainPanel } from "./explain.js?v=202611110929";
+import { setDue, setChip } from "./chrome.js?v=202611110929";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -70,7 +70,7 @@ export async function studentHome(user) {
 async function practicePanel() {
   const syl = syllabusFilters(await getBooks());
   const sk = skillFilter();
-  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
+  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 3 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button" }, "Start practice");
   go.addEventListener("click", async () => {
     go.disabled = true;
@@ -183,7 +183,7 @@ function leaderboardPanel(user) {
 function mistakesPanel() {
   const info = el("p", { class: "muted" }, "Checking your past answers…");
   const bookSel = el("select", {}, [el("option", { value: "" }, "All books")]);
-  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 10 }, `${n} questions`)));
+  const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 3 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button", disabled: true }, "Redo my mistakes");
   const row = el("div", { class: "row" }, [bookSel, countSel, go]);
   row.style.display = "none";

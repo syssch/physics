@@ -33,8 +33,44 @@ async function isTeacher(email) {
 /** Only teachers and students who are on at least one class list may use the platform. */
 async function requireMember(request) {
   const user = requireSchoolUser(request);
-  if ((await db.doc(`members/${user.email}`).get()).exists || (await isTeacher(user.email))) return user;
+  if ((await db.doc(`members/${user.email}`).get()).exists) return user;
+  if (await isTeacher(user.email)) { user.isTeacher = true; return user; }
   throw new HttpsError("permission-denied", "This site is for SYSS Physics students. Ask your physics teacher to add you to a class.");
+}
+
+// ------------------------------------------------------------------ rate limits
+/**
+ * Per-student limits for reasonable use (teachers are not limited). Each action has a short window and a daily cap
+ * (Hong Kong day). A student working normally never meets them; they stop scripts, stuck reload loops and
+ * button-mashing from running up Firestore and Cloud Functions usage. Counts live in `rateLimits/{uid}`.
+ */
+const RATE_LIMITS = {
+  start:       { what: "practice sets started", perWindow: 20, windowMin: 10, perDay: 150 },
+  submit:      { what: "sets submitted",        perWindow: 20, windowMin: 10, perDay: 150 },
+  review:      { what: "result reviews opened", perWindow: 60, windowMin: 10, perDay: 600 },
+  leaderboard: { what: "leaderboard views",     perWindow: 60, windowMin: 10, perDay: 600 },
+  explain:     { what: "Explain cards marked",  perWindow: 20, windowMin: 10, perDay: 100 },
+  feedback:    { what: "feedback messages",     perWindow: 30, windowMin: 10, perDay: 150 },
+};
+async function rateLimit(user, action, now = Date.now()) {
+  if (user.isTeacher) return;
+  const L = RATE_LIMITS[action];
+  const ref = db.doc(`rateLimits/${user.uid}`);
+  const day = dayKey(now), winMs = L.windowMin * 60000;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = (snap.exists && snap.get(action)) || {};
+    const w = cur.winStart && now - cur.winStart < winMs ? { winStart: cur.winStart, win: cur.win || 0 } : { winStart: now, win: 0 };
+    const d = cur.day === day ? cur.dayCount || 0 : 0;
+    if (d >= L.perDay) {
+      throw new HttpsError("resource-exhausted", `You've reached today's limit (${L.perDay} ${L.what}). It resets at midnight — well done for working so hard!`);
+    }
+    if (w.win >= L.perWindow) {
+      const mins = Math.max(1, Math.ceil((w.winStart + winMs - now) / 60000));
+      throw new HttpsError("resource-exhausted", `Slow down a little — that's ${L.perWindow} ${L.what} in ${L.windowMin} minutes. Please try again in ${mins} minute${mins > 1 ? "s" : ""}.`);
+    }
+    tx.set(ref, { email: user.email, [action]: { winStart: w.winStart, win: w.win + 1, day, dayCount: d + 1 } }, { merge: true });
+  });
 }
 
 const cleanEmails = (list) => [...new Set((list || []).map((e) => String(e).trim().toLowerCase()).filter(Boolean))];
@@ -146,6 +182,7 @@ function cleanResponses(questionIds, raw) {
 /** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic / skill. */
 exports.startPractice = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "start");
   const { topic, subtopic, chapter, skill } = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt((request.data || {}).count, 10) || 10));
 
@@ -189,6 +226,7 @@ exports.startPractice = onCall(async (request) => {
  */
 exports.startMistakes = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "start");
   const data = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt(data.count, 10) || 10));
 
@@ -248,6 +286,7 @@ exports.startMistakes = onCall(async (request) => {
  */
 exports.submitAnswers = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "submit");
   const data = request.data || {};
   let questionIds, attemptRef, meta, reveal, revealMode = "after_submit";
 
@@ -398,6 +437,7 @@ async function recordCheckin(user, ms, kind) {
 /** Explain: 300 points the first time each day the student marks their card of the day as read. */
 exports.explainRead = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "explain");
   const cardId = String((request.data || {}).cardId || "");
   const prog = await db.doc(`explainProgress/${user.uid}`).get();
   const today = prog.exists ? prog.get("today") : null;
@@ -425,6 +465,7 @@ function ranked(scores) {
  */
 exports.getLeaderboard = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "leaderboard");
   const data = request.data || {};
   const period = ["week", "month", "all"].includes(data.period) ? data.period : "week";
   const teacher = await isTeacher(user.email);
@@ -545,6 +586,7 @@ exports.getReview = onCall(async (request) => {
   if (!at.exists) throw new HttpsError("not-found", "Attempt not found.");
   const teacher = await isTeacher(user.email);
   if (at.get("uid") !== user.uid && !teacher) throw new HttpsError("permission-denied", "Not your attempt.");
+  if (!teacher) await rateLimit(user, "review");
 
   let reveal = true, revealMode = "after_submit";
   if (at.get("mode") === "assignment" && !teacher) {
@@ -570,6 +612,7 @@ exports.getReview = onCall(async (request) => {
 const FEEDBACK_TYPES = ["key", "wording", "figure", "solution", "other"];
 exports.sendFeedback = onCall(async (request) => {
   const user = await requireMember(request);
+  await rateLimit(user, "feedback");
   const d = request.data || {};
   const kind = ["error", "explain"].includes(d.kind) ? d.kind : null;
   const qid = String(d.qid || "");

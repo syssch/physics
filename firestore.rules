@@ -101,6 +101,11 @@ service cloud.firestore {
       allow read: if isTeacher();
       allow write: if false;
     }
+    // Per-student usage counters for rate limits (Cloud Functions only).
+    match /rateLimits/{uid} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
     match /checkinBonus/{id} {
       allow read: if isTeacher();
       allow write: if false;
