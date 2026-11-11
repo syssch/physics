@@ -151,9 +151,9 @@ updates itself whenever a class is saved or deleted.
   "Hardest first" / "Most attempted" ordering. Built in the teacher's browser from `attempts` (reloaded each time the
   stats page opens; the bank reuses it for 5 minutes).
 - *Students* (button on each class on the dashboard, `#/t/students/<class>`): every student in the class with sets done,
-  sets in the last 7 days, questions answered, % correct, assignments submitted and last active. Click a name (here or on
+  sets in the last 7 days, questions answered, % correct, assignments submitted, Explain cards read and last active. Click a name (here or on
   any Results grid) for the student's *record* (`js/studentrecord.js`): summary (sets by type, % correct, assignments
-  submitted / late / overdue, last active), % correct by book and by chapter (weakest first, marked against the current
+  submitted / late / overdue, Explain cards read, last active), % correct by book and by chapter (weakest first, marked against the current
   answer keys), every practice set, Redo my mistakes and assignment with *View* (each question with the student's answer,
   the key and solution), questions whose latest answer is wrong, overdue assignments and the student's feedback. CSV of the
   sets list. Reads `attempts` by email (no extra index needed).
@@ -190,7 +190,7 @@ Questions (question bank, printable paper), Leaderboard and Explain, a Teacher |
   `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
   shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each. At the top, *My progress* (`myProgress` Cloud Function):
-  sets done (practice / redo / assignments), questions answered, % correct, sets this week, % correct by book and by
+  sets done (practice / redo / assignments), questions answered, % correct, sets this week, Explain cards read, % correct by book and by
   chapter (weakest first; chapters with 3+ answers, each with *Practise 5*), and how many questions are waiting in Redo my
   mistakes. Assignments whose answers are still hidden count as sets but are not marked, so nothing is given away.
 - *Feedback on a question* (review page, under each question): *Report a problem* (answer key may be wrong, typo or unclear

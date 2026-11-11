@@ -899,6 +899,22 @@ ok(row && row.children[4].textContent === "Ch 6, Ch 7, Ch 8, Ch 9, Ch 11", "teac
 fake.store.get("explainProgress/s1").topics = ["Force and Motion"];
 await go("#/t"); await go("#/t/explain"); await waitFor(() => byText("h1", "reading progress"), "teacher progress again");
 ok(byText("table.grid tr", "s001").children[4].textContent === "all", "old topic choices fall back to all chapters");
+{ // cards read also show in the Students list, the student record and the student's own My progress
+  const nRead = Object.keys(fake.store.get("explainProgress/s1").read).filter((id) => explain.cards.some((c) => c.id === id)).length;
+  const s1cls = [...fake.store.entries()].find(([p, d]) => /^classes\/[^/]+$/.test(p) && (d.studentEmails || []).includes(S1.email))[0].split("/")[1];
+  await go(`#/t/students/${s1cls}`);
+  await waitFor(() => $("table.students"), "students list");
+  const hi = $$("table.students th").findIndex((th) => th.textContent === "Explain cards");
+  const r1 = $$("table.students tr").find((tr) => tr.querySelector("a") && decodeURIComponent(tr.querySelector("a").getAttribute("href")).endsWith(S1.email));
+  ok(hi > 0 && r1.children[hi].textContent.startsWith(String(nRead)), "Students list shows Explain cards read");
+  await go(r1.querySelector("a").getAttribute("href"));
+  await waitFor(() => byText(".statcard", "Explain cards read"), "record card");
+  ok(byText(".statcard", "Explain cards read").querySelector(".statval").textContent === `${nRead}/${explain.cards.length}`, "student record shows cards read out of all cards");
+  fake.setUser(S1); await sleep(50); await go("#/"); await go("#/history");
+  await waitFor(() => byText(".progress .statcard", "Explain cards read"), "my progress card");
+  ok(byText(".progress .statcard", "Explain cards read").querySelector(".statval").textContent === `${nRead}/${explain.cards.length}`, "My progress shows the student's cards read");
+  fake.setUser(T); await sleep(50); await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
 
 console.log("13. Class lists control access");
 const S9 = { uid: "s9", email: "s009@syss.edu.hk", name: "Not Physics" };

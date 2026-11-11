@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js?v=202611112131";
+import { db, api, auth } from "./fb.js?v=202611112229";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611112131";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611112131";
-import { runQuiz, showReview } from "./quiz.js?v=202611112131";
-import { explainPanel } from "./explain.js?v=202611112131";
-import { setDue, setChip } from "./chrome.js?v=202611112131";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611112229";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611112229";
+import { runQuiz, showReview } from "./quiz.js?v=202611112229";
+import { explainPanel, getCards, readStats } from "./explain.js?v=202611112229";
+import { setDue, setChip } from "./chrome.js?v=202611112229";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -272,7 +272,12 @@ export async function historyView(user) {
 async function progressPanel() {
   const box = el("div", { class: "panel progress" }, [el("h2", {}, "My progress")]);
   let p, books = [];
-  try { [p, books] = await Promise.all([api.myProgress({}), getBooks().catch(() => [])]); }
+  let ex = null;
+  try {
+    [p, books, ex] = await Promise.all([api.myProgress({}), getBooks().catch(() => []),
+      Promise.all([getDoc(doc(db, "explainProgress", auth.currentUser.uid)), getCards()])
+        .then(([d, b]) => readStats(d.exists() ? d.data() : {}, b.cards)).catch(() => null)]);
+  }
   catch (e) { box.append(el("p", { class: "muted" }, errMsg(e))); return box; }
   const pc = (ok, n) => (n ? Math.round((100 * ok) / n) : 0);
   const card = (label, value, sub) => el("div", { class: "statcard" }, [el("div", { class: "statval" }, String(value)),
@@ -282,6 +287,7 @@ async function progressPanel() {
     card("questions answered", p.answered, p.answered ? `${p.correct} correct` : ""),
     card("correct overall", p.answered ? `${pc(p.correct, p.answered)}%` : "—"),
     card("this week", p.week, "sets in the last 7 days"),
+    ex ? card("Explain cards read", ex.total ? `${ex.n}/${ex.total}` : ex.n, `${ex.week} in the last 7 days`) : null,
   ]));
   if (p.hidden) box.append(el("p", { class: "muted small" }, `${p.hidden} assignment${p.hidden > 1 ? "s are" : " is"} not counted yet — the answers haven't been released.`));
   if (p.wrongNow) {
