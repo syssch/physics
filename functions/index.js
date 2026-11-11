@@ -51,6 +51,7 @@ const RATE_LIMITS = {
   leaderboard: { what: "leaderboard views",     perWindow: 60, windowMin: 10, perDay: 600 },
   explain:     { what: "Explain cards marked",  perWindow: 20, windowMin: 10, perDay: 100 },
   feedback:    { what: "feedback messages",     perWindow: 30, windowMin: 10, perDay: 150 },
+  progress:    { what: "progress summaries",    perWindow: 30, windowMin: 10, perDay: 300 },
 };
 async function rateLimit(user, action, now = Date.now()) {
   if (user.isTeacher) return;
@@ -649,4 +650,63 @@ exports.sendFeedback = onCall(async (request) => {
   };
   await ref.set(fb);
   return { feedback: { kind, type: fb.type, note: fb.note, status: "open" } };
+});
+
+// ------------------------------------------------------------------ my progress (students)
+/**
+ * The student's own summary for My results: sets done, % correct overall and by book / chapter, and how many questions
+ * are waiting in Redo my mistakes. Only results whose answers the student may already see are marked (an assignment
+ * with hidden answers counts as a set but its answers are left out), so the summary never gives answers away.
+ */
+exports.myProgress = onCall(async (request) => {
+  const user = await requireMember(request);
+  await rateLimit(user, "progress");
+  const now = Date.now();
+  const tms = (t) => (t && t.toMillis ? t.toMillis() : 0);
+  const atts = (await db.collection("attempts").where("uid", "==", user.uid).get()).docs.map((d) => d.data())
+    .sort((a, b) => tms(a.submittedAt) - tms(b.submittedAt));
+  const out = { sets: atts.length, practice: 0, mistakes: 0, assignments: 0, week: 0, hidden: 0, answered: 0, correct: 0,
+                byBook: [], byChapter: [], wrongNow: 0, lastAt: atts.length ? tms(atts[atts.length - 1].submittedAt) : null };
+  const asgCache = new Map(), visible = [];
+  for (const a of atts) {
+    if (a.mode === "assignment") out.assignments++; else if (a.kind === "mistakes") out.mistakes++; else out.practice++;
+    if (now - tms(a.submittedAt) < 7 * 86400000) out.week++;
+    if (a.mode === "assignment") {
+      const key = `${a.classId}/${a.assignmentId}`;
+      if (!asgCache.has(key)) asgCache.set(key, await db.doc(`classes/${a.classId}/assignments/${a.assignmentId}`).get());
+      const asg = asgCache.get(key);
+      if (asg.exists && !canReveal(asg)) { out.hidden++; continue; }
+    }
+    visible.push(a);
+  }
+  if (!visible.length) return out;
+  const { answers } = await loadKeys([...new Set(visible.flatMap((a) => a.questionIds || []))]);
+  const idx = await db.doc("meta/questionIndex").get();
+  let ix = {};
+  if (idx.exists && typeof idx.get("data") === "string") { try { ix = JSON.parse(idx.get("data")); } catch (e) { ix = {}; } }
+  else if (idx.exists && idx.get("questions")) ix = idx.get("questions");
+  if (!Object.keys(ix).length) {                       // older data without the index: read the questions themselves
+    const ids = Object.keys(answers);
+    (ids.length ? await db.getAll(...ids.map((q) => db.doc(`questions/${q}`))) : []).forEach((d) => {
+      if (d.exists && d.get("active") !== false) ix[d.id] = { t: d.get("topic"), c: d.get("chapters") || [] };
+    });
+  }
+  const book = new Map(), ch = new Map(), latest = new Map();
+  const add = (m, k, ok) => { const r = m.get(k) || [0, 0]; r[0]++; if (ok) r[1]++; m.set(k, r); };
+  for (const a of visible) {
+    for (const q of a.questionIds || []) {
+      const r = (a.responses || {})[q] || "";
+      latest.set(q, r);
+      if (!answers[q]) continue;
+      const ok = r === answers[q];
+      out.answered++; if (ok) out.correct++;
+      const info = ix[q];
+      if (info) { add(book, info.t || "Other", ok); (info.c || []).forEach((c) => add(ch, c, ok)); }
+    }
+  }
+  out.byBook = [...book.entries()].map(([k, [n, ok]]) => [k, n, ok]);
+  out.byChapter = [...ch.entries()].map(([k, [n, ok]]) => [k, n, ok]);
+  const blocked = await openAssignmentQuestionIds(user.email);
+  out.wrongNow = [...latest.entries()].filter(([q, r]) => answers[q] && r !== answers[q] && ix[q] && !blocked.has(q)).length;
+  return out;
 });

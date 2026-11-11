@@ -1,11 +1,11 @@
-import { db, api } from "./fb.js?v=202611112123";
+import { db, api } from "./fb.js?v=202611112131";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611112123";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611112123";
-import { runQuiz, showReview } from "./quiz.js?v=202611112123";
-import { explainPanel } from "./explain.js?v=202611112123";
-import { setDue, setChip } from "./chrome.js?v=202611112123";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611112131";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611112131";
+import { runQuiz, showReview } from "./quiz.js?v=202611112131";
+import { explainPanel } from "./explain.js?v=202611112131";
+import { setDue, setChip } from "./chrome.js?v=202611112131";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -249,13 +249,14 @@ export async function historyView(user) {
   mount(loading());
   const attempts = await myAttempts(user, 200);
   const page = el("section", {}, [el("h1", {}, "My results")]);
+  if (attempts.length) page.append(await progressPanel());
   if (!attempts.length) page.append(el("p", { class: "muted" }, "Nothing yet."));
   else {
     const del = async (ids) => {
       try { for (const id of ids) await deleteDoc(doc(db, "attempts", id)); toast(`Deleted ${ids.length} result(s).`); historyView(user); }
       catch (e) { toast(errMsg(e), "error"); }
     };
-    const t = el("table", { class: "grid" }, [el("tr", {}, ["Date", "Set", "Score", "%", user.isTeacher ? "" : null].filter((h) => h !== null).map((h) => el("th", {}, h)))]);
+    const t = el("table", { class: "grid history" }, [el("tr", {}, ["Date", "Set", "Score", "%", user.isTeacher ? "" : null].filter((h) => h !== null).map((h) => el("th", {}, h)))]);
     attempts.forEach((a) => t.append(el("tr", {}, [el("td", {}, fmtDate(a.submittedAt)),
       el("td", {}, el("a", { href: `#/review/${a.id}` }, a.title || "Practice")),
       el("td", {}, `${a.score}/${a.total}`), el("td", {}, a.total ? `${Math.round((100 * a.score) / a.total)}%` : ""),
@@ -265,4 +266,56 @@ export async function historyView(user) {
       onclick: () => confirm(`Delete all ${attempts.length} of your results? This can't be undone.`) && del(attempts.map((a) => a.id)) }, "Delete all my results")));
   }
   mount(page);
+}
+
+// ---------------------------------------------------------------- My progress (top of My results)
+async function progressPanel() {
+  const box = el("div", { class: "panel progress" }, [el("h2", {}, "My progress")]);
+  let p, books = [];
+  try { [p, books] = await Promise.all([api.myProgress({}), getBooks().catch(() => [])]); }
+  catch (e) { box.append(el("p", { class: "muted" }, errMsg(e))); return box; }
+  const pc = (ok, n) => (n ? Math.round((100 * ok) / n) : 0);
+  const card = (label, value, sub) => el("div", { class: "statcard" }, [el("div", { class: "statval" }, String(value)),
+    el("div", { class: "statlabel" }, label), sub ? el("div", { class: "muted small" }, sub) : null]);
+  box.append(el("div", { class: "statgrid" }, [
+    card("sets done", p.sets, `${p.practice} practice · ${p.mistakes} redo · ${p.assignments} assignment${p.assignments === 1 ? "" : "s"}`),
+    card("questions answered", p.answered, p.answered ? `${p.correct} correct` : ""),
+    card("correct overall", p.answered ? `${pc(p.correct, p.answered)}%` : "—"),
+    card("this week", p.week, "sets in the last 7 days"),
+  ]));
+  if (p.hidden) box.append(el("p", { class: "muted small" }, `${p.hidden} assignment${p.hidden > 1 ? "s are" : " is"} not counted yet — the answers haven't been released.`));
+  if (p.wrongNow) {
+    box.append(el("p", { class: "notice" }, [`${p.wrongNow} question${p.wrongNow > 1 ? "s" : ""} you got wrong last time ${p.wrongNow > 1 ? "are" : "is"} waiting. `,
+      el("a", { href: "#/practise" }, "Redo my mistakes")]));
+  }
+  const chName = new Map();
+  books.forEach((b) => (b.chapters || []).forEach((c) => chName.set(c.id, `${b.book > 5 ? `B${b.book} ` : ""}Ch ${c.no} ${c.en || ""}`.trim())));
+  const table = (rows, title, chapterIds) => {
+    const t = el("table", { class: "grid areas" }, [el("tr", {}, [el("th", {}, title), el("th", {}, "Answered"), el("th", {}, "Correct"), el("th", {}, ""), chapterIds ? el("th", {}, "") : null])]);
+    rows.forEach(([k, n, ok]) => {
+      const v = pc(ok, n);
+      const prac = chapterIds ? el("button", { type: "button", class: "btn small" }, "Practise 5") : null;
+      if (prac) prac.addEventListener("click", async () => {
+        prac.disabled = true;
+        try {
+          const r = await api.startPractice({ chapter: k, count: 5 });
+          sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
+          location.hash = `#/practice/${r.sessionId}`;
+        } catch (e) { toast(errMsg(e), "error"); prac.disabled = false; }
+      });
+      t.append(el("tr", {}, [el("td", {}, chapterIds ? chName.get(k) || `Ch ${k}` : k), el("td", {}, String(n)), el("td", {}, `${v}%`),
+        el("td", { class: "barcell" }, el("span", { class: `bar ${v < 50 ? "low" : v < 75 ? "mid" : "high"}`, style: `width:${Math.max(v, 2)}%` })),
+        chapterIds ? el("td", {}, prac) : null]));
+    });
+    return t;
+  };
+  const order = (a, b) => pc(a[2], a[1]) - pc(b[2], b[1]) || b[1] - a[1];
+  const chRows = p.byChapter.filter((r) => r[1] >= 3).sort(order);
+  if (p.byBook.length) {
+    box.append(el("h3", {}, "Strengths and weak areas"),
+      el("p", { class: "muted small" }, "Weakest first. Chapters appear once you have answered at least 3 of their questions."),
+      el("div", { class: "areas2" }, [el("div", { class: "scroll" }, table([...p.byBook].sort(order), "Book")),
+        chRows.length ? el("div", { class: "scroll" }, table(chRows, "Chapter", true)) : null]));
+  }
+  return box;
 }

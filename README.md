@@ -189,7 +189,10 @@ Questions (question bank, printable paper), Leaderboard and Explain, a Teacher |
   top 10 (class + name from the class list) and their own rank. Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
   `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
   shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
-- *My results*: every past attempt, with a review page for each.
+- *My results*: every past attempt, with a review page for each. At the top, *My progress* (`myProgress` Cloud Function):
+  sets done (practice / redo / assignments), questions answered, % correct, sets this week, % correct by book and by
+  chapter (weakest first; chapters with 3+ answers, each with *Practise 5*), and how many questions are waiting in Redo my
+  mistakes. Assignments whose answers are still hidden count as sets but are not marked, so nothing is given away.
 - *Feedback on a question* (review page, under each question): *Report a problem* (answer key may be wrong, typo or unclear
   wording, figure missing or wrong, solution wrong or unclear, something else, plus an optional note) at any time;
   *Explain in class* (one tap, optional note, *Undo*) once the solutions are shown. Sent by the `sendFeedback` Cloud

@@ -261,8 +261,8 @@ ok(!leak, "practice never serves questions from open assignments");
 
 console.log("8. history");
 await go("#/history");
-await waitFor(() => byText("h1", "My results"), "history");
-ok($$("table.grid tr").length === 5, "history lists 4 attempts");
+await waitFor(() => byText("h1", "My results") && $("table.history"), "history");
+ok($$("table.history tr").length === 5, "history lists 4 attempts");
 
 console.log("8b. redo my mistakes");
 {
@@ -755,6 +755,38 @@ console.log("9e. first-attempt choice statistics");
   set(sortSel, "");
   sessionStorage.removeItem("qsWho");
   await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
+console.log("9f. My progress (students)");
+{
+  fake.setUser(S1); await sleep(50); await go("#/"); await go("#/history");
+  await waitFor(() => $(".progress .statgrid"), "progress panel");
+  const mineN = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.uid === "s1").length;
+  ok($(".progress .statval").textContent === String(mineN), "sets done matches the student's results");
+  const p0 = await api.myProgress({});
+  const pv = await api.startMistakes({ preview: true });
+  ok(p0.wrongNow === pv.available, "questions waiting = Redo my mistakes count");
+  ok(p0.answered > 0 && p0.correct <= p0.answered && p0.byBook.length && byText(".progress table.areas th", "Book"), "% correct by book");
+  ok(!p0.answers && !p0.solutions && !JSON.stringify(p0).includes("worked solution"), "no answer keys or solutions are sent");
+  if (p0.wrongNow) ok(byText(".progress .notice a", "Redo my mistakes"), "link to Redo my mistakes when questions are waiting");
+  // an assignment with hidden answers counts as a set but is not marked
+  const qh = Object.keys(bundle.answers).slice(30, 33);
+  fake.store.set(`classes/${classId}/assignments/hidden9f`, { title: "Hidden quiz", questionIds: qh, reveal: "manual", dueAt: Timestamp.fromMillis(Date.now() - 1000), createdBy: T.email });
+  await api.submitAnswers({ classId, assignmentId: "hidden9f", responses: Object.fromEntries(qh.map((q) => [q, bundle.answers[q]])) });
+  const p1 = await api.myProgress({});
+  ok(p1.sets === p0.sets + 1 && p1.hidden === p0.hidden + 1 && p1.answered === p0.answered && p1.correct === p0.correct, "hidden-answer assignment is counted as a set but not marked");
+  await go("#/"); await go("#/history");
+  await waitFor(() => byText(".progress p", "not counted yet"), "hidden note");
+  ok(true, "student is told why it isn't counted yet");
+  const prac = byText(".progress button", "Practise 5");
+  if (prac) {
+    prac.click();
+    await waitFor(() => location.hash.startsWith("#/practice/") && $$(".qcard").length, "chapter practice");
+    ok(true, "Practise 5 starts a set on that chapter");
+  }
+  fake.store.delete(`classes/${classId}/assignments/hidden9f`); fake.store.delete("attempts/hidden9f_s1");
+  fake.setUser(T); await sleep(50); await go("#/t");
+  await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
 console.log("10. admin");
