@@ -239,10 +239,23 @@ mirrored in `tests/fakes/rules.mjs`) against an in-memory Firebase. It doesn't n
 network access.
 
 ```bash
-cd tests && npm install && node run.mjs
+cd tests && npm install && node run.mjs          # synthetic test data in tests/fixtures/ (works anywhere)
+node run.mjs --real                              # the real exports in ../platform_prep/export (your Mac only)
 ```
 
+The fixtures (`tests/fixtures/*.json`) keep the real ids, books, chapters and skills but replace every question text,
+option, answer letter and Explain card text with made-up content, so they are safe in this public repo. Rebuild them
+after big changes to the question bank with `python3 tools/make_test_fixtures.py`. GitHub runs the fixture tests on every
+push and pull request (`.github/workflows/tests.yml`; a red ✗ on the commit means something broke).
+
 If you change `firestore.rules`, update `tests/fakes/rules.mjs` to match.
+
+### Working with other AI coding agents
+
+`AGENTS.md` (read by Codex, Cursor, Copilot, Gemini CLI and others), `CLAUDE.md` (Claude Code) and
+`.github/copilot-instructions.md` tell an agent the rules, the code map, the feature checklist and how to test. Review
+an agent's changes in GitHub Desktop before pushing, and never give it Firebase or GitHub credentials — deploy with
+`deploy.command` yourself.
 
 ## Updating the site's code
 

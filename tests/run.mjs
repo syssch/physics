@@ -1,5 +1,6 @@
 // End-to-end test of the web app + Cloud Functions against an in-memory Firebase (no network needed).
-// Needs the trial bundle at ../../platform_prep/export/trial/bundle.json
+// Data: synthetic fixtures in tests/fixtures/ (safe for the public repo; made by tools/make_test_fixtures.py).
+// `node run.mjs --real` (or REAL_DATA=1) uses the real exports in ../../platform_prep/export/ instead (Shi's Mac only).
 import { register, createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
@@ -8,8 +9,14 @@ register("./fakes/hooks.mjs", import.meta.url);
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as pathResolve } from "node:path";
 // Run from learning-platform/tests:  npm install && node run.mjs
-const ROOT = pathResolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const html = readFileSync(`${ROOT}/learning-platform/index.html`, "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
+const APP = pathResolve(dirname(fileURLToPath(import.meta.url)), "..");          // the site (repo root)
+const REAL = process.argv.includes("--real") || process.env.REAL_DATA === "1";
+const EXPORT = pathResolve(APP, "..", "platform_prep", "export");
+const DATA = REAL
+  ? { trial: `${EXPORT}/trial/bundle.json`, explain: `${EXPORT}/explain/explain_bundle.json`, all: `${EXPORT}/all_ready/bundle.json` }
+  : { trial: `${APP}/tests/fixtures/trial.json`, explain: `${APP}/tests/fixtures/explain.json`, all: `${APP}/tests/fixtures/all.json` };
+console.log(`Test data: ${REAL ? "real exports" : "synthetic fixtures"}`);
+const html = readFileSync(`${APP}/index.html`, "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
 const dom = new JSDOM(html, { url: "http://localhost/index.html", pretendToBeVisual: true });
 const w = dom.window;
 const NodeFile = globalThis.File;
@@ -24,7 +31,7 @@ process.on("unhandledRejection", (e) => errors.push("unhandled: " + (e?.message 
 
 const { fake, Timestamp } = await import("./fakes/core.mjs");
 // seed
-const bundle = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/trial/bundle.json`, "utf8"));
+const bundle = JSON.parse(readFileSync(DATA.trial, "utf8"));
 for (const q of bundle.questions) fake.store.set(`questions/${q.id}`, { ...q, active: true });
 const PNG1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="; // 1x1 png
 // every trial question gets a worked solution, except one (questions without a solution still work)
@@ -32,7 +39,7 @@ const noSol = Object.keys(bundle.answers)[0];
 for (const [id, a] of Object.entries(bundle.answers)) fake.store.set(`answerKeys/${id}`, id === noSol ? { answer: a } : { answer: a, solution: `<p><b>Key idea:</b> worked solution for ${id} $x^2$</p><p class="sol-fig"><img src="data:image/png;base64,${PNG1}" alt="Solution figure"></p>` });
 fake.store.set("meta/topics", process.env.NOMETABOOKS ? { topics: bundle.topics } : { topics: bundle.topics, books: bundle.books });   // as the Admin import writes it (NOMETABOOKS: an older import without the book list)
 fake.store.set("teachers/teacher@singyin.edu.hk", {});
-const explain = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/explain/explain_bundle.json`, "utf8"));
+const explain = JSON.parse(readFileSync(DATA.explain, "utf8"));
 if (process.env.NOBOOKS) delete explain.books;   // bundle imported without its book list
 // an Explain bundle imported before the Chinese chapter names were dropped still carries them: they must not show
 explain.cards.forEach((c) => { c.chapterZh = "中文"; });
@@ -45,7 +52,7 @@ const Module = require("module");
 const fakesAdmin = require("./fakes/admin.cjs");
 const origLoad = Module._load;
 Module._load = function (req, ...rest) { return fakesAdmin[req] || origLoad.call(this, req, ...rest); };
-fake.handlers = require(`${ROOT}/learning-platform/functions/index.js`);
+fake.handlers = require(`${APP}/functions/index.js`);
 fake.afterWrite = async (path, before, after) => {
   const m = path.match(/^classes\/([^/]+)$/);
   if (!m) return;
@@ -75,7 +82,7 @@ const X = { uid: "x1", email: "someone@gmail.com", name: "Outsider" };
 
 console.log("1. outsider is rejected");
 fake.user = X;
-await import(`${ROOT}/learning-platform/js/app.js`);
+await import(`${APP}/js/app.js`);
 await waitFor(() => byText("p.error", "not a school account"), "outsider message");
 ok(fake.user === null, "non-school account is signed out");
 
@@ -189,8 +196,8 @@ let denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "answerKeys", q
 ok(denied, "student cannot read answer keys");
 denied = false; try { await fs.setDoc(fs.doc({ __db: true }, "attempts", "fake"), { uid: "s1", score: 99 }); } catch (e) { denied = /permission/.test(e.message); }
 ok(denied, "student cannot write attempts");
-const VER = (readFileSync(`${ROOT}/learning-platform/js/app.js`, "utf8").match(/fb\.js(\?v=\w+)?"/) || [])[1] || "";
-const { api } = await import(`${ROOT}/learning-platform/js/fb.js${VER}`);   // same module instance as the app
+const VER = (readFileSync(`${APP}/js/app.js`, "utf8").match(/fb\.js(\?v=\w+)?"/) || [])[1] || "";
+const { api } = await import(`${APP}/js/fb.js${VER}`);   // same module instance as the app
 let again = ""; try { await api.submitAnswers({ classId, assignmentId: a1, responses: {} }); } catch (e) { again = e.message; }
 ok(/already submitted/.test(again), "cannot submit twice");
 let notIn = ""; fake.user = { uid: "s9", email: "s009@syss.edu.hk", name: "x" };
@@ -781,7 +788,8 @@ console.log("9f. My progress (students)");
   const prac = byText(".progress button", "Practise 5");
   if (prac) {
     prac.click();
-    await waitFor(() => location.hash.startsWith("#/practice/") && $$(".qcard").length, "chapter practice");
+    // a set on that chapter, or (if all its questions are in open assignments) the server's "no questions" message
+    await waitFor(() => (location.hash.startsWith("#/practice/") && $$(".qcard").length) || /No questions match/.test($("#toast").textContent), "chapter practice");
     ok(true, "Practise 5 starts a set on that chapter");
   }
   fake.store.delete(`classes/${classId}/assignments/hidden9f`); fake.store.delete("attempts/hidden9f_s1");
@@ -1004,7 +1012,7 @@ ok(true, "teacher can delete their own results");
 
 console.log("15. full SYSS import (all ready questions) and the practice index");
 {
-  const full = JSON.parse(readFileSync(`${ROOT}/platform_prep/export/all_ready/bundle.json`, "utf8"));
+  const full = JSON.parse(readFileSync(DATA.all, "utf8"));
   fake.setUser(T); await sleep(50);
   await go("#/t"); await go("#/t/admin");
   await waitFor(() => byText("h2", "Import questions"), "admin for full import");
@@ -1035,9 +1043,10 @@ console.log("15. full SYSS import (all ready questions) and the practice index")
   const rb = await api.startPractice({ topic: "Atomic World", count: 5 });
   ok(rb.questionIds.every((id) => idx[id].t === "Atomic World"), "practice by book uses the index");
   ok(full.questions.every((q) => JSON.stringify(idx[q.id].k) === JSON.stringify(q.skills)), "practice index lists every question's skills");
-  const inSk = full.questions.filter((q) => q.skills.includes("Experimental skills")).map((q) => q.id);
+  const inSk = Object.keys(idx).filter((id) => (idx[id].k || []).includes("Experimental skills"));   // every question on the platform
   const rs = await api.startPractice({ skill: "Experimental skills", count: 20 });
-  ok(inSk.length && rs.questionIds.length === Math.min(20, inSk.length) && rs.questionIds.every((id) => inSk.includes(id)), `practice by skill draws only from the ${inSk.length} experimental-skills questions`);
+  ok(inSk.length && rs.questionIds.length && rs.questionIds.length <= 20 && (inSk.length < 25 || rs.questionIds.length === 20) && rs.questionIds.every((id) => inSk.includes(id)),
+    `practice by skill draws only from the ${inSk.length} experimental-skills questions`);
 }
 
 console.log(`\n${passed} checks passed.`);
