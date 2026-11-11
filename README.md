@@ -142,6 +142,14 @@ updates itself whenever a class is saved or deleted.
   solutions pages, shuffled order. *Preview & print* shows an A4 layout; print it or choose "Save as PDF" in the print
   dialog, or *Download Word (.docx)* for an editable file (maths become real Word equations; figures are fetched by the
   teacher-only `figureData` Cloud Function, built in the browser by `js/docx.js`). Nothing is saved on the platform.
+- *Question stats* (Questions → Question stats, `#/t/qstats`, `js/qstats.js`): every attempted question with how students
+  answered it the **first time** they met it (practice, Redo my mistakes or an assignment; later attempts and staff accounts
+  are not counted): number of students, % correct, and counts for A/B/C/D/blank with the key highlighted. Filter by
+  book/chapter/skill/form/text and by students (all, a form such as F4, or a class) and a minimum number of students;
+  sort by any column (hardest first by default); *Show* opens the question; CSV. The *question bank* shows the same
+  summary bar under each question (tick "Show students' first-attempt choices"), with the same student filter and
+  "Hardest first" / "Most attempted" ordering. Built in the teacher's browser from `attempts` (reloaded each time the
+  stats page opens; the bank reuses it for 5 minutes).
 - *Students* (button on each class on the dashboard, `#/t/students/<class>`): every student in the class with sets done,
   sets in the last 7 days, questions answered, % correct, assignments submitted and last active. Click a name (here or on
   any Results grid) for the student's *record* (`js/studentrecord.js`): summary (sets by type, % correct, assignments

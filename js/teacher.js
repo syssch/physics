@@ -1,14 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611112112";
+import { db, storage, api } from "./fb.js?v=202611112123";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611112112";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611112112";
-import { isSchoolEmail } from "./config.js?v=202611112112";
-import { importExplainBundle } from "./explain.js?v=202611112112";
-import { recordHref } from "./studentrecord.js?v=202611112112";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611112112";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611112112";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611112123";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611112123";
+import { isSchoolEmail } from "./config.js?v=202611112123";
+import { importExplainBundle } from "./explain.js?v=202611112123";
+import { recordHref } from "./studentrecord.js?v=202611112123";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611112123";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611112123";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611112123";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -143,22 +144,126 @@ export async function bankView(user) {
   const f = questionFilters(questions, topics, () => draw(), books);
   const showKeys = el("input", { type: "checkbox", checked: store.get("bankShowSolutions") !== false });
   showKeys.addEventListener("change", () => { store.set("bankShowSolutions", showKeys.checked); draw(); });
+  // first-attempt choice summaries
+  const showStats = el("input", { type: "checkbox", checked: store.get("bankShowStats") !== false });
+  const statsOpts = el("span", { class: "row inline" });
+  const sortSel = el("select", { "aria-label": "Order" }, [["", "Paper order"], ["hard", "Hardest first (first attempts)"], ["most", "Most attempted first"]]
+    .map(([v, l]) => el("option", { value: v }, l)));
+  sortSel.addEventListener("change", () => draw());
+  let stats = null, who = null;
+  async function ensureStats() {
+    if (!showStats.checked) { statsOpts.replaceChildren(); return; }
+    if (!stats) {
+      statsOpts.replaceChildren(el("span", { class: "muted" }, "Loading students' answers…"));
+      stats = await loadFirstAttempts();
+      who = studentFilter(stats.classes, () => { sessionStorage.setItem("qsWho", who.value()); draw(); }, sessionStorage.getItem("qsWho") || "");
+    }
+    statsOpts.replaceChildren(who.node, sortSel);
+  }
+  showStats.addEventListener("change", () => { store.set("bankShowStats", showStats.checked); draw(); });
   let drawId = 0;
   async function draw() {
     const id = ++drawId;
-    const qs = f.apply();
-    count.textContent = `${qs.length} of ${questions.length} questions` + (qs.length > 200 ? " — showing the first 200; narrow the filters to see the rest" : "");
+    try { await ensureStats(); } catch (e) { toast(errMsg(e), "error"); showStats.checked = false; }
+    if (id !== drawId) return;
+    let qs = f.apply();
+    const on = showStats.checked && stats;
+    const emails = on ? who.emails() : null;
+    if (on && sortSel.value) {
+      try { await loadKeys(qs.filter((q) => stats.firsts.has(q.id)).map((q) => q.id)); } catch (e) { toast(errMsg(e), "error"); }
+      if (id !== drawId) return;
+      const sum = new Map(qs.map((q) => [q.id, summarise(stats.firsts.get(q.id), emails, (keyCache.get(q.id) || {}).answer, q.optionKeys)]));
+      qs = qs.filter((q) => sum.get(q.id).n).sort((a, b) => sortSel.value === "most"
+        ? sum.get(b.id).n - sum.get(a.id).n
+        : (sum.get(a.id).pct ?? 101) - (sum.get(b.id).pct ?? 101) || sum.get(b.id).n - sum.get(a.id).n);
+    }
+    count.textContent = `${qs.length} of ${questions.length} questions` + (on && sortSel.value ? " attempted by these students" : "")
+      + (qs.length > 200 ? " — showing the first 200; narrow the filters to see the rest" : "");
     const page = qs.slice(0, 200);
-    if (showKeys.checked) {
+    if (showKeys.checked || on) {
       try { await loadKeys(page.map((q) => q.id)); }
       catch (e) { toast(errMsg(e), "error"); }
       if (id !== drawId) return;                               // a newer filter change has started
     }
-    listBox.replaceChildren(...page.map((q, i) => renderQuestion(q, { number: i + 1, review: showKeys.checked ? teacherReview(q.id) : null })));
+    listBox.replaceChildren(...page.map((q, i) => {
+      const c = renderQuestion(q, { number: i + 1, review: showKeys.checked ? teacherReview(q.id) : null });
+      if (on) {
+        const key = (keyCache.get(q.id) || {}).answer;
+        c.insertBefore(statsLine(summarise(stats.firsts.get(q.id), emails, key, q.optionKeys), key), c.querySelector(".solution"));
+      }
+      return c;
+    }));
     typeset(listBox);
   }
   mount(el("section", {}, [el("h1", {}, "Question bank"), f.node,
-    el("label", { class: "check" }, [showKeys, " Show answers & solutions"]), count, listBox]));
+    el("div", { class: "row" }, [el("label", { class: "check" }, [showKeys, " Show answers & solutions"]),
+      el("label", { class: "check" }, [showStats, " Show students' first-attempt choices"]), statsOpts,
+      el("a", { href: "#/t/qstats" }, "Question stats table")]),
+    count, listBox]));
+  draw();
+}
+
+/** All attempted questions with their first-attempt choice counts: sortable, filterable, CSV. */
+export async function questionStatsView(user, force = true) {   // always the latest results when opened
+  mount(loading("Loading students' answers…"));
+  const [questions, topics, books, stats] = await Promise.all([getAllQuestions(), getTopics(), getBooks(), loadFirstAttempts(force)]);
+  const attempted = questions.filter((q) => stats.firsts.has(q.id));
+  await loadKeys(attempted.map((q) => q.id));
+  const body = el("div", {});
+  const info = el("p", { class: "muted" });
+  const f = questionFilters(attempted, topics, () => draw(), books);
+  const who = studentFilter(stats.classes, () => { sessionStorage.setItem("qsWho", who.value()); draw(); }, sessionStorage.getItem("qsWho") || "");
+  const minSel = el("select", { "aria-label": "Minimum students" }, [1, 3, 5, 10, 20].map((n) => el("option", { value: n }, `at least ${n} student${n > 1 ? "s" : ""}`)));
+  minSel.addEventListener("change", () => draw());
+  const sort = { by: "pct", dir: 1 };
+  let rows = [];
+  function draw() {
+    const emails = who.emails(), min = Number(minSel.value);
+    rows = f.apply().map((q) => { const key = (keyCache.get(q.id) || {}).answer; return { q, key, s: summarise(stats.firsts.get(q.id), emails, key, q.optionKeys) }; })
+      .filter((r) => r.s.n >= min);
+    const val = (r) => sort.by === "pct" ? (r.s.pct ?? 101) : sort.by === "n" ? r.s.n : sourceLabel(r.q);
+    rows.sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * sort.dir || b.s.n - a.s.n);
+    const students = new Set(); let firsts = 0;
+    for (const r of rows) for (const e of stats.firsts.get(r.q.id)) if (!emails || emails.has(e.email)) { students.add(e.email); firsts++; }
+    info.textContent = `${rows.length} questions · ${firsts} first attempts by ${students.size} students · loaded ${new Date(stats.at).toLocaleTimeString("en-HK", { timeStyle: "short" })}`;
+    const th = (label, by) => {
+      const h = el("th", { class: by ? "sortable" : "" }, by && sort.by === by ? `${label} ${sort.dir > 0 ? "▲" : "▼"}` : label);
+      if (by) h.addEventListener("click", () => { sort.dir = sort.by === by ? -sort.dir : (by === "n" ? -1 : 1); sort.by = by; draw(); });
+      return h;
+    };
+    const t = el("table", { class: "grid qstats" }, [el("tr", {}, [th("Question", "src"), th("Topic"), th("Students", "n"), th("% correct", "pct"),
+      th("A"), th("B"), th("C"), th("D"), th("Blank"), th("")])]);
+    rows.slice(0, 500).forEach((r) => {
+      const keys = r.q.optionKeys || ["A", "B", "C", "D"];
+      const cnt = (k) => el("td", { class: k === r.key ? "qs-keycell" : "" }, r.s.counts[k] ? `${r.s.counts[k]} (${Math.round((100 * r.s.counts[k]) / r.s.n)}%)` : "0");
+      const more = el("button", { type: "button", class: "linkbtn" }, "Show");
+      const detail = el("tr", { class: "attempt-detail", hidden: true }, el("td", { colspan: 10 }));
+      more.addEventListener("click", () => {
+        detail.hidden = !detail.hidden; more.textContent = detail.hidden ? "Show" : "Hide";
+        if (detail.hidden || detail.dataset.drawn) return;
+        detail.dataset.drawn = "1";
+        const c = renderQuestion(r.q, { review: teacherReview(r.q.id) });
+        c.insertBefore(statsLine(r.s, r.key), c.querySelector(".solution"));
+        detail.firstChild.append(c); typeset(c);
+      });
+      t.append(el("tr", {}, [el("td", { class: "nowrap" }, sourceLabel(r.q)), el("td", {}, r.q.topic || ""), el("td", {}, String(r.s.n)),
+        el("td", { class: r.s.pct === null ? "" : r.s.pct < 50 ? "qs-low" : r.s.pct < 75 ? "qs-mid" : "qs-high" }, r.s.pct === null ? "no key" : `${r.s.pct}%`),
+        ...["A", "B", "C", "D"].map((k) => keys.includes(k) ? cnt(k) : el("td", {}, "")), el("td", {}, String(r.s.blank)), el("td", {}, more)]), detail);
+    });
+    body.replaceChildren(rows.length ? el("div", { class: "scroll" }, t) : el("p", { class: "muted" }, "No questions match."),
+      rows.length > 500 ? el("p", { class: "muted" }, "Showing the first 500 — narrow the filters or download the CSV for the rest.") : "");
+  }
+  const csv = el("button", { class: "btn small", type: "button" }, "Download CSV");
+  csv.addEventListener("click", () => {
+    const out = [["question", "id", "topic", "students", "percent_correct", "key", "A", "B", "C", "D", "blank"],
+      ...rows.map((r) => [sourceLabel(r.q), r.q.id, r.q.topic || "", r.s.n, r.s.pct ?? "", r.key || "", r.s.counts.A || 0, r.s.counts.B || 0, r.s.counts.C || 0, r.s.counts.D || 0, r.s.blank])];
+    const blob = new Blob(["﻿" + out.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" });
+    el("a", { href: URL.createObjectURL(blob), download: `question_stats${who.value() ? "_" + who.node.selectedOptions[0].textContent.replace(/\W+/g, "") : ""}.csv` }).click();
+  });
+  const refresh = el("button", { class: "btn small", type: "button", onclick: () => questionStatsView(user, true) }, "Reload latest results");
+  mount(el("section", {}, [el("h1", {}, "Question stats"),
+    el("p", { class: "muted" }, "How students answered each question the first time they met it (practice, Redo my mistakes or an assignment); later attempts are not counted. Click a column heading to sort."),
+    f.node, el("div", { class: "row" }, [who.node, minSel, csv, refresh]), info, body]));
   draw();
 }
 
@@ -352,7 +457,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611112112");
+      const { buildPaperDocx } = await import("./docx.js?v=202611112123");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {

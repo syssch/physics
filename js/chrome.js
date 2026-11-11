@@ -1,6 +1,6 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { el } from "./ui.js?v=202611112112";
+import { el } from "./ui.js?v=202611112123";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
@@ -13,9 +13,10 @@ const TEACHER_NAV = [
   { href: "#/t", icon: "layout-dashboard", label: "Classes", match: /^(#?\/?|#\/t|#\/t\/(class|results|students?)(\/.*)?)$/ },
   { href: "#/t/assign", icon: "clipboard-list", label: "Assign", match: /^#\/t\/assign/ },
   { href: "#/t/feedback", icon: "message-question", label: "Feedback", match: /^#\/t\/feedback/, badge: "feedback" },
-  { label: "Questions", icon: "database", match: /^#\/t\/(bank|paper)/, items: [
+  { label: "Questions", icon: "database", match: /^#\/t\/(bank|paper|qstats)/, items: [
     { href: "#/t/bank", icon: "search", label: "Browse question bank", short: "Bank" },
     { href: "#/t/paper", icon: "printer", label: "Printable paper", short: "Paper" },
+    { href: "#/t/qstats", icon: "chart-bar", label: "Question stats (first attempts)", short: "Stats" },
   ] },
   { href: "#/t/leaderboard", icon: "trophy", label: "Leaderboard", short: "Board", match: /^#\/t\/leaderboard/ },
   { href: "#/t/explain", icon: "book", label: "Explain", match: /^#\/t\/explain/ },

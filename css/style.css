@@ -133,3 +133,17 @@ table.areas td.barcell { width:35%; min-width:90px; }
 tr.attempt-detail > td { background:var(--bg); padding:.6rem; }
 .attempt-review .qcard { margin-bottom:.7rem; }
 table.students td, table.attempts td { vertical-align:middle; }
+
+/* first-attempt choice statistics */
+.qstat { display:flex; flex-wrap:wrap; gap:.35rem .9rem; align-items:center; margin-top:.6rem; padding:.45rem .6rem;
+  background:var(--bg); border:1px solid var(--line); border-radius:8px; font-size:.88rem; }
+.qs-head { color:var(--muted); margin-right:.3rem; }
+.qs-opt { display:inline-flex; align-items:center; gap:.3rem; }
+.qs-opt.key b { color:var(--good); } .qs-opt.key b::after { content:" ✓"; }
+.qs-bar { display:inline-block; width:46px; height:.45rem; background:var(--line); border-radius:999px; overflow:hidden; }
+.qs-bar > span { display:block; height:100%; background:var(--accent); }
+.qs-opt.key .qs-bar > span { background:var(--good); }
+.qs-low { color:var(--bad); } .qs-mid { color:var(--warn); } .qs-high { color:var(--good); }
+td.qs-keycell { background:var(--good-soft); font-weight:600; }
+table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
+.row.inline { display:inline-flex; gap:.5rem; align-items:center; }

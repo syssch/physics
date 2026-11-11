@@ -708,6 +708,55 @@ console.log("9d. student record (teacher)");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+console.log("9e. first-attempt choice statistics");
+{
+  // expected: each student's earliest answer to each question (staff excluded)
+  const atts = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && /@syss\.edu\.hk$/.test(d.email)).map(([, d]) => d)
+    .sort((a, b) => a.submittedAt.toMillis() - b.submittedAt.toMillis());
+  const first = new Map(), all = new Map();
+  for (const a of atts) for (const q of a.questionIds) {
+    const k = `${a.email}|${q}`, r = (a.responses || {})[q] || "";
+    if (!first.has(k)) first.set(k, r);
+    if (!all.has(k)) all.set(k, []); all.get(k).push(r);
+  }
+  const changed = [...all.entries()].find(([, rs]) => rs.length > 1 && rs[0] !== rs[rs.length - 1]);
+  ok(changed, "test data has a question a student answered differently later");
+  const cq = changed[0].split("|")[1];
+  const exp = (qid, emails) => { const c = {}; let n = 0; for (const [k, r] of first) { const [e, q] = k.split("|"); if (q !== qid || (emails && !emails.includes(e))) continue; n++; c[r || "blank"] = (c[r || "blank"] || 0) + 1; } return { n, c }; };
+  const want = exp(cq);
+  await go("#/t/qstats");
+  await waitFor(() => byText("h1", "Question stats") && $("table.qstats"), "stats page");
+  const attemptedQs = new Set([...first.keys()].map((k) => k.split("|")[1]));
+  ok($$("table.qstats tr").filter((tr) => !tr.classList.contains("attempt-detail")).length - 1 === [...attemptedQs].filter((q) => fake.store.has(`questions/${q}`)).length, "one row per attempted question");
+  const row = $$("table.qstats tr").find((tr) => tr.children[0] && tr.children[0].textContent === (() => { const q = fake.store.get(`questions/${cq}`); return `${q.year} ${q.form} ${q.paper} Q${q.questionNumber}`; })());
+  ok(row && row.children[2].textContent === String(want.n), "student count = students who attempted it (each once)");
+  const key = fake.store.get(`answerKeys/${cq}`).answer;
+  const cellFor = (k) => row.children[4 + ["A", "B", "C", "D"].indexOf(k)].textContent;
+  ok(["A", "B", "C", "D"].every((k) => cellFor(k).startsWith(String(want.c[k] || 0))), "choice counts use each student's FIRST answer only");
+  ok(row.children[4 + ["A", "B", "C", "D"].indexOf(key)].classList.contains("qs-keycell"), "the key's column is highlighted");
+  // sorted hardest first
+  const pcts = $$("table.qstats tr").slice(1).filter((tr) => !tr.classList.contains("attempt-detail")).map((tr) => parseInt(tr.children[3].textContent, 10)).filter((x) => !isNaN(x));
+  ok(pcts.every((p, i) => !i || pcts[i - 1] <= p), "sorted by % correct, lowest first");
+  row.querySelector("button.linkbtn").click(); await sleep(10);
+  ok(row.nextElementSibling.querySelector(".qcard .qstat"), "Show opens the question with its choice bar");
+  // class filter
+  const whoSel = $$("section select").find((s) => [...s.options].some((o) => o.value.startsWith("class:")));
+  set(whoSel, "class:other1");
+  ok(byText("p.muted", "No questions match"), "a class with no attempts shows nothing");
+  set(whoSel, "");
+  // the question bank shows the same summary under each question
+  await go("#/t/bank");
+  await waitFor(() => $$(".qcard .qstat").length, "bank stats");
+  const sortSel = $$("section select").find((s) => [...s.options].some((o) => o.value === "hard"));
+  set(sortSel, "hard");
+  await waitFor(() => /attempted by these students/.test($("section p.muted").textContent + $$("p.muted").map((p) => p.textContent).join(" ")), "bank sorted");
+  ok($$(".qcard").length === [...attemptedQs].filter((q) => fake.store.has(`questions/${q}`)).length && $$(".qcard .qstat").length === $$(".qcard").length, "bank: hardest first lists the attempted questions with their summaries");
+  ok(byText(".qstat", "First attempts:") && $(".qs-opt.key"), "summary line marks the key");
+  set(sortSel, "");
+  sessionStorage.removeItem("qsWho");
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");
