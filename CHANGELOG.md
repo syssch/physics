@@ -5,7 +5,7 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-12
 
-- **Copyright notice on the sign-in page** ("By logging in, you acknowledge…"; wording in `COPYRIGHT_NOTICE` in
+- **Copyright notice on the sign-in page** ("By logging in, you acknowledge…" — school copyright; HKEAA mention removed; wording in `COPYRIGHT_NOTICE` in
   `js/app.js`, style `.signin .disclaimer` in `css/app.css`). *Push.* Tests: 259.
 
 ## 2026-11-11

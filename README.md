@@ -114,7 +114,7 @@ Until this is done, test with teacher accounts or a few adult accounts.
 ## Using it
 
 **Sign-in page:** shows a copyright notice under the button ("By logging in, you acknowledge…" — materials belong to
-the school and, for HKDSE material, the HKEAA; personal study by SYSS students and staff only; no copying, sharing or
+the school; personal study by SYSS students and staff only; no copying, sharing or
 uploading elsewhere). Edit the wording in `COPYRIGHT_NOTICE` at the top of `js/app.js`.
 
 **Who can use it:** teachers on the teacher list, and students whose email is on at least one class list.

@@ -1,6 +1,6 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611120950";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611120950";
-import { attachFeedbackBars } from "./feedback.js?v=202611120950";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611121000";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611121000";
+import { attachFeedbackBars } from "./feedback.js?v=202611121000";
 
 /**
  * Run a set of questions.
