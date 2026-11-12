@@ -140,3 +140,4 @@ h3.pattern { font-size:.9rem; color:var(--muted); margin:.9rem 0 .3rem; text-tra
 td.nowrap { white-space: nowrap; }
 
 .signin .disclaimer { margin-top:2rem; font-size:.8rem; line-height:1.45; color:var(--muted); text-align:left; border-top:1px solid var(--line); padding-top:.9rem; }
+.navlink .ext { font-size:.75rem; opacity:.6; }

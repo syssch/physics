@@ -31,7 +31,7 @@ Read `README.md` for the full feature description.
 | File | Role |
 |---|---|
 | `js/app.js` | auth gate + sign-in page (`COPYRIGHT_NOTICE`), hash router: `routes = [[regex, fn, teacherOnly]]` |
-| `js/chrome.js` | top bar + phone tab bar (`STUDENT_NAV`, `TEACHER_NAV`, `setBadge`) |
+| `js/chrome.js` | top bar + phone tab bar (`STUDENT_NAV`, `TEACHER_NAV`, `setBadge`; `external: true` = link to another site in a new tab, e.g. Simulations) |
 | `js/ui.js` | `el(tag, attrs, children)` (sanitises `html:`), `mount`, `toast`, `errMsg`, `fmtDate`, `pct`, `chunk`, `typeset`, `store` |
 | `js/fb.js` | Firebase init + `api.<callable>` wrappers (add every new callable here) |
 | `js/questions.js` | question loading, syllabus/skill filters, `renderQuestion`, `sourceLabel` |
@@ -71,7 +71,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 259 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 261 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

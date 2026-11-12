@@ -5,6 +5,8 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-12
 
+- **Simulations link** in the top bar for students and teachers → https://syssch.github.io/physim/ (new tab;
+  `external: true` nav items in `js/chrome.js`, kept out of the phone tab bar, shown in the ☰ menu). *Push.* Tests: 261.
 - **Copyright notice on the sign-in page** ("By logging in, you acknowledge…" — school copyright; HKEAA mention removed; wording in `COPYRIGHT_NOTICE` in
   `js/app.js`, style `.signin .disclaimer` in `css/app.css`). *Push.* Tests: 259.
 

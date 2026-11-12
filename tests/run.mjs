@@ -91,6 +91,7 @@ console.log("2. teacher creates a class");
 fake.setUser(T);
 await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 ok(byText("#nav a", "Classes") && byText(".seg a", "Student") && $('#nav .dd a[href="#/t/paper"]'), "teacher top bar: Classes, Questions menu, teacher/student switch");
+ok(byText("#nav a", "Simulations") && !$$("#tabbar a").some((x) => x.textContent.includes("Simulations")), "teachers also get the Simulations link (top bar / phone menu, not the tab bar)");
 await go("#/t/class/new");
 await waitFor(() => $("textarea"), "class form");
 set($("input[type=text]"), "4A Physics");
@@ -166,6 +167,8 @@ ok(byText(".points-panel h2", "Earn leaderboard points") && $$(".points-panel .p
 await waitFor(() => byText("#nav a.on .navbadge", "due"), "due badge");
 ok(/^\d+ due$/.test($("#nav .navbadge").textContent) && !$(".seg") && !byText("#nav a", "Classes"), "student top bar: Home shows assignments due, no teacher items");
 ok($$("#tabbar a").length === 5 && byText("#tabbar a", "Practise"), "phone tab bar has the five student links");
+{ const sim = byText("#nav a", "Simulations");
+  ok(sim && sim.getAttribute("href") === "https://syssch.github.io/physim/" && sim.getAttribute("target") === "_blank" && /noopener/.test(sim.getAttribute("rel")), "Simulations link in the top bar opens syssch.github.io/physim in a new tab"); }
 await go(`#/do/${classId}/${a1}`);
 await waitFor(() => $$(".qcard").length === 8, "8 questions");
 ok($$("img.figure").length === qids1.filter((id) => fake.store.get(`questions/${id}`).figures.length).length, "figures rendered");

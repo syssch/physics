@@ -1,6 +1,6 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { el } from "./ui.js?v=202611121000";
+import { el } from "./ui.js?v=202611121731";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
@@ -8,6 +8,7 @@ const STUDENT_NAV = [
   { href: "#/explain", icon: "book", label: "Explain", match: /^#\/explain/ },
   { href: "#/leaderboard", icon: "trophy", label: "Leaderboard", short: "Board", match: /^#\/leaderboard/ },
   { href: "#/history", icon: "history", label: "My results", short: "Results", match: /^#\/(history|review)/ },
+  { href: "https://syssch.github.io/physim/", icon: "atom-2", label: "Simulations", external: true },
 ];
 const TEACHER_NAV = [
   { href: "#/t", icon: "layout-dashboard", label: "Classes", match: /^(#?\/?|#\/t|#\/t\/(class|results|students?)(\/.*)?)$/ },
@@ -20,6 +21,7 @@ const TEACHER_NAV = [
   ] },
   { href: "#/t/leaderboard", icon: "trophy", label: "Leaderboard", short: "Board", match: /^#\/t\/leaderboard/ },
   { href: "#/t/explain", icon: "book", label: "Explain", match: /^#\/t\/explain/ },
+  { href: "https://syssch.github.io/physim/", icon: "atom-2", label: "Simulations", external: true },
 ];
 
 const icon = (name) => el("i", { class: `ti ti-${name}`, "aria-hidden": "true" });
@@ -50,13 +52,17 @@ function navItem(item) {
     btn.addEventListener("click", (e) => { e.stopPropagation(); closeMenus(wrap); wrap.classList.toggle("open"); });
     return wrap;
   }
+  if (item.external) {   // another site (e.g. the physics simulations): new tab, never highlighted
+    return el("a", { href: item.href, class: "navlink external", target: "_blank", rel: "noopener", title: `${item.label} (opens in a new tab)` },
+      [icon(item.icon), item.label, el("i", { class: "ti ti-external-link ext", "aria-hidden": "true" })]);
+  }
   const a = el("a", { href: item.href, class: "navlink", "data-match": item.match.source }, [icon(item.icon), item.label]);
   if (item.badge) a.append(el("span", { class: "navbadge", "data-key": item.badge, hidden: true }));
   return a;
 }
 
 function tabItems(nav) {
-  return nav.flatMap((n) => n.items ? n.items.map((s) => ({ ...s, match: new RegExp(`^${s.href.replace(/[/#]/g, "\\$&")}`) })) : [n]).slice(0, 5)
+  return nav.filter((n) => !n.external).flatMap((n) => n.items ? n.items.map((s) => ({ ...s, match: new RegExp(`^${s.href.replace(/[/#]/g, "\\$&")}`) })) : [n]).slice(0, 5)
     .map((n) => {
       const a = el("a", { href: n.href, "data-match": n.match.source }, [icon(n.icon), el("span", {}, n.short || n.label)]);
       if (n.badge) a.append(el("span", { class: "navbadge", "data-key": n.badge, hidden: true }));

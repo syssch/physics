@@ -172,8 +172,9 @@ updates itself whenever a class is saved or deleted.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
 
 **Top bar** (`js/chrome.js`): students get Home (with "N due" for assignments not yet submitted), Practise (random
-set + Redo my mistakes), Explain, Leaderboard and My results, plus "4A · 132 pts". Teachers get Classes, Assign, Feedback,
-Questions (question bank, printable paper), Leaderboard and Explain, a Teacher | Student switch, and an initials button
+set + Redo my mistakes), Explain, Leaderboard, My results and **Simulations** (opens https://syssch.github.io/physim/
+in a new tab), plus "4A · 132 pts". Teachers get Classes, Assign, Feedback,
+Questions (question bank, printable paper, question stats), Leaderboard, Explain and Simulations, a Teacher | Student switch, and an initials button
 (name, Admin, Sign out). On phones the links move to a bottom tab bar and a ☰ menu. Icons: Tabler icons webfont (CDN).
 
 **Students**:
