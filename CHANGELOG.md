@@ -5,6 +5,14 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-12
 
+- **Picture-option figures checked** (question data): all 143 questions whose options are pictures were reviewed by eye.
+  12 re-cropped from the papers because option letters or diagrams were missing/garbled (e.g. 2021-22 F5 E2 Q29 had no
+  letters, 2024-25 F6 Mock 1A Q15 had no option graphs, several were missing "A." and "C."); 10 had stray question
+  text removed. New tool `platform_prep/recrop_from_paper.py`. Originals in
+  `question_bank/archive/backup_fig_picopt_20261112/`. *Re-import the bundle.*
+- **Figures fixed from student reports** (question data): 2018-19 F4 T1 Q5 (option letters A and C were cropped off)
+  and 2024-25 F4 E2 Q15 (the four option diagrams were missing) re-cropped at 300 dpi from the papers. Originals in
+  `question_bank/archive/backup_fig_reports_20261112/`. *Re-import the bundle, then mark both reports "fixed".*
 - **Simulations link** in the top bar for students and teachers → https://syssch.github.io/physim/ (new tab;
   `external: true` nav items in `js/chrome.js`, kept out of the phone tab bar, shown in the ☰ menu). *Push.* Tests: 261.
 - **Copyright notice on the sign-in page** ("By logging in, you acknowledge…" — school copyright; HKEAA mention removed; wording in `COPYRIGHT_NOTICE` in
