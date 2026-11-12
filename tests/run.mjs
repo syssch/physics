@@ -85,6 +85,7 @@ fake.user = X;
 await import(`${APP}/js/app.js`);
 await waitFor(() => byText("p.error", "not a school account"), "outsider message");
 ok(fake.user === null, "non-school account is signed out");
+ok(byText(".signin p.disclaimer", "By logging in, you acknowledge") && /copyright/.test($(".signin .disclaimer").textContent), "sign-in page shows the copyright notice");
 
 console.log("2. teacher creates a class");
 fake.setUser(T);

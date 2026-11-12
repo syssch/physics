@@ -3,6 +3,11 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-12
+
+- **Copyright notice on the sign-in page** ("By logging in, you acknowledge…"; wording in `COPYRIGHT_NOTICE` in
+  `js/app.js`, style `.signin .disclaimer` in `css/app.css`). *Push.* Tests: 259.
+
 ## 2026-11-11
 
 - **Questions now stand alone** (question data, not code): 9 questions that said "Refer to Question 4", "Q.3" or
@@ -10,6 +15,9 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
   removed from 6 shared-stem questions; 4 solutions updated. `platform_prep/platform_readiness.py` now blocks any
   question that refers to another question. *Re-import `all_ready/bundle.json` (Admin → Import questions); no push or
   deploy needed for this item.*
+- **Figures trimmed** (question data): stray "mass /kg" fragment removed from 2015-16 F3 T2 Q4/Q5 graphs, cut-off text
+  line removed from the top of 2016-17 F5 E1 Q3 (also used by Q4). Originals in
+  `question_bank/archive/backup_fig_trim_20261111/`. *Re-import the bundle (with its figures).*
 - **Handoff files for AI agents** — `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`; synthetic test data in
   `tests/fixtures/` (`tools/make_test_fixtures.py`); tests default to fixtures, `--real` for the real exports; GitHub
   Actions runs the tests on every push/PR (`.github/workflows/tests.yml`). *Push.* Tests: 258.

@@ -1,15 +1,22 @@
-import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611112229";
+import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611120950";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, toast, errMsg } from "./ui.js?v=202611112229";
-import { isSchoolEmail } from "./config.js?v=202611112229";
-import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611112229";
-import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611112229";
-import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611112229";
-import { studentsView, studentRecordView } from "./studentrecord.js?v=202611112229";
-import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611112229";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611112229";
+import { el, mount, toast, errMsg } from "./ui.js?v=202611120950";
+import { isSchoolEmail } from "./config.js?v=202611120950";
+import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611120950";
+import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611120950";
+import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611120950";
+import { studentsView, studentRecordView } from "./studentrecord.js?v=202611120950";
+import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611120950";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611120950";
 
 let user = null;
+
+// Shown under the sign-in button (edit the wording here).
+export const COPYRIGHT_NOTICE = "By logging in, you acknowledge that the questions, solutions, Explain cards and other "
+  + "materials on this site are protected by copyright, belonging to Sing Yin Secondary School and, for HKDSE material, "
+  + "the Hong Kong Examinations and Assessment Authority (HKEAA). They are provided only for the personal study of "
+  + "SYSS students and staff. You must not copy, share, sell or upload them to any other website, group, app or AI "
+  + "tool without the school's permission.";
 
 function signInPage(message) {
   const btn = el("button", { class: "btn primary big", type: "button" }, "Sign in with school Google account");
@@ -21,6 +28,7 @@ function signInPage(message) {
     el("p", {}, "Sign in with your school Google account (@syss.edu.hk or @singyin.edu.hk) to do assignments and practise past-paper questions."),
     message ? el("p", { class: "error" }, message) : null,
     btn,
+    el("p", { class: "disclaimer" }, COPYRIGHT_NOTICE),
   ]));
   clearChrome();
 }
