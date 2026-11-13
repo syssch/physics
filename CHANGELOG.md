@@ -5,6 +5,13 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-13
 
+- **Leaderboard wording for students**: above the top 10 the board now always says "You have **1,200** points, ranking
+  **3** of **45**" for the chosen period ("You have 0 points — not ranked yet" if none); replaces "You: #3 of 45, …",
+  which only showed when outside the top 10. `myRankLine()` in `js/student.js`, `.my-rank` in `css/style.css`. *Push.* Tests: 277.
+- **Statement solutions re-laid out** (question data): 44 (1)(2)(3)-type solutions had line breaks in the middle of
+  sentences ("… light is slower in X —<br>(2) ✓") or verdicts after the reasoning. Now each line starts with the
+  statement and its verdict, then the reason, e.g. 2025-26 F6 Mock 1A Q18. Originals in
+  `question_bank/archive/backup_statement_breaks_20261113/`. *Re-import the bundle.*
 - **Solution updated** (question data): 2024-25 F5 E3 Q28 — final step now uses tan c = sin c / cos c = 2/√3 ⇒
   c = 49.1°, n = 1/sin c = 1.32 (instead of sin²c + cos²c = 1); marked as a teacher solution. *Re-import the bundle.*
 - **Admin → Check figures**: lists every figure file used by a question that is missing from Firebase Storage (with

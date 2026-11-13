@@ -373,6 +373,8 @@ console.log("8c. leaderboard");
   await waitFor(() => /4A · \d+ pts/.test($(".chip-pts")?.textContent || ""), "points chip");
   ok(true, "top bar shows the student's class and points");
   ok($(".leaderboard tr.me") && byText(".leaderboard tr.me", "4A"), "student sees the board with their own row highlighted");
+  { const lbw = await api.getLeaderboard({ period: "week" }), line = $(".leaderboard .my-rank")?.textContent || "";
+    ok(lbw.me && line === `You have ${lbw.me.pts.toLocaleString("en")} points, ranking ${lbw.me.rank} of ${lbw.total}`, "student sees \"You have N points, ranking R of T\" above the board"); }
   const lb = await api.getLeaderboard({ period: "all" });
   ok(lb.rows.length <= 10 && lb.rows.every((x) => !("email" in x)) && lb.me && lb.me.pts === fake.store.get("leaderboards/F4_all").scores.s1.pts, "students get the top 10 and their own rank, without emails");
   ok((await api.getLeaderboard({ period: "all", form: "F5" })).form === "F4", "students only see their own form");

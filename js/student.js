@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611131959";
+import { db, api, auth } from "./fb.js?v=202611132115";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611131959";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611131959";
-import { runQuiz, showReview } from "./quiz.js?v=202611131959";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611131959";
-import { setDue, setChip } from "./chrome.js?v=202611131959";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611131959";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611132115";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611132115";
+import { runQuiz, showReview } from "./quiz.js?v=202611132115";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611132115";
+import { setDue, setChip } from "./chrome.js?v=202611132115";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611132115";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -137,6 +137,14 @@ export async function refreshStudentStatus(user) {
 const PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
 export const POINTS_HELP = "How to earn points: 100 per correct answer in practice (including Redo my mistakes) and assignments, plus +500 for 90%+ or +200 for 75–89% in sets of 5 or more questions · 300 for reading your Explain card of the day (once a day) · +500 check-in bonus once a week when you practise, do an assignment or read your card on 3 different days (Monday–Sunday).";
 
+/** "You have 1,200 points, ranking 3 of 45" (or 0 points, not yet ranked). */
+function myRankLine(r) {
+  const n = (x) => Number(x).toLocaleString("en");
+  return r.me
+    ? el("p", { class: "my-rank" }, ["You have ", el("strong", {}, n(r.me.pts)), " points, ranking ", el("strong", {}, n(r.me.rank)), " of ", el("strong", {}, n(r.total))])
+    : el("p", { class: "my-rank muted" }, ["You have ", el("strong", {}, "0"), " points — not ranked yet in this period."]);
+}
+
 /** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
 function leaderboardPanel(user) {
   const head = el("h2", {}, "Leaderboard");
@@ -166,14 +174,12 @@ function leaderboardPanel(user) {
         const when = period === "all" ? "yet" : period === "week" ? "this week" : "this month";
         body.replaceChildren(el("p", { class: "muted" }, formSel
           ? `No ${r.form} student has practice points ${when}. Try another form or "All time". If students practised before the leaderboard was switched on, click "Recount from results" on the teacher Leaderboard page.`
-          : period === "all" ? "No points yet — finish a practice set to get on the board!" : `No points yet ${when} — be the first!`));
+          : period === "all" ? "You have 0 points — finish a practice set to get on the board!" : `You have 0 points ${when} — no one has any yet. Be the first!`));
         return;
       }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points"].map((h) => el("th", {}, h)))]);
       rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
-      const mine = formSel ? null : r.me ? (rows.some((x) => x.me) ? null : el("p", {}, `You: #${r.me.rank} of ${r.total}, ${r.me.pts} points`))
-        : el("p", { class: "muted" }, "You have no points in this period yet.");
-      body.replaceChildren(t, ...(mine ? [mine] : []));
+      body.replaceChildren(...(formSel ? [] : [myRankLine(r)]), t);
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }
   PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => show(p) }, label)));

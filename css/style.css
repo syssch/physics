@@ -148,3 +148,6 @@ td.qs-keycell { background:var(--good-soft); font-weight:600; }
 table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
 .row.inline { display:inline-flex; gap:.5rem; align-items:center; }
 .row > input.qsearch { min-width:min(100%, 19rem); }
+
+.leaderboard .my-rank { font-size:1.08em; margin:.4em 0 .6em; }
+.leaderboard .my-rank strong { color:var(--accent); }
