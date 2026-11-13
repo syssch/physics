@@ -1,9 +1,9 @@
 // First-attempt choice statistics: for each question, how students answered it the FIRST time they met it
 // (in practice, Redo my mistakes or an assignment). Built in the teacher's browser from `attempts` (teachers may read
 // them), cached for the session. Staff accounts (@singyin.edu.hk) are left out.
-import { db } from "./fb.js?v=202611131123";
+import { db } from "./fb.js?v=202611131959";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, toDate } from "./ui.js?v=202611131123";
+import { el, toDate } from "./ui.js?v=202611131959";
 
 let cache = null;
 const ms = (ts) => (!ts ? 0 : ts.toMillis ? ts.toMillis() : +toDate(ts));

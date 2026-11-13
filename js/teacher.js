@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611131123";
+import { db, storage, api } from "./fb.js?v=202611131959";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611131123";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611131123";
-import { isSchoolEmail } from "./config.js?v=202611131123";
-import { importExplainBundle } from "./explain.js?v=202611131123";
-import { recordHref } from "./studentrecord.js?v=202611131123";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611131123";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611131123";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611131123";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611131959";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611131959";
+import { isSchoolEmail } from "./config.js?v=202611131959";
+import { importExplainBundle } from "./explain.js?v=202611131959";
+import { recordHref } from "./studentrecord.js?v=202611131959";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611131959";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611131959";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611131959";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -475,7 +475,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611131123");
+      const { buildPaperDocx } = await import("./docx.js?v=202611131959");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -884,6 +884,27 @@ export async function adminView(user) {
     exGo.disabled = false;
   });
 
+  // Check that every figure used by a question is in Storage (a figure missing there shows "Figure could not be loaded")
+  const chkBtn = el("button", { class: "btn small", type: "button" }, "Check figures");
+  const chkOut = el("div", { class: "figcheck" });
+  chkBtn.addEventListener("click", async () => {
+    chkBtn.disabled = true; chkOut.replaceChildren(el("p", { class: "muted" }, "Checking…"));
+    try {
+      const uses = new Map();
+      (await getAllQuestions()).forEach((q) => (q.figures || []).forEach((f) => { if (!uses.has(f)) uses.set(f, []); uses.get(f).push(q); }));
+      const names = [...uses.keys()], missing = [];
+      for (const part of chunk(names, 20)) {
+        await Promise.all(part.map((n) => getDownloadURL(ref(storage, `figures/${n}`)).catch(() => missing.push(n))));
+        chkOut.firstChild.textContent = `Checking… ${Math.min(names.length, names.indexOf(part[part.length - 1]) + 1)} of ${names.length}`;
+      }
+      chkOut.replaceChildren(missing.length
+        ? el("div", {}, [el("p", { class: "error" }, `${missing.length} of ${names.length} figure files are missing from the platform. Import again choosing bundle.json and these files (or the whole figures folder):`),
+            el("ul", {}, missing.sort().map((n) => el("li", {}, [el("code", {}, n), el("span", { class: "muted" }, " — " + uses.get(n).map(sourceLabel).join(", "))])))])
+        : el("p", { class: "good" }, `All ${names.length} figure files are on the platform.`));
+    } catch (e) { chkOut.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
+    chkBtn.disabled = false;
+  });
+
   const qs = await getDocs(collection(db, "questions"));
   mount(el("section", { class: "narrow" }, [
     el("h1", {}, "Admin"),
@@ -891,7 +912,8 @@ export async function adminView(user) {
     el("div", { class: "panel" }, [el("h2", {}, "Teachers"), tList, el("div", { class: "row" }, [newT, addT])]),
     el("div", { class: "panel" }, [el("h2", {}, "Import questions"),
       el("p", { class: "muted" }, `${qs.size} questions on the platform now. Choose bundle.json and all files in its figures folder (made by platform_prep/export_for_platform.py). Re-importing updates questions with the same id.`),
-      el("label", {}, ["bundle.json", bundleIn]), el("label", {}, ["Figure files", figIn]), go, log]),
+      el("label", {}, ["bundle.json", bundleIn]), el("label", {}, ["Figure files", figIn]), go, log,
+      el("p", { class: "muted" }, "If a question shows \"Figure could not be loaded\", check which figure files are missing:"), chkBtn, chkOut]),
     el("div", { class: "panel" }, [el("h2", {}, "Import Explain cards"),
       el("p", { class: "muted" }, "Choose explain_bundle.json (made by platform_prep/export_explain_cards.py). Importing again replaces all cards; students keep their read marks."),
       el("label", {}, ["explain_bundle.json", exIn]), exGo, exLog]),

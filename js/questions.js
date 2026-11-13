@@ -1,9 +1,9 @@
-import { db, storage } from "./fb.js?v=202611131123";
+import { db, storage } from "./fb.js?v=202611131959";
 import { collection, getDocs, query, where, documentId, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, chunk } from "./ui.js?v=202611131123";
-import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611131123";
+import { el, chunk } from "./ui.js?v=202611131959";
+import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611131959";
 
 const cache = new Map();
 let allLoaded = false;
@@ -148,7 +148,7 @@ export function figureImg(name) {
   const img = el("img", { class: "figure", alt: "Figure for this question" });
   const url = figUrls.get(name) || getDownloadURL(ref(storage, `figures/${name}`));
   figUrls.set(name, url);
-  Promise.resolve(url).then((u) => (img.src = u)).catch(() => img.replaceWith(el("p", { class: "muted" }, "(Figure could not be loaded.)")));
+  Promise.resolve(url).then((u) => (img.src = u)).catch(() => img.replaceWith(el("p", { class: "muted", title: name }, "(Figure could not be loaded.)")));
   return img;
 }
 

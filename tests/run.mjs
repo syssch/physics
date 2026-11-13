@@ -889,6 +889,18 @@ ok(fake.store.get(`questions/${small.questions[0].id}`).textHtml.endsWith("<p>up
 ok(fake.store.get(`answerKeys/${small.questions[0].id}`).solution === "<p>imported solution</p>" && !("solution" in fake.store.get(`questions/${small.questions[0].id}`)), "import stores solutions with the answer keys (not in the public question)");
 ok(Object.keys(JSON.parse(fake.store.get("meta/questionIndex").data)).length === bundle.questions.length, "first import builds the practice index from all questions already on the platform");
 
+{ // Admin → Check figures lists figure files missing from Storage
+  const qAny = [...fake.store.entries()].find(([p, d]) => /^questions\//.test(p) && (d.figures || []).length)[1];
+  const fname = qAny.figures[0], saved = fake.files.get(`figures/${fname}`);
+  fake.files.delete(`figures/${fname}`);
+  await go("#/t"); await go("#/t/admin");
+  await waitFor(() => byText("button", "Check figures"), "check figures button");
+  byText("button", "Check figures").click();
+  await waitFor(() => $(".figcheck ul") || byText(".figcheck p", "All "), "figure check result", 20000);
+  ok($(".figcheck ul") && byText(".figcheck li", fname), "Check figures lists the missing figure file and its question");
+  fake.files.set(`figures/${fname}`, saved);
+}
+
 console.log("11. teacher is NOT allowed what students aren't, and students can't reach teacher pages");
 fake.setUser(S1); await sleep(50);
 await go("#/t/admin");

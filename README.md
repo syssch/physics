@@ -90,6 +90,8 @@ Until this is done, test with teacher accounts or a few adult accounts.
 2. On the website, sign in, then open *Teacher*, then *Admin*, then *Import questions*. Choose
    `bundle.json` and select **all** the files in its `figures` folder, then click *Import*.
    Importing again later updates questions that have the same ID and adds new ones; nothing is removed.
+   If a question shows "(Figure could not be loaded.)", click *Check figures* on the same page: it lists the figure
+   files missing from the website and their questions; import again selecting those files.
    The import also updates `meta/questionIndex`, a small list of every question's book, chapter, subtopic and skills,
    so starting a practice set costs one database read instead of one per question.
 

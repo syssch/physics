@@ -5,6 +5,44 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-13
 
+- **Solution updated** (question data): 2024-25 F5 E3 Q28 — final step now uses tan c = sin c / cos c = 2/√3 ⇒
+  c = 49.1°, n = 1/sin c = 1.32 (instead of sin²c + cos²c = 1); marked as a teacher solution. *Re-import the bundle.*
+- **Admin → Check figures**: lists every figure file used by a question that is missing from Firebase Storage (with
+  the questions using it), e.g. 2023-24 F6 T1 Q2 showing "Figure could not be loaded" because its PNG was not
+  selected at an earlier import. Fix: import again with those files selected. *Push.* Tests: 276.
+- **Typo fixed** (question data): 2023-24 F3 E2 Q4 option D — 內鎵鏡 → 內窺鏡 (endoscope). *Re-import the bundle.*
+- **Figure cropped** (question data): 2022-23 F5 E2 Q31 — the upper diagram (Q30's media W/X/Y/Z) removed; only the
+  prism remains. Original in `question_bank/archive/backup_fig_reports_20261113/`. *Re-import the bundle.*
+- **Re-tagged** (question data): 2021-22 F6 T1 Q10 → Total Internal Reflection of Light (Ch 18); 2025-26 F6 Mock 1A Q15
+  (water waves) → Reflection, Refraction & Diffraction of Waves (Ch 14, was Refraction of Light). *Re-import the bundle.*
+- **Solution updated** (question data): 2014-15 F6 T1 Q12 — step-by-step: refractive indices from n = c/v, Snell's law
+  at each boundary (87.7°, then 41.8°), shortcut last. *Re-import the bundle.*
+- **Wavelength of light → Ch 16 only** (question data): 2013-14 F6 T1 Q4, 2021-22 F6 T1 Q5, 2022-23 F6 T1 Q3 and
+  2024-25 F5 E3 Q30 no longer carry a Ch 18 tag (subtopic EM Spectrum only). *Re-import the bundle.*
+- **Re-tagged** (question data): 2024-25 F6 T1 Q2 (water waves, shallow → deep) moved from Refraction of Light (Ch 18)
+  to Reflection, Refraction & Diffraction of Waves (Ch 14). *Re-import the bundle.*
+- **Wavelength of light → also Ch 16** (question data): optics questions whose text involves the wavelength of light
+  keep their tag and also get Ch 16 (subtopic EM Spectrum): 2013-14 F6 T1 Q4, 2021-22 F6 T1 Q5 (also Total Internal
+  Reflection), 2022-23 F6 T1 Q3, 2024-25 F5 E3 Q30, and DSE 2018 1A Q16 (bank only). *Re-import the bundle.*
+- **Total internal reflection re-tag** (question data): every question whose text, options or solution mentions "total
+  internal reflection" or "critical angle" now has the single subtopic Total Internal Reflection of Light (Ch 18) —
+  19 changed (16 SYSS on the platform, 3 DSE); ones about total internal reflection of sound go to Ch 16 (EM Spectrum).
+  Originals in `question_bank/archive/backup_tir_retag_20261113.zip`. *Re-import the bundle.*
+- **Re-tagged** (question data): 2017-18 F6 T1 Q9 and 2020-21 F6 Mock 1A Q18 → subtopic Total Internal Reflection
+  of Light (Ch 18).
+  *Re-import the bundle.*
+- **Re-tagged** (question data): 2016-17 F6 T1 Q12 (wavelength of light in a medium) moved from Ch 18 to Ch 16 Light
+  Waves (subtopic EM Spectrum). *Re-import the bundle.*
+- **Re-tagged** (question data): 2016-17 F6 Mock 1A Q19 → subtopic Total Internal Reflection of Light (was Refraction
+  of Light; still Ch 18). *Re-import the bundle.*
+- **Solution updated** (question data): 2013-14 F6 T1 Q8 — Snell's law at the bottom face (n sin 47° = 1 × sin 90°) as
+  Method 1, without the critical angle; critical-angle method kept as Method 2. *Re-import the bundle.*
+- **Solution figure redrawn** (question data): 2025-26 F3 E1 Q3 — the image of "SING YIN" is now drawn in red behind the
+  mirror, with dashed perpendicular construction lines; solution text mentions it. *Re-import the bundle.*
+- **Re-tagged** (question data): 2021-22 F6 T1 Q6 (light vs sound) moved from Ch 17 to Ch 16 Light Waves (subtopic
+  EM Spectrum). *Re-import the bundle.*
+- **2024-25 F3 E3 Q2** (question data): now shows the front view from Q1 (mirror on the ground in front of the school)
+  above the four options, with a lead-in sentence so it stands alone. *Re-import the bundle.*
 - **Search by source**: the teacher search box (question bank, assignment builder, printable paper, question stats) also
   finds questions by source — "2018-19 F4 E2 Q1" (exact; Q1 ≠ Q10), "F4 E2 2018-19" (whole paper), "Q12", the id
   "SYSS-2018-19-F4-E2-Q1" or "Q.1". `searchMatcher()` in `js/teacher.js`. *Push.* Tests: 275.
