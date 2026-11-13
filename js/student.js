@@ -1,11 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611121731";
+import { db, api, auth } from "./fb.js?v=202611130815";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611121731";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611121731";
-import { runQuiz, showReview } from "./quiz.js?v=202611121731";
-import { explainPanel, getCards, readStats } from "./explain.js?v=202611121731";
-import { setDue, setChip } from "./chrome.js?v=202611121731";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611130815";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611130815";
+import { runQuiz, showReview } from "./quiz.js?v=202611130815";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611130815";
+import { setDue, setChip } from "./chrome.js?v=202611130815";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611130815";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -67,8 +68,8 @@ export async function studentHome(user) {
   }
 }
 
-async function practicePanel() {
-  const syl = syllabusFilters(await getBooks());
+async function practicePanel(limit = null) {
+  const syl = syllabusFilters(limitBooks(await getBooks(), limit));
   const sk = skillFilter();
   const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 3 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button" }, "Start practice");
@@ -82,6 +83,7 @@ async function practicePanel() {
   });
   return el("div", { class: "panel" }, [el("h2", {}, "Random practice set"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
+    limit ? el("p", { class: "notice f3-limit" }, `${limit.form} practice covers ${limitText(limit)} — the chapters you learn in ${limit.form}.`) : null,
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
 }
 
@@ -104,7 +106,8 @@ function pointsPanel() {
 /** Practise page: a random set by book / chapter / subtopic / skill, and "Redo my mistakes". */
 export async function practisePage(user) {
   mount(loading());
-  const page = el("section", {}, [el("h1", {}, "Practise"), await practicePanel(), mistakesPanel()]);
+  const limit = await chapterLimit(user);
+  const page = el("section", {}, [el("h1", {}, "Practise"), await practicePanel(limit), mistakesPanel()]);
   mount(page);
 }
 
@@ -249,7 +252,7 @@ export async function historyView(user) {
   mount(loading());
   const attempts = await myAttempts(user, 200);
   const page = el("section", {}, [el("h1", {}, "My results")]);
-  if (attempts.length) page.append(await progressPanel());
+  if (attempts.length) page.append(await progressPanel(user));
   if (!attempts.length) page.append(el("p", { class: "muted" }, "Nothing yet."));
   else {
     const del = async (ids) => {
@@ -269,13 +272,13 @@ export async function historyView(user) {
 }
 
 // ---------------------------------------------------------------- My progress (top of My results)
-async function progressPanel() {
+async function progressPanel(user) {
   const box = el("div", { class: "panel progress" }, [el("h2", {}, "My progress")]);
   let p, books = [];
   let ex = null;
   try {
     [p, books, ex] = await Promise.all([api.myProgress({}), getBooks().catch(() => []),
-      Promise.all([getDoc(doc(db, "explainProgress", auth.currentUser.uid)), getCards()])
+      Promise.all([getDoc(doc(db, "explainProgress", auth.currentUser.uid)), cardsFor(user)])
         .then(([d, b]) => readStats(d.exists() ? d.data() : {}, b.cards)).catch(() => null)]);
   }
   catch (e) { box.append(el("p", { class: "muted" }, errMsg(e))); return box; }
@@ -294,13 +297,14 @@ async function progressPanel() {
     box.append(el("p", { class: "notice" }, [`${p.wrongNow} question${p.wrongNow > 1 ? "s" : ""} you got wrong last time ${p.wrongNow > 1 ? "are" : "is"} waiting. `,
       el("a", { href: "#/practise" }, "Redo my mistakes")]));
   }
+  const limit = await chapterLimit(user);
   const chName = new Map();
   books.forEach((b) => (b.chapters || []).forEach((c) => chName.set(c.id, `${b.book > 5 ? `B${b.book} ` : ""}Ch ${c.no} ${c.en || ""}`.trim())));
   const table = (rows, title, chapterIds) => {
     const t = el("table", { class: "grid areas" }, [el("tr", {}, [el("th", {}, title), el("th", {}, "Answered"), el("th", {}, "Correct"), el("th", {}, ""), chapterIds ? el("th", {}, "") : null])]);
     rows.forEach(([k, n, ok]) => {
       const v = pc(ok, n);
-      const prac = chapterIds ? el("button", { type: "button", class: "btn small" }, "Practise 5") : null;
+      const prac = chapterIds && (!limit || limit.chapters.has(String(k))) ? el("button", { type: "button", class: "btn small" }, "Practise 5") : null;
       if (prac) prac.addEventListener("click", async () => {
         prac.disabled = true;
         try {

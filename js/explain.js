@@ -1,11 +1,12 @@
 // "Explain" cards: Paper 1B explanation questions with marking scheme, teaching notes and examiners' comments.
 // Students read one card a day (or any card they like, by textbook chapter) and mark cards as read.
 // Cards carry book / chapter tags (Book 1–7, Ch 1–27 …); older bundles without them fall back to topics.
-import { db, api } from "./fb.js?v=202611121731";
+import { db, api } from "./fb.js?v=202611130815";
 import { doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk } from "./ui.js?v=202611121731";
-import { studentLabel, sortByRoster, attachRosters } from "./roster.js?v=202611121731";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk } from "./ui.js?v=202611130815";
+import { studentLabel, sortByRoster, attachRosters } from "./roster.js?v=202611130815";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611130815";
 
 let bundleCache = null;
 export async function getCards() {
@@ -24,6 +25,15 @@ export function readStats(progress, cards) {
   const times = Object.entries((progress && progress.read) || {}).filter(([id]) => !ids || ids.has(id)).map(([, t]) => Date.parse(t)).filter(Boolean);
   const weekAgo = Date.now() - 7 * 864e5;
   return { n: times.length, week: times.filter((t) => t >= weekAgo).length, last: times.length ? Math.max(...times) : null, total: cards ? cards.length : 0 };
+}
+
+/** The cards a student may use: F3 students only get cards in their form's chapters (see js/forms.js). */
+export async function cardsFor(user) {
+  const [b, limit] = await Promise.all([getCards(), chapterLimit(user)]);
+  if (!limit) return b;
+  const out = { topics: b.topics, books: limitBooks(b.books, limit), cards: b.cards.filter((c) => limit.chapters.has(String(c.chapter))), limit };
+  out.groups = groupsOf(out);
+  return out;
 }
 
 // ---------------------------------------------------------------- chapters
@@ -102,7 +112,7 @@ const plain = (h) => (h || "").replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").
 export async function explainPanel(user) {
   const box = el("div", { class: "panel" }, [el("h2", {}, "Explain card of the day")]);
   try {
-    const bundle = await getCards(), { cards } = bundle;
+    const bundle = await cardsFor(user), { cards } = bundle;
     if (!cards.length) { box.append(el("p", { class: "muted" }, "Coming soon.")); return box; }
     const p = await loadProgress(user);
     const c = await todayCard(user, bundle, p);
@@ -123,7 +133,7 @@ export async function explainPanel(user) {
 // ---------------------------------------------------------------- library (choose chapters, list cards)
 export async function explainLibrary(user) {
   mount(loading());
-  const [bundle, p] = await Promise.all([getCards(), loadProgress(user)]);
+  const [bundle, p] = await Promise.all([cardsFor(user), loadProgress(user)]);
   const { cards, groups } = bundle;
   if (!cards.length) return mount(el("p", { class: "muted" }, "The Explain cards haven't been loaded yet."));
   const page = el("section", {});
@@ -131,6 +141,7 @@ export async function explainLibrary(user) {
   page.append(el("h1", {}, "Explain it! — Paper 1B explanation questions"));
   page.append(el("p", { class: "muted" },
     "Each card is a past DSE \"explain\" question with the marking scheme, teaching notes and what examiners said. Read one a day — your daily card comes from the chapters you tick below."));
+  if (bundle.limit) page.append(el("p", { class: "notice f3-limit" }, `${bundle.limit.form}: cards from ${limitText(bundle.limit)}.`));
   if (today) page.append(el("div", { class: "panel today" }, [
     el("strong", {}, "Today: "), `${chLabel(today)} · ${label(today)} — ${today.pattern} `,
     el("a", { class: "btn small primary", href: `#/explain/${today.id}` }, p.read[today.id] ? "Read again ✓" : "Read now"),
@@ -192,7 +203,7 @@ export async function explainLibrary(user) {
 // ---------------------------------------------------------------- one card
 export async function explainCard(user, id) {
   mount(loading());
-  const [{ cards }, p] = await Promise.all([getCards(), loadProgress(user)]);
+  const [{ cards }, p] = await Promise.all([cardsFor(user), loadProgress(user)]);
   const c = cards.find((x) => x.id === id);
   if (!c) return mount(el("p", { class: "error" }, "Card not found."));
   const sameTopic = cards.filter((x) => keyOf(x) === keyOf(c));

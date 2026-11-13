@@ -42,6 +42,7 @@ Read `README.md` for the full feature description.
 | `js/feedback.js` | "Explain in class" / "Report a problem" (students) and the Feedback page (teachers) |
 | `js/qstats.js` | first-attempt choice statistics |
 | `js/explain.js` | Explain cards; `readStats()` (cards read / this week / last) used by progress pages |
+| `js/forms.js` | `FORM_CHAPTERS` (F3 → Ch 1, 2, 17, 18, 19) and helpers; mirrored in `functions/index.js` — keep identical |
 | `js/docx.js`, `js/roster.js`, `js/syllabus.js` | Word export, class lists, syllabus data |
 | `functions/index.js` | callables: `startPractice`, `startMistakes`, `submitAnswers`, `getReview`, `getLeaderboard`, `rebuildLeaderboards`, `explainRead`, `figureData`, `sendFeedback`, `myProgress`, `rebuildMembers`; trigger `syncMembers` |
 
@@ -54,6 +55,8 @@ by functions use `allow write: if false` with teacher read.
 - Practice never serves questions from open assignments. Redo my mistakes = latest *visible* answer wrong/blank.
 - Points (`PTS`): 100 per correct answer; +500 (≥90%) / +200 (75–89%) for sets of 5+; 300 for the Explain card of the
   day; +500 weekly check-in on the 3rd active day; each assignment counts once. Hong Kong time.
+- F3 students (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise, Redo my mistakes and Explain
+  (`FORM_CHAPTERS` in `js/forms.js` and `functions/index.js`); teachers and assignments are not limited.
 - Rate limits (`RATE_LIMITS`, teachers exempt) on student-facing callables: call `rateLimit(user, bucket)`.
 - Feedback docs: teachers may change only `status`, `handledBy`, `handledAt`.
 
@@ -71,7 +74,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 261 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 269 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

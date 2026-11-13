@@ -180,6 +180,21 @@ function cleanResponses(questionIds, raw) {
   return out;
 }
 
+// ------------------------------------------------------------------ chapters per form
+/**
+ * F3 students only learn these chapters in F3 (and not all go on to take Physics), so Practise and Redo my mistakes
+ * only use questions tagged with nothing but these chapters. Teachers and other forms are not limited; assignments are
+ * not affected. The same list is in js/forms.js (FORM_CHAPTERS) — change both together (a test checks they match).
+ */
+const FORM_CHAPTERS = { F3: ["1", "2", "17", "18", "19"] };
+async function chapterLimit(user) {
+  if (user.isTeacher || (await isTeacher(user.email))) return null;
+  const info = await studentForm(user.email);
+  return info && FORM_CHAPTERS[info.form] ? { form: info.form, chapters: new Set(FORM_CHAPTERS[info.form]) } : null;
+}
+const withinLimit = (limit, chapters) => !limit || ((chapters || []).length > 0 && chapters.every((c) => limit.chapters.has(String(c))));
+const limitMessage = (limit) => `${limit.form} practice covers Ch ${[...limit.chapters].join(", ")} only.`;
+
 /** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic / skill. */
 exports.startPractice = onCall(async (request) => {
   const user = await requireMember(request);
@@ -201,6 +216,9 @@ exports.startPractice = onCall(async (request) => {
     entries = snap.docs.map((d) => ({ id: d.id, topic: d.get("topic"), chapters: d.get("chapters") || [], subtopics: d.get("subtopics") || [], skills: d.get("skills") || [] }));
   }
   const blocked = await openAssignmentQuestionIds(user.email);
+  const limit = await chapterLimit(user);
+  if (limit && chapter && !limit.chapters.has(String(chapter))) throw new HttpsError("invalid-argument", limitMessage(limit));
+  if (limit) entries = entries.filter((e) => withinLimit(limit, e.chapters));
   let pool = entries
     .filter((e) => !topic || e.topic === String(topic))
     .filter((e) => !subtopic || e.subtopics.includes(subtopic))
@@ -257,10 +275,12 @@ exports.startMistakes = onCall(async (request) => {
   if (!ix && wrong.length) {        // older data without the index: read just these questions
     ix = {};
     (await db.getAll(...wrong.map((q) => db.doc(`questions/${q}`)))).forEach((d) => {
-      if (d.exists && d.get("active") !== false) ix[d.id] = { t: d.get("topic") };
+      if (d.exists && d.get("active") !== false) ix[d.id] = { t: d.get("topic"), c: d.get("chapters") || [] };
     });
   }
   if (ix) wrong = wrong.filter((q) => ix[q]);
+  const limit = await chapterLimit(user);
+  if (limit) wrong = wrong.filter((q) => ix && ix[q] && withinLimit(limit, ix[q].c));
   const blocked = await openAssignmentQuestionIds(user.email);
   wrong = wrong.filter((q) => !blocked.has(q));
 

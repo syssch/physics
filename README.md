@@ -179,6 +179,10 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
 
 **Students**:
 - *Home* lists their assignments with due dates and scores.
+- *F3 chapter limit*: students whose class name starts with 3 (e.g. 3A) only learn Ch 1, 2, 17, 18 and 19 in F3, so
+  their Practise menus, random sets, Redo my mistakes, "Practise 5" and Explain cards only use those chapters
+  (questions tagged with nothing but those chapters, from any form's papers). Teachers' assignments are not limited.
+  The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
 - *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.

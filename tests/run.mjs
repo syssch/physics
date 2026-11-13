@@ -801,6 +801,44 @@ console.log("9f. My progress (students)");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+console.log("9g. F3 chapter limit (Ch 1, 2, 17, 18, 19)");
+{
+  // the client and server lists must match
+  const srv = (readFileSync(`${APP}/functions/index.js`, "utf8").match(/const FORM_CHAPTERS = (\{[^}]*\});/) || [])[1];
+  const cli = (readFileSync(`${APP}/js/forms.js`, "utf8").match(/export const FORM_CHAPTERS = (\{[^}]*\});/) || [])[1];
+  ok(srv && srv === cli, "FORM_CHAPTERS is the same in functions/index.js and js/forms.js");
+  const F3 = new Set(["1", "2", "17", "18", "19"]);
+  const S7 = { uid: "s7", email: "s007@syss.edu.hk", name: "Form Three" };
+  fake.store.set("classes/f3cls", { name: "3A", studentEmails: [S7.email] });
+  fake.store.set(`members/${S7.email}`, { classes: ["f3cls"] });
+  const inF3 = (id) => { const q = fake.store.get(`questions/${id}`); return q && q.chapters.length && q.chapters.every((c) => F3.has(c)); };
+  fake.setUser(S7); await sleep(80);
+  const r = await api.startPractice({ count: 20 });
+  ok(r.questionIds.length && r.questionIds.every(inF3), "F3 random practice only uses questions from Ch 1, 2, 17, 18, 19");
+  let msg = ""; try { await api.startPractice({ chapter: "9", count: 5 }); } catch (e) { msg = e.message; }
+  ok(/F3 practice covers Ch 1, 2, 17, 18, 19 only/.test(msg), "F3 students cannot ask for other chapters");
+  await go("#/history"); await go("#/practise");
+  await waitFor(() => byText("button", "Start practice"), "practice page");
+  const chSel = $$(".panel select")[1];
+  const chs = [...chSel.options].map((o) => o.value).filter(Boolean);
+  ok(chs.length && chs.every((c) => F3.has(c)) && byText(".f3-limit", "Ch 1, 2, 17, 18 and 19"), "practice menus only list the F3 chapters, with a note");
+  // Redo my mistakes: a wrong answer outside the F3 chapters is left out
+  const other = Object.keys(bundle.answers).find((id) => !inF3(id)), mine = Object.keys(bundle.answers).find(inF3);
+  const wrongOf = (id) => ["A", "B", "C", "D"].find((k) => k !== bundle.answers[id]);
+  fake.store.set("attempts/practice_f3test", { uid: "s7", email: S7.email, mode: "practice", title: "Practice", questionIds: [other, mine],
+    responses: { [other]: wrongOf(other), [mine]: wrongOf(mine) }, score: 0, total: 2, submittedAt: Timestamp.now() });
+  const pv = await api.startMistakes({ preview: true });
+  ok(pv.available === 1, "Redo my mistakes only offers F3-chapter questions");
+  // teachers (and other forms) are not limited
+  fake.setUser(T); await sleep(50);
+  const rt = await api.startPractice({ chapter: "9", count: 3 });
+  ok(rt.questionIds.length > 0, "teachers are not limited");
+  fake.setUser(S1); await sleep(50);
+  ok((await api.startPractice({ chapter: "9", count: 3 })).questionIds.length > 0, "F4 students are not limited");
+  fake.store.delete("attempts/practice_f3test");
+  fake.setUser(T); await sleep(50); await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");
@@ -920,6 +958,16 @@ ok(byText("table.grid tr", "s001").children[4].textContent === "all", "old topic
   fake.setUser(T); await sleep(50); await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+{ // F3 students only get Explain cards from their chapters (class "3A" was added in 9g)
+  const F3 = new Set(["1", "2", "17", "18", "19"]);
+  fake.setUser({ uid: "s7", email: "s007@syss.edu.hk", name: "Form Three" }); await sleep(80);
+  await go("#/history"); await go("#/explain");
+  await waitFor(() => byText("h1", "Explain it!"), "F3 explain library");
+  const n = explain.cards.filter((c) => F3.has(String(c.chapter))).length;
+  ok(byText(".f3-limit", "Ch 1, 2, 17, 18 and 19") && $$(".cardrow").length === n, `F3 Explain shows only the ${n} cards in Ch 1, 2, 17, 18, 19`);
+  fake.setUser(T); await sleep(50); await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
 console.log("13. Class lists control access");
 const S9 = { uid: "s9", email: "s009@syss.edu.hk", name: "Not Physics" };
 fake.setUser(S9); await sleep(80);
@@ -966,7 +1014,8 @@ ok(true, "student added by paste can now sign in");
 fake.setUser(T); await sleep(50);
 fake.store.delete("members/s009@syss.edu.hk");
 const r = await api.rebuildMembers({});
-ok(r.members === 4 && fake.store.has("members/s009@syss.edu.hk"), "rebuild restores the access list from class lists");
+{ const all = new Set([...fake.store.entries()].filter(([p]) => /^classes\/[^/]+$/.test(p)).flatMap(([, d]) => d.studentEmails || []));
+  ok(r.members === all.size && fake.store.has("members/s009@syss.edu.hk"), "rebuild restores the access list from class lists"); }
 
 console.log("14. Deleting results");
 // a student cannot delete their own result

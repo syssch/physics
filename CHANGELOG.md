@@ -3,6 +3,16 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-13
+
+- **F3 chapter limit**: students in F3 classes (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise,
+  Redo my mistakes, "Practise 5" and Explain cards (questions tagged only with those chapters, from any form's papers).
+  Teachers, F4–F6 and assignments are not affected. Config `FORM_CHAPTERS` in `js/forms.js` **and**
+  `functions/index.js` (test checks they match). *deploy.command + push.* Tests: 269.
+- **Wording fix from a student report** (question data): 2017-18 F3 E2 Q6 — statement (3) now says "the same mass of a
+  liquid with smaller specific heat capacity" and the stem says each change is made on its own; solution explains why.
+  *Re-import the bundle, then mark the report "fixed".*
+
 ## 2026-11-12
 
 - **Picture-option figures checked** (question data): all 143 questions whose options are pictures were reviewed by eye.
