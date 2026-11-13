@@ -840,6 +840,36 @@ console.log("9g. F3 chapter limit (Ch 1, 2, 17, 18, 19)");
   fake.setUser(T); await sleep(50); await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+console.log("9h. search by source (e.g. 2018-19 F4 E2 Q1)");
+{
+  await go("#/history"); await go("#/t/bank");
+  await waitFor(() => $(".qsearch") && $$(".qcard").length, "bank");
+  const all = [...fake.store.entries()].filter(([p, d]) => /^questions\//.test(p) && d.active !== false).map(([, d]) => d);
+  const lab = (q) => `${q.year} ${q.form} ${q.paper} Q${q.questionNumber}`;
+  const target = all.find((q) => all.some((o) => o.year === q.year && o.form === q.form && o.paper === q.paper && o.questionNumber === q.questionNumber + "0")) || all[0];
+  set($(".qsearch"), lab(target));
+  await waitFor(() => /^1 of /.test(byText("p.muted", " of ")?.textContent || ""), "one match");
+  ok($$(".qcard").length === 1 && $(".qcard .qsrc").textContent.includes(lab(target)), `"${lab(target)}" finds exactly that question (not Q${target.questionNumber}0 etc.)`);
+  const paperN = all.filter((q) => q.year === target.year && q.form === target.form && q.paper === target.paper).length;
+  set($(".qsearch"), `${target.form} ${target.paper} ${target.year}`);
+  await waitFor(() => $$(".qcard").length === Math.min(paperN, 200), "whole paper");
+  ok(true, "year + form + paper (any order) lists the whole paper");
+  set($(".qsearch"), target.id);
+  await waitFor(() => $$(".qcard").length === 1, "by id");
+  ok(true, "the question id works too");
+  set($(".qsearch"), `${target.year} ${target.form} ${target.paper} Q.${target.questionNumber}`);
+  await waitFor(() => $$(".qcard").length === 1, "Q. form");
+  ok(true, '"Q.1" is read as "Q1"');
+  set($(".qsearch"), "");
+  // the same box in the assignment builder
+  await go("#/t/assign");
+  await waitFor(() => $(".qsearch") && $$(".pickrow").length, "assignment builder");
+  set($(".qsearch"), lab(target));
+  await waitFor(() => $$(".pickrow").length === 1, "builder filtered");
+  ok(true, "assignment builder can filter by source");
+  await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");

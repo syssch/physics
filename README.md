@@ -129,7 +129,9 @@ updates itself whenever a class is saved or deleted.
 **Teachers** (*Teacher* tab):
 - *New class*: give the class a name and paste the students' school emails, one per line.
 - *New assignment*: pick the class, title, due date, and whether answers are shown right after
-  submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), skill tested, form or text, tick
+  submitting or only after the due date. Filter by book → chapter → subtopic (each narrows the next), skill tested, form, or
+  search by text or source (e.g. "2018-19 F4 E2 Q1", or "2018-19 F4 E2" for the whole paper — the same box is in the
+  question bank, printable paper and question stats), tick
   questions, or add random ones from the current filter.
 - *Edit / Delete assignment* (on its Results page): change the title, due date or when answers are shown (questions can't
   be changed once set). Deleting removes it from students' Home pages and the dashboard; submitted results, My results

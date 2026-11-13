@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611131116";
+import { db, storage, api } from "./fb.js?v=202611131123";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611131116";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611131116";
-import { isSchoolEmail } from "./config.js?v=202611131116";
-import { importExplainBundle } from "./explain.js?v=202611131116";
-import { recordHref } from "./studentrecord.js?v=202611131116";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611131116";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611131116";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611131116";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611131123";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611131123";
+import { isSchoolEmail } from "./config.js?v=202611131123";
+import { importExplainBundle } from "./explain.js?v=202611131123";
+import { recordHref } from "./studentrecord.js?v=202611131123";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611131123";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611131123";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611131123";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -99,19 +99,37 @@ export async function classEditor(user, classId) {
 }
 
 // ---------------------------------------------------------------- question picker (shared by builder and bank)
+/**
+ * Search box matcher: words in the question text, or the question's source. A source search matches token by token
+ * against "2018-19 F4 E2 Q1" (so "Q1" doesn't match Q10–Q19; "F4 E2" gives the whole paper of every year), and also
+ * accepts the question id ("SYSS-2018-19-F4-E2-Q1") or "2018-19 F4 E2 Q.1". Returns null for an empty box.
+ */
+export function searchMatcher(raw) {
+  const text = String(raw || "").trim().toLowerCase();
+  if (!text) return null;
+  const tokens = text.replace(/\bq\.\s*(?=\d)/g, "q").split(/\s+/).filter(Boolean);
+  return (q, plainText) => {
+    const label = sourceLabel(q).toLowerCase().split(/\s+/);
+    if (tokens.every((t) => label.includes(t))) return true;
+    if (String(q.id || "").toLowerCase() === text || (text.startsWith("syss-") && String(q.id || "").toLowerCase().startsWith(text + "-"))) return true;
+    return (plainText ?? (q.textHtml || "").replace(/<[^>]+>/g, " ").toLowerCase()).includes(text);
+  };
+}
+
 function questionFilters(questions, topics, onChange, books = []) {
   const syl = syllabusFilters(books.length ? books : booksFromQuestions(questions), onChange);
   const skill = skillFilter(onChange);
   const forms = [...new Set(questions.map((q) => q.form))].sort();
   const formSel = el("select", {}, [el("option", { value: "" }, "All forms")].concat(forms.map((f) => el("option", { value: f }, f))));
-  const search = el("input", { type: "search", placeholder: "Search text…" });
+  const search = el("input", { type: "search", class: "qsearch", placeholder: "Search text or source, e.g. 2018-19 F4 E2 Q1",
+    title: "Words from the question, or its source: year, form, paper and/or question number (e.g. 2018-19 F4 E2 Q1, F4 E2, Q12)" });
   formSel.addEventListener("change", onChange);
   search.addEventListener("input", onChange);
   const strip = (h) => (h || "").replace(/<[^>]+>/g, " ").toLowerCase();
-  const apply = () => questions.filter((q) =>
+  const apply = () => { const m = searchMatcher(search.value); return questions.filter((q) =>
     syl.matches(q) && skill.matches(q) &&
     (!formSel.value || q.form === formSel.value) &&
-    (!search.value || strip(q.textHtml).includes(search.value.toLowerCase())));
+    (!m || m(q, strip(q.textHtml)))); };
   return { node: el("div", { class: "row" }, [...syl.nodes, skill.node, formSel, search]), apply };
 }
 
@@ -457,7 +475,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611131116");
+      const { buildPaperDocx } = await import("./docx.js?v=202611131123");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {

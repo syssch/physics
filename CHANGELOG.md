@@ -5,6 +5,9 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-13
 
+- **Search by source**: the teacher search box (question bank, assignment builder, printable paper, question stats) also
+  finds questions by source — "2018-19 F4 E2 Q1" (exact; Q1 ≠ Q10), "F4 E2 2018-19" (whole paper), "Q12", the id
+  "SYSS-2018-19-F4-E2-Q1" or "Q.1". `searchMatcher()` in `js/teacher.js`. *Push.* Tests: 275.
 - **Browser tab icon**: an atom favicon (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` for phone home
   screens; links in `index.html` with `?v=1` — bump that number if the icon changes). *Push.* Tests: 270.
 - **Statement-question solutions** (question data): in (1)(2)(3)-type solutions the explanations for (2), (3) (and (4))
