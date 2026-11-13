@@ -2,7 +2,7 @@
 // Data: synthetic fixtures in tests/fixtures/ (safe for the public repo; made by tools/make_test_fixtures.py).
 // `node run.mjs --real` (or REAL_DATA=1) uses the real exports in ../../platform_prep/export/ instead (Shi's Mac only).
 import { register, createRequire } from "node:module";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { JSDOM } from "jsdom";
 register("./fakes/hooks.mjs", import.meta.url);
 
@@ -85,6 +85,7 @@ fake.user = X;
 await import(`${APP}/js/app.js`);
 await waitFor(() => byText("p.error", "not a school account"), "outsider message");
 ok(fake.user === null, "non-school account is signed out");
+ok($('link[rel="icon"][href^="favicon.svg"]') && $('link[rel="apple-touch-icon"]') && ["favicon.svg", "favicon-32.png", "apple-touch-icon.png"].every((f) => existsSync(`${APP}/${f}`)), "browser tab icon (favicon) is set and its files exist");
 ok(byText(".signin p.disclaimer", "By logging in, you acknowledge") && /copyright/.test($(".signin .disclaimer").textContent), "sign-in page shows the copyright notice");
 
 console.log("2. teacher creates a class");

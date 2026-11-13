@@ -5,6 +5,16 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-13
 
+- **Browser tab icon**: an atom favicon (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` for phone home
+  screens; links in `index.html` with `?v=1` — bump that number if the icon changes). *Push.* Tests: 270.
+- **Statement-question solutions** (question data): in (1)(2)(3)-type solutions the explanations for (2), (3) (and (4))
+  now start on new lines (681 solutions). Originals zipped in
+  `question_bank/archive/backup_statement_linebreaks_20261113.zip`. *Re-import the bundle.*
+- **Thermometer solutions** (question data): 18 more thermometer-calibration calculations now show a "Method 1 — rate
+  of change" first (e.g. 0.25 cm °C⁻¹, L = 5 + 0.25T) and "Method 2 — proportion" second (all 19 have both).
+  *Re-import the bundle.*
+- **Solution updated** (question data): 2024-25 F4 E1 Q1 now shows a rate-of-change method (0.15 and 0.1 cm °C⁻¹,
+  3 + 0.15T = 5 + 0.1T) before the proportion method; marked as a teacher solution. *Re-import the bundle.*
 - **F3 chapter limit**: students in F3 classes (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise,
   Redo my mistakes, "Practise 5" and Explain cards (questions tagged only with those chapters, from any form's papers).
   Teachers, F4–F6 and assignments are not affected. Config `FORM_CHAPTERS` in `js/forms.js` **and**

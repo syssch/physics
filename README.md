@@ -113,6 +113,10 @@ Until this is done, test with teacher accounts or a few adult accounts.
 
 ## Using it
 
+**Browser tab icon:** `favicon.svg` (blue rounded square with an atom, like the top-bar logo), plus `favicon-32.png` and
+`apple-touch-icon.png` (180 px, used when a phone adds the site to its home screen). If you change the icon, raise the
+`?v=1` on those three links in `index.html` so browsers fetch the new one.
+
 **Sign-in page:** shows a copyright notice under the button ("By logging in, you acknowledge…" — materials belong to
 the school; personal study by SYSS students and staff only; no copying, sharing or
 uploading elsewhere). Edit the wording in `COPYRIGHT_NOTICE` at the top of `js/app.js`.

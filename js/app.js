@@ -1,13 +1,13 @@
-import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611130815";
+import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611131116";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, toast, errMsg } from "./ui.js?v=202611130815";
-import { isSchoolEmail } from "./config.js?v=202611130815";
-import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611130815";
-import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611130815";
-import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611130815";
-import { studentsView, studentRecordView } from "./studentrecord.js?v=202611130815";
-import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611130815";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611130815";
+import { el, mount, toast, errMsg } from "./ui.js?v=202611131116";
+import { isSchoolEmail } from "./config.js?v=202611131116";
+import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611131116";
+import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611131116";
+import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611131116";
+import { studentsView, studentRecordView } from "./studentrecord.js?v=202611131116";
+import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611131116";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611131116";
 
 let user = null;
 
