@@ -5,6 +5,9 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-13
 
+- **Redo my mistakes by chapter**: the menu now lists each book and its chapters with the number of mistakes waiting
+  (e.g. "Ch 9 Momentum (4)"); students pick all, one book or one chapter. `startMistakes` takes `chapter` and its
+  preview returns `byChapter`; `mistakesPanel(books)` in `js/student.js`. *deploy.command + push.* Tests: 281.
 - **Leaderboard wording for students**: above the top 10 the board now always says "You have **1,200** points, ranking
   **3** of **45**" for the chosen period ("You have 0 points — not ranked yet" if none); replaces "You: #3 of 45, …",
   which only showed when outside the top 10. `myRankLine()` in `js/student.js`, `.my-rank` in `css/style.css`. *Push.* Tests: 277.

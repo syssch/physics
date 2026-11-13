@@ -311,6 +311,20 @@ console.log("8b. redo my mistakes");
   const book = Object.keys(pv.byTopic)[0];
   const rb = await api.startMistakes({ topic: book, count: 20 });
   ok(rb.questionIds.every((q) => bundle.questions.find((x) => x.id === q).topic === book), "set can be limited to one book");
+  const chs = Object.entries(pv.byChapter || {});
+  ok(chs.length && chs.every(([c, n]) => n === exp.filter((q) => (bundle.questions.find((x) => x.id === q).chapters || []).includes(c)).length), "preview splits them by chapter");
+  const [ch1, n1] = chs[0];
+  const rc = await api.startMistakes({ chapter: ch1, count: 20 });
+  ok(rc.questionIds.length === Math.min(20, n1) && rc.questionIds.every((q) => bundle.questions.find((x) => x.id === q).chapters.includes(ch1)), "set can be limited to one chapter");
+  await go("#/practise");
+  await waitFor(() => $(".mistakes select option[value^='ch:']"), "chapter choices in Redo my mistakes");
+  ok($(`.mistakes select option[value='ch:${ch1}']`) && /\(\d+\)$/.test($(`.mistakes select option[value='ch:${ch1}']`).textContent) && $(".mistakes select optgroup"), "Redo my mistakes lists chapters (grouped by book, with counts)");
+  set($(".mistakes select"), `ch:${ch1}`);
+  byText("button", "Redo my mistakes").click();
+  await waitFor(() => byText("h1", "Redo my mistakes") && $$(".qcard").length, "redo quiz page (one chapter)");
+  { const sid = location.hash.split("/").pop(), sess = fake.store.get(`sessions/${sid}`);
+    ok(sess && sess.chapter === ch1 && sess.questionIds.every((q) => bundle.questions.find((x) => x.id === q).chapters.includes(ch1)), "choosing a chapter on the page gives a set from that chapter only"); }
+  await go("#/");
   // through the page
   await go("#/practise");
   await waitFor(() => { const b = byText("button", "Redo my mistakes"); return b && !b.disabled; }, "redo button");

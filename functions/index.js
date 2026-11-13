@@ -241,7 +241,8 @@ exports.startPractice = onCall(async (request) => {
  * "Redo my mistakes": a practice set made of questions the student got wrong (or left blank) the last
  * time they answered them. Only attempts whose answers the student may already see count, so an
  * assignment whose answers are still hidden gives nothing away. Questions in open assignments stay out.
- *   { count?, topic?, preview? }  preview: just return how many questions are waiting (overall and per book).
+ *   { count?, topic?, chapter?, preview? }  preview: just return how many questions are waiting (overall, per book
+ *   and per chapter — a question tagged with two chapters counts in both).
  */
 exports.startMistakes = onCall(async (request) => {
   const user = await requireMember(request);
@@ -286,15 +287,20 @@ exports.startMistakes = onCall(async (request) => {
 
   if (data.preview) {
     const byTopic = {};
-    if (ix) wrong.forEach((q) => { const t = ix[q].t || "Other"; byTopic[t] = (byTopic[t] || 0) + 1; });
-    return { available: wrong.length, byTopic };
+    const byChapter = {};
+    if (ix) wrong.forEach((q) => {
+      const t = ix[q].t || "Other"; byTopic[t] = (byTopic[t] || 0) + 1;
+      (ix[q].c || []).forEach((c) => { byChapter[c] = (byChapter[c] || 0) + 1; });
+    });
+    return { available: wrong.length, byTopic, byChapter };
   }
-  const pool = data.topic && ix ? wrong.filter((q) => ix[q].t === String(data.topic)) : wrong;
+  let pool = data.topic && ix ? wrong.filter((q) => ix[q].t === String(data.topic)) : wrong;
+  if (data.chapter && ix) pool = pool.filter((q) => (ix[q].c || []).map(String).includes(String(data.chapter)));
   if (!pool.length) throw new HttpsError("not-found", "No mistakes to redo right now. Well done!");
   const questionIds = shuffle(pool).slice(0, count);
   const ref = await db.collection("sessions").add({
     uid: user.uid, email: user.email, mode: "mistakes", title: "Redo my mistakes",
-    topic: data.topic ? String(data.topic) : null, questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
+    topic: data.topic ? String(data.topic) : null, chapter: data.chapter ? String(data.chapter) : null, questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
   });
   return { sessionId: ref.id, questionIds, available: wrong.length };
 });

@@ -52,7 +52,8 @@ by functions use `allow write: if false` with teacher read.
 ## Behaviours to keep consistent
 
 - Reveal modes per assignment: `after_submit` | `after_due` | `manual` (+ `released: true`).
-- Practice never serves questions from open assignments. Redo my mistakes = latest *visible* answer wrong/blank.
+- Practice never serves questions from open assignments. Redo my mistakes = latest *visible* answer wrong/blank;
+  `startMistakes({topic?, chapter?, count, preview})`, preview returns `byTopic` + `byChapter` counts.
 - Points (`PTS`): 100 per correct answer; +500 (≥90%) / +200 (75–89%) for sets of 5+; 300 for the Explain card of the
   day; +500 weekly check-in on the 3rd active day; each assignment counts once. Hong Kong time.
 - F3 students (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise, Redo my mistakes and Explain
@@ -74,7 +75,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 277 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 281 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

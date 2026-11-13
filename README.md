@@ -194,7 +194,8 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
 - *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
-- *Redo my mistakes*: a practice set (5–20 questions, optionally one book) made of the questions the student got wrong
+- *Redo my mistakes*: a practice set (3–20 questions; all, one book or one chapter — the menu lists each book and
+  chapter with how many mistakes are waiting) made of the questions the student got wrong
   or left blank the last time they answered them. A question leaves the list once it is answered correctly. Only results
   whose answers the student can already see count (an assignment with hidden answers adds nothing until it is released),
   and questions in open assignments are left out. Built by the `startMistakes` Cloud Function from the student's

@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611132115";
+import { db, api, auth } from "./fb.js?v=202611132123";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611132115";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611132115";
-import { runQuiz, showReview } from "./quiz.js?v=202611132115";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611132115";
-import { setDue, setChip } from "./chrome.js?v=202611132115";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611132115";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611132123";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611132123";
+import { runQuiz, showReview } from "./quiz.js?v=202611132123";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611132123";
+import { setDue, setChip } from "./chrome.js?v=202611132123";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611132123";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -107,7 +107,7 @@ function pointsPanel() {
 export async function practisePage(user) {
   mount(loading());
   const limit = await chapterLimit(user);
-  const page = el("section", {}, [el("h1", {}, "Practise"), await practicePanel(limit), mistakesPanel()]);
+  const page = el("section", {}, [el("h1", {}, "Practise"), await practicePanel(limit), mistakesPanel(await getBooks())]);
   mount(page);
 }
 
@@ -189,9 +189,9 @@ function leaderboardPanel(user) {
 }
 
 /** "Redo my mistakes": a practice set of questions answered wrongly (or left blank) last time. */
-function mistakesPanel() {
+function mistakesPanel(books = []) {
   const info = el("p", { class: "muted" }, "Checking your past answers…");
-  const bookSel = el("select", {}, [el("option", { value: "" }, "All books")]);
+  const bookSel = el("select", { "aria-label": "Chapter" }, [el("option", { value: "" }, "All chapters")]);
   const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 3 }, `${n} questions`)));
   const go = el("button", { class: "btn primary", type: "button", disabled: true }, "Redo my mistakes");
   const row = el("div", { class: "row" }, [bookSel, countSel, go]);
@@ -199,13 +199,26 @@ function mistakesPanel() {
   api.startMistakes({ preview: true }).then((r) => {
     if (!r.available) { info.textContent = "No mistakes to redo right now. Questions you get wrong in practice (and in assignments, once their answers are shown) will appear here."; return; }
     info.textContent = `${r.available} question${r.available === 1 ? "" : "s"} you got wrong (or left blank) last time. A question leaves this list once you answer it correctly.`;
-    Object.entries(r.byTopic || {}).sort().forEach(([t, n]) => bookSel.append(el("option", { value: t }, `${t} (${n})`)));
+    bookSel.firstChild.textContent = `All chapters (${r.available})`;
+    // by book, then by chapter (a question tagged with two chapters appears under both)
+    const byCh = r.byChapter || {}, byT = { ...(r.byTopic || {}) }, used = new Set();
+    for (const b of books) {
+      const t = b.en, chs = (b.chapters || []).filter((c) => byCh[c.id]);
+      if (!byT[t] && !chs.length) continue;
+      const g = el("optgroup", { label: b.book ? `Book ${b.book} ${b.en}` : b.en });
+      if (byT[t]) g.append(el("option", { value: `book:${t}` }, `All of ${b.book ? `Book ${b.book}` : t} (${byT[t]})`));
+      chs.forEach((c) => { used.add(c.id); g.append(el("option", { value: `ch:${c.id}` }, `${b.book > 5 ? `B${b.book} ` : ""}Ch ${c.no} ${c.en || ""}`.trim() + ` (${byCh[c.id]})`)); });
+      bookSel.append(g); delete byT[t];
+    }
+    Object.entries(byT).sort().forEach(([t, n]) => bookSel.append(el("option", { value: `book:${t}` }, `${t} (${n})`)));
+    Object.entries(byCh).filter(([c]) => !used.has(c)).forEach(([c, n]) => bookSel.append(el("option", { value: `ch:${c}` }, `Ch ${c} (${n})`)));
     row.style.display = ""; go.disabled = false;
   }).catch((e) => { info.textContent = errMsg(e); });
   go.addEventListener("click", async () => {
     go.disabled = true;
     try {
-      const r = await api.startMistakes({ topic: bookSel.value || null, count: Number(countSel.value) });
+      const v = bookSel.value, pick = v.startsWith("ch:") ? { chapter: v.slice(3) } : v.startsWith("book:") ? { topic: v.slice(5) } : {};
+      const r = await api.startMistakes({ ...pick, count: Number(countSel.value) });
       sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
       sessionStorage.setItem(`session-title-${r.sessionId}`, "Redo my mistakes");
       location.hash = `#/practice/${r.sessionId}`;
