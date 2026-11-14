@@ -44,7 +44,8 @@ def fake_bundle(b, ids=None):
     questions = [fake_question(q, i + 1) for i, q in enumerate(qs)]
     answers = {q["id"]: pick(q["id"], q.get("optionKeys") or ["A", "B", "C", "D"]) for q in questions}
     return {"generatedAt": "synthetic", "name": b.get("name", "") + " (synthetic test data)", "topics": b["topics"],
-            "books": b["books"], "skills": b.get("skills", []), "questions": questions, "answers": answers, "solutions": {}}
+            "books": b["books"], "skills": b.get("skills", []), "questions": questions, "answers": answers, "solutions": {},
+            "retired": b.get("retired", [])}
 
 
 def fake_explain(e):

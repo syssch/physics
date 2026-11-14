@@ -206,8 +206,8 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   time (Hong Kong time; weeks start on Monday). Points: 100 per correct answer in practice and assignments (including Redo my mistakes; each assignment once;
   sets of 3, 5, 10, 15 or 20), +500 for 90%+ or +200 for 75–89% in sets of 5 or more; 300 for marking the Explain card of
   the day as read (once a day, `explainRead` function); +500 check-in bonus once a week on the 3rd day with any practice
-  set, assignment or card of the day (`activity/{uid}_{day}`, `checkinBonus/{uid}_{week}`). Students see the
-  top 10 (class + name from the class list) and their own rank. Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
+  set, assignment or card of the day (`activity/{uid}_{day}`, `checkinBonus/{uid}_{week}`). Students see
+  "You have N points, ranking R of T" and the top 10 (class + name from the class list). Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
   `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
   shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each. At the top, *My progress* (`myProgress` Cloud Function):

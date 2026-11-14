@@ -7,6 +7,8 @@ Follow `AGENTS.md` at the repository root. The essentials:
 - Marking and anything involving answer keys happens only in Cloud Functions; `canReveal()` decides what students may see.
 - Change `firestore.rules` and `tests/fakes/rules.mjs` together. Add new callables to `api` in `js/fb.js`.
 - Student-facing callables call `rateLimit(user, bucket)`.
+- Out-of-syllabus questions are retired at import (`active: false`, removed from `meta/questionIndex`): anything that
+  lists questions must use `active == true` or the index.
 - After changing `js/` or `css/`, run `python3 tools/bump_version.py`.
 - Every change: add/extend a section in `tests/run.mjs`, run `cd tests && npm install && node run.mjs` (must pass with no
   console errors), update `README.md`, and say whether a Firebase deploy (`deploy.command`) is needed.

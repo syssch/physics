@@ -5,6 +5,8 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-14
 
+- **Handoff check**: test fixtures regenerated from the current export (now carry `retired`), README leaderboard
+  wording, copilot note on retired questions. *Push.* Tests: 282 (fixtures and `--real`).
 - **Drift velocity out of syllabus** (question bank only): DSE 2015 1A Q27 marked `out_of_syllabus`; no SYSS question on
   the platform uses drift velocity / I = nAvQ. *Nothing to re-import for this item.*
 - **Old papers screened for out-of-syllabus content** (question data): 2013-14 and 2014-15 papers predate the HKDSE
