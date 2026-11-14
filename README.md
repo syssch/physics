@@ -89,7 +89,9 @@ Until this is done, test with teacher accounts or a few adult accounts.
    `platform_prep/figure_checks.json` (the list of checked papers).
 2. On the website, sign in, then open *Teacher*, then *Admin*, then *Import questions*. Choose
    `bundle.json` and select **all** the files in its `figures` folder, then click *Import*.
-   Importing again later updates questions that have the same ID and adds new ones; nothing is removed.
+   Importing again later updates questions that have the same ID and adds new ones. Questions marked out of syllabus in
+   the question bank (`out_of_syllabus`) are listed in the bundle's `retired`; the import sets them inactive (gone from
+   practice, Redo my mistakes and the question bank; old results and assignments still show them).
    If a question shows "(Figure could not be loaded.)", click *Check figures* on the same page: it lists the figure
    files missing from the website and their questions; import again selecting those files.
    The import also updates `meta/questionIndex`, a small list of every question's book, chapter, subtopic and skills,

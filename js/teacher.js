@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611132123";
+import { db, storage, api } from "./fb.js?v=202611141656";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611132123";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611132123";
-import { isSchoolEmail } from "./config.js?v=202611132123";
-import { importExplainBundle } from "./explain.js?v=202611132123";
-import { recordHref } from "./studentrecord.js?v=202611132123";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611132123";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611132123";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611132123";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611141656";
+import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611141656";
+import { isSchoolEmail } from "./config.js?v=202611141656";
+import { importExplainBundle } from "./explain.js?v=202611141656";
+import { recordHref } from "./studentrecord.js?v=202611141656";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611141656";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611141656";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611141656";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -475,7 +475,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611132123");
+      const { buildPaperDocx } = await import("./docx.js?v=202611141656");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -860,14 +860,19 @@ export async function adminView(user) {
       if (old.exists()) Object.assign(index, readQuestionIndex(old.data()));
       else (await getAllQuestions()).forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; }); // first time: include earlier imports
       bundle.questions.forEach((q) => { index[q.id] = { t: q.topic, c: q.chapters || [], s: q.subtopics || [], k: q.skills || [] }; });
+      // out-of-syllabus questions: set inactive (hidden from practice, mistakes and the bank; old results and
+      // assignments still show them) and drop them from the practice index
+      const retired = (bundle.retired || []).filter((id) => index[id]);
+      retired.forEach((id) => { delete index[id]; ops.push([doc(db, "questions", id), { active: false, retiredAt: serverTimestamp() }, "update"]); });
       // stored as one JSON text field: a map with thousands of entries exceeds Firestore's index-entry limit
       ops.push([doc(db, "meta", "questionIndex"), { data: JSON.stringify(index), count: Object.keys(index).length, updatedAt: serverTimestamp() }]);
       for (const part of chunk(ops, 400)) {
         const b = writeBatch(db);
-        part.forEach(([r, d]) => b.set(r, d));
+        part.forEach(([r, d, how]) => (how === "update" ? b.update(r, d) : b.set(r, d)));
         await b.commit();
       }
       say(`Saved ${bundle.questions.length} questions, answer keys and ${Object.keys(bundle.solutions || {}).length} solutions.`);
+      if (retired.length) say(`Took ${retired.length} out-of-syllabus question${retired.length > 1 ? "s" : ""} off the platform: ${retired.join(", ")}`);
       toast("Import finished.");
     } catch (e) { say("Error: " + errMsg(e)); toast(errMsg(e), "error"); }
     go.disabled = false;

@@ -3,8 +3,32 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-14
+
+- **Drift velocity out of syllabus** (question bank only): DSE 2015 1A Q27 marked `out_of_syllabus`; no SYSS question on
+  the platform uses drift velocity / I = nAvQ. *Nothing to re-import for this item.*
+- **Old papers screened for out-of-syllabus content** (question data): 2013-14 and 2014-15 papers predate the HKDSE
+  2016 syllabus change. Newly marked `out_of_syllabus` (→ bundle `retired`): daily motion on the celestial sphere
+  (2013-14 F6 Mock 2 Q1.2, 2014-15 F6 Mock 2 Q1.2; DSE 2012–2015 Paper 2 in the bank), electric PE / equipotentials
+  (2013-14 F5 E2 Q20, 2014-15 F5 E2 Q16, 2014-15 F5 T2 Q11), Hall effect (2014-15 F6 Mock 1A Q29; DSE 2015 1A Q30).
+  Re-tagged 2019-20 F6 Mock 2 Q1.2 (→ Geocentric & Heliocentric Models) and 2020-21 F6 Mock 2 Q1.1 (→ Scale of the
+  Universe), which were wrongly under Celestial Sphere. 13 questions retired in all. *Re-import the bundle.*
+- **2-D collisions out of syllabus** (question data): 2013-14 F4 E2 Q17, 2013-14 F5 E2 Q15 and 2013-14 F6 Mock 1A Q10
+  (plus DSE 2012 1A Q13 in the bank) marked `out_of_syllabus` → in the bundle's `retired` list. *Push (if not yet), then
+  re-import the bundle.*
+- **Out-of-syllabus questions removed** (question data + import): electric potential due to a point charge is no longer
+  in the syllabus. 2013-14 F5 T2 Q9 and Q11, 2013-14 F6 Mock 1A Q22 and 2014-15 F6 Mock 1A Q22 (plus DSE 2012 1A Q25
+  and DSE 2014 1A Q23 in the bank) are marked `out_of_syllabus` and kept in the bank. The export lists them in the
+  bundle's new `retired` field; Admin → Import sets them inactive and removes them from the practice index (old
+  results and assignments still show them). `platform_readiness.py`, `export_for_platform.py`, `js/teacher.js`.
+  *Push, then re-import the bundle.* Tests: 282.
+
 ## 2026-11-13
 
+- **Figure fixed from a student report** (question data): 2018-19 F3 T1 Q1 showed only 2 of the 3 graphs (graph (1),
+  constant R, was missing) and no (1)(2)(3) labels; re-cropped from the paper with labels, solution explains each graph.
+  Original in `question_bank/archive/backup_fig_reports_20261113/`. *Re-import the bundle (with its figures), then mark
+  the report "fixed".*
 - **Redo my mistakes by chapter**: the menu now lists each book and its chapters with the number of mistakes waiting
   (e.g. "Ch 9 Momentum (4)"); students pick all, one book or one chapter. `startMistakes` takes `chapter` and its
   preview returns `byChapter`; `mistakesPanel(books)` in `js/student.js`. *deploy.command + push.* Tests: 281.

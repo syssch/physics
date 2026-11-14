@@ -1156,6 +1156,20 @@ console.log("15. full SYSS import (all ready questions) and the practice index")
   const idx = JSON.parse(idxDoc.data);
   ok(Object.keys(idx).length >= full.questions.length && full.questions.every((q) => idx[q.id] && idx[q.id].t === q.topic), "practice index lists every question with its book");
   ok(!JSON.stringify(idx).includes('"answer'), "practice index holds no answers");
+  { // a later bundle lists an out-of-syllabus question in "retired": it leaves the platform but keeps its data
+    const rid = full.questions.find((q) => (q.chapters || []).length)?.id;
+    const ret = { ...full, questions: [], answers: {}, solutions: {}, retired: [rid, "SYSS-NEVER-IMPORTED-Q1"] };
+    await go("#/t"); await go("#/t/admin");
+    await waitFor(() => byText("h2", "Import questions"), "admin for retire import");
+    const [rIn] = $$("input[type=file]");
+    Object.defineProperty(rIn, "files", { value: [new NodeFile([JSON.stringify(ret)], "bundle.json", { type: "application/json" })] });
+    byText("button", "Import").click();
+    await waitFor(() => /Took 1 out-of-syllabus question off the platform/.test($(".log").textContent), "retire import done", 20000);
+    const rq = fake.store.get(`questions/${rid}`), ix2 = JSON.parse(fake.store.get("meta/questionIndex").data);
+    ok(rq && rq.active === false && rq.topic && fake.store.has(`answerKeys/${rid}`) && !ix2[rid] && !fake.store.has("questions/SYSS-NEVER-IMPORTED-Q1"),
+      "Import with \"retired\" ids sets those questions inactive and removes them from the practice index (data kept; unknown ids ignored)");
+    fake.store.set(`questions/${rid}`, { ...rq, active: true }); fake.store.set("meta/questionIndex", idxDoc);
+  }
   // a student practises by chapter: the pool comes from the index
   fake.setUser(S1); await sleep(50);
   const inCh = full.questions.filter((q) => q.chapters.includes("18")).map((q) => q.id);

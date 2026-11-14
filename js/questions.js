@@ -1,9 +1,9 @@
-import { db, storage } from "./fb.js?v=202611132123";
+import { db, storage } from "./fb.js?v=202611141656";
 import { collection, getDocs, query, where, documentId, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, chunk } from "./ui.js?v=202611132123";
-import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611132123";
+import { el, chunk } from "./ui.js?v=202611141656";
+import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611141656";
 
 const cache = new Map();
 let allLoaded = false;
