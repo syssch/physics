@@ -151,3 +151,8 @@ table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
 
 .leaderboard .my-rank { font-size:1.08em; margin:.4em 0 .6em; }
 .leaderboard .my-rank strong { color:var(--accent); }
+
+.fbk-dismiss { margin:.4em 0; display:grid; gap:.35em; }
+.fbk-dismiss textarea { width:100%; }
+.fbk-reply { margin-top:.3em; font-size:.92em; }
+.fbk-state .fbk-reply { font-style:italic; }

@@ -176,7 +176,8 @@ updates itself whenever a class is saved or deleted.
   requests, grouped by question with how many asked, who, and their notes (most requested first), and their problem
   reports (type, note, student, where they saw it). Filter by class (practice-set feedback appears under all of the
   student's classes). Open any item's question with its answer and solution. *Mark as explained* / *Mark fixed* /
-  *Dismiss* (and *Reopen*); the student sees the outcome on their review page. Fix a reported question in the question
+  *Dismiss* (with an optional note of up to 300 characters, e.g. why the key is right) and *Reopen*; the student sees the
+  outcome (and the note) on their review page. Fix a reported question in the question
   bank app, re-export and import it as usual. Each assignment's *Results* page also counts requests and reports per
   question and lists them under each question.
 - *Explain reading*: for each class, how many Explain cards each student has marked read (total, last 7 days, last date) and which chapters they chose.
@@ -251,7 +252,7 @@ Unfinished answers are saved in the browser, so reloading the page doesn't lose 
 | `explainProgress/{uid}` | a student's read marks, chosen chapters (`topics`), today's card | the student, teachers |
 | `rateLimits/{uid}` | per-student usage counters for the rate limits (Cloud Functions only) | teachers |
 | `sessions/{id}` | practice sets (written only by Cloud Functions) | the student |
-| `feedback/{kind}_{uid}_{qid}` | "explain" request or "error" report: question, type, note, class(es), assignment, `status` open/done/dismissed (written by `sendFeedback`; teachers may change only the status) | the student, teachers |
+| `feedback/{kind}_{uid}_{qid}` | "explain" request or "error" report: question, type, note, class(es), assignment, `status` open/done/dismissed (written by `sendFeedback`; teachers may change only the status and `reply`, a note of ≤ 300 characters) | the student, teachers |
 
 ## Testing changes locally
 

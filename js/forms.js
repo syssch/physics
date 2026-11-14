@@ -1,7 +1,7 @@
 // Chapters each form may practise. F3 students only learn these chapters in F3 (and not all go on to take Physics),
 // so their Practise, Redo my mistakes and Explain cards are limited to them. Teachers (and other forms) are not limited.
 // The same list is in functions/index.js (FORM_CHAPTERS) — change both together (a test checks they match).
-import { db } from "./fb.js?v=202611141656";
+import { db } from "./fb.js?v=202611141944";
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
 export const FORM_CHAPTERS = { F3: ["1", "2", "17", "18", "19"] };

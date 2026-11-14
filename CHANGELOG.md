@@ -5,6 +5,10 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-14
 
+- **Note when dismissing a problem report**: on the teacher Feedback page *Dismiss…* opens a box for an optional short
+  note (≤ 300 characters, e.g. "The key is correct: …"); the student's review page then shows "Your teacher checked your
+  report: “…”". Stored as `reply` on the feedback doc (cleared on Reopen or a new report). `js/feedback.js`,
+  `firestore.rules` (+ `tests/fakes/rules.mjs`). *deploy.command (rules) + push.* Tests: 287.
 - **Handoff check**: test fixtures regenerated from the current export (now carry `retired`), README leaderboard
   wording, copilot note on retired questions. *Push.* Tests: 282 (fixtures and `--real`).
 - **Drift velocity out of syllabus** (question bank only): DSE 2015 1A Q27 marked `out_of_syllabus`; no SYSS question on

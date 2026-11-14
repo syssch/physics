@@ -1,12 +1,12 @@
 // "Explain" cards: Paper 1B explanation questions with marking scheme, teaching notes and examiners' comments.
 // Students read one card a day (or any card they like, by textbook chapter) and mark cards as read.
 // Cards carry book / chapter tags (Book 1–7, Ch 1–27 …); older bundles without them fall back to topics.
-import { db, api } from "./fb.js?v=202611141656";
+import { db, api } from "./fb.js?v=202611141944";
 import { doc, getDoc, setDoc, getDocs, collection, query, where, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk } from "./ui.js?v=202611141656";
-import { studentLabel, sortByRoster, attachRosters } from "./roster.js?v=202611141656";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611141656";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk } from "./ui.js?v=202611141944";
+import { studentLabel, sortByRoster, attachRosters } from "./roster.js?v=202611141944";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611141944";
 
 let bundleCache = null;
 export async function getCards() {

@@ -661,6 +661,30 @@ console.log("9b. student feedback: report a problem / explain in class");
   fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
   await waitFor(() => byText(`#q-${CSS_escape(qids1[0])} .fbk-state`, "Explained in class"), "student sees explained");
   ok(byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "fixed"), "student sees the report was fixed");
+  { // teacher reopens the report and dismisses it with a short note; the student sees the note
+    fake.setUser(T); await sleep(50); await go("#/t"); await go("#/t/feedback");
+    await waitFor(() => $$(".fbk-item").length, "feedback page (dismiss)");
+    set($$(".fbk-filters select")[1], "closed");
+    const it = () => $$(".fbk-item").find((i) => i.textContent.includes("Label B"));
+    [...it().querySelectorAll("button")].find((b) => b.textContent === "Reopen").click();
+    await waitFor(() => fake.store.get(erPath).status === "open" && !it(), "reopened");
+    set($$(".fbk-filters select")[1], "open");
+    await waitFor(() => it() && [...it().querySelectorAll("button")].some((b) => b.textContent === "Dismiss…"), "dismiss button");
+    [...it().querySelectorAll("button")].find((b) => b.textContent === "Dismiss…").click();
+    ok(!it().querySelector(".fbk-dismiss").hidden && it().querySelector(".fbk-dismiss textarea"), "Dismiss… opens a box for a short note");
+    it().querySelector(".fbk-dismiss textarea").value = "Label B is on the second figure.";
+    [...it().querySelectorAll(".fbk-dismiss button")].find((b) => b.textContent === "Dismiss").click();
+    await waitFor(() => fake.store.get(erPath).status === "dismissed" && /Dismissed/.test($("#toast").textContent), "dismissed");
+    ok(fake.store.get(erPath).reply === "Label B is on the second figure." && fake.store.get(erPath).handledBy === T.email, "dismissing saves the teacher's note");
+    let tooLong = false; try { await fs.updateDoc(fs.doc({ __db: true }, "feedback", erPath.split("/")[1]), { reply: "x".repeat(301) }); } catch (e) { tooLong = /permission/.test(e.message); }
+    ok(tooLong, "the note is limited to 300 characters");
+    set($$(".fbk-filters select")[1], "closed");
+    ok(byText(".fbk-item .fbk-reply", "Label B is on the second figure."), "teacher sees the note on dismissed reports");
+    set($$(".fbk-filters select")[1], "open");
+    fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
+    await waitFor(() => byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "checked your report"), "student sees dismissed");
+    ok(byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "Label B is on the second figure."), "student sees the teacher's note on a dismissed report");
+  }
   fake.setUser(T); await sleep(50); await go("#/t");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
   sessionStorage.removeItem("fbkClass");

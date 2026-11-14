@@ -1,15 +1,15 @@
 // Teacher pages for individual students: a class's student list with a short summary each (#/t/students/<classId>)
 // and one student's full record (#/t/student/<classId>/<email>): every attempt (practice, Redo my mistakes,
 // assignments) with a review of each, % correct by book and chapter, questions currently wrong, and their feedback.
-import { db } from "./fb.js?v=202611141656";
+import { db } from "./fb.js?v=202611141944";
 import { collection, doc, getDoc, getDocs, query, where, orderBy, documentId }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, fmtDate, toDate, pct, chunk, typeset } from "./ui.js?v=202611141656";
-import { getQuestions, getBooks, renderQuestion, sourceLabel } from "./questions.js?v=202611141656";
-import { attachRoster, attachRosters, studentLabel, sortByRoster } from "./roster.js?v=202611141656";
-import { ERROR_TYPES } from "./feedback.js?v=202611141656";
-import { getCards, readStats } from "./explain.js?v=202611141656";
-import { limitForClasses } from "./forms.js?v=202611141656";
+import { el, mount, loading, fmtDate, toDate, pct, chunk, typeset } from "./ui.js?v=202611141944";
+import { getQuestions, getBooks, renderQuestion, sourceLabel } from "./questions.js?v=202611141944";
+import { attachRoster, attachRosters, studentLabel, sortByRoster } from "./roster.js?v=202611141944";
+import { ERROR_TYPES } from "./feedback.js?v=202611141944";
+import { getCards, readStats } from "./explain.js?v=202611141944";
+import { limitForClasses } from "./forms.js?v=202611141944";
 
 const ms = (ts) => (!ts ? 0 : ts.toMillis ? ts.toMillis() : +toDate(ts));
 const DAY = 86400000;

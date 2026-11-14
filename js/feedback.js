@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611141656";
+import { db, auth, api } from "./fb.js?v=202611141944";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611141656";
-import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611141656";
-import { attachRosters, studentLabel } from "./roster.js?v=202611141656";
-import { setBadge } from "./chrome.js?v=202611141656";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611141944";
+import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611141944";
+import { attachRosters, studentLabel } from "./roster.js?v=202611141944";
+import { setBadge } from "./chrome.js?v=202611141944";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -91,7 +91,8 @@ function drawBar(bar, qid, ctx, mine) {
   // Report a problem
   if (!er || er.status !== "open") {
     if (er && er.status === "done") row.append(el("span", { class: "fbk-state good" }, [icon("check"), "Your report was fixed — thank you!"]));
-    else if (er && er.status === "dismissed") row.append(el("span", { class: "fbk-state" }, "Your teacher checked your report."));
+    else if (er && er.status === "dismissed") row.append(el("span", { class: "fbk-state" }, er.reply
+      ? [icon("message"), "Your teacher checked your report: ", el("em", { class: "fbk-reply" }, `“${er.reply}”`)] : "Your teacher checked your report."));
     const b = el("button", { type: "button", class: "btn small fbk-report" }, [icon("flag"), er ? "Report another problem" : "Report a problem"]);
     b.addEventListener("click", () => openReport(panel, null, async (type, note) => { await send({ kind: "error", type, note }); toast("Thanks — your teacher will check it."); }));
     row.append(b);
@@ -158,10 +159,10 @@ function labelFor(f, classes, classId) {
 const whereFrom = (f) => f.mode === "assignment" ? `${f.title || "assignment"} Q${f.qnum}` : `${f.title || "practice"} (Q${f.qnum})`;
 
 /** Teacher action: set the status of feedback docs. */
-async function setStatus(user, items, status) {
+async function setStatus(user, items, status, reply) {
   await Promise.all(items.map((f) => updateDoc(doc(db, "feedback", f.id), status === "open"
-    ? { status: "open", handledBy: null, handledAt: null }
-    : { status, handledBy: user.email, handledAt: serverTimestamp() })));
+    ? { status: "open", handledBy: null, handledAt: null, reply: null }
+    : { status, handledBy: user.email, handledAt: serverTimestamp(), ...(reply !== undefined ? { reply: reply || null } : {}) })));
   refreshFeedbackBadge();
 }
 
@@ -227,18 +228,33 @@ export async function feedbackView(user) {
 
     // Error reports, newest first
     const erBox = el("div", { class: "panel" }, [el("h2", {}, [icon("flag"), ` Problem reports (${errors.length})`]),
-      el("p", { class: "muted" }, "Fix the question in the question bank app, re-export and import it (Admin), then mark the report as fixed. The student sees \"fixed\" or \"checked\".")]);
+      el("p", { class: "muted" }, "Fix the question in the question bank app, re-export and import it (Admin), then mark the report as fixed. If nothing needs fixing, Dismiss it — you can leave a short note that the student will see. The student sees \"fixed\" or \"checked\" (with your note).")]);
     if (!errors.length) erBox.append(el("p", { class: "muted" }, "No reports."));
     errors.forEach((f) => {
       const q = qmap.get(f.qid);
       const act = (status, label, cls = "btn small") => el("button", { type: "button", class: cls, onclick: async () => {
-        try { await setStatus(user, [f], status); f.status = status; draw(); } catch (e) { toast(errMsg(e), "error"); } } }, label);
+        try { await setStatus(user, [f], status); f.status = status; if (status === "open") f.reply = null; draw(); } catch (e) { toast(errMsg(e), "error"); } } }, label);
+      // Dismiss: optional short note for the student (e.g. why the key is right)
+      const dismissForm = el("div", { class: "fbk-dismiss", hidden: true });
+      const replyIn = el("textarea", { rows: 2, maxlength: 300, placeholder: "Note to the student (optional), e.g. \"The key is correct: the ball is still accelerating at Q.\"" });
+      const doDismiss = el("button", { type: "button", class: "btn small primary" }, "Dismiss");
+      doDismiss.addEventListener("click", async () => {
+        doDismiss.disabled = true;
+        const reply = replyIn.value.trim().slice(0, 300);
+        try { await setStatus(user, [f], "dismissed", reply); f.status = "dismissed"; f.reply = reply || null; toast(reply ? "Dismissed — the student will see your note." : "Dismissed."); draw(); }
+        catch (e) { toast(errMsg(e), "error"); doDismiss.disabled = false; }
+      });
+      dismissForm.append(replyIn, el("div", { class: "row" }, [doDismiss,
+        el("button", { type: "button", class: "linkbtn", onclick: () => { dismissForm.hidden = true; } }, "Cancel")]));
+      const openDismiss = el("button", { type: "button", class: "btn small", onclick: () => { dismissForm.hidden = false; replyIn.focus(); } }, "Dismiss…");
       erBox.append(el("div", { class: "fbk-item" }, [
         el("div", { class: "fbk-head" }, [el("strong", {}, typeLabel(f.type)),
           el("span", { class: "muted" }, q ? `${q.topic} · ${sourceLabel(q)}` : f.qid),
-          f.status === "open" ? el("span", { class: "row" }, [act("done", "Mark fixed", "btn small primary"), act("dismissed", "Dismiss")])
+          f.status === "open" ? el("span", { class: "row" }, [act("done", "Mark fixed", "btn small primary"), openDismiss])
             : el("span", { class: "row" }, [el("span", { class: "muted" }, f.status === "done" ? "Fixed" : "Dismissed"), act("open", "Reopen")])]),
         f.note ? el("div", { class: "fbk-note" }, `“${f.note}”`) : null,
+        f.status === "open" ? dismissForm : null,
+        f.status === "dismissed" && f.reply ? el("div", { class: "fbk-reply" }, [el("strong", {}, "Your note: "), f.reply]) : null,
         el("div", { class: "muted small" }, `${labelFor(f, classes, st.classId)} · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`),
         q ? questionDetails(q) : null,
       ]));

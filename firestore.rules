@@ -111,11 +111,13 @@ service cloud.firestore {
       allow write: if false;
     }
     // Student feedback (error reports, "explain in class" requests): written by the sendFeedback Cloud Function.
-    // Students see their own; teachers see all and may only change the status.
+    // Students see their own; teachers see all and may only change the status and leave a short reply note.
     match /feedback/{id} {
       allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);
       allow update: if isTeacher()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'handledBy', 'handledAt']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'handledBy', 'handledAt', 'reply'])
+        && (!('reply' in request.resource.data) || request.resource.data.reply == null
+            || (request.resource.data.reply is string && request.resource.data.reply.size() <= 300));
       allow delete: if isTeacher();
       allow create: if false;
     }

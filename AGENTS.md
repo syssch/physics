@@ -61,7 +61,8 @@ by functions use `allow write: if false` with teacher read.
 - F3 students (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise, Redo my mistakes and Explain
   (`FORM_CHAPTERS` in `js/forms.js` and `functions/index.js`); teachers and assignments are not limited.
 - Rate limits (`RATE_LIMITS`, teachers exempt) on student-facing callables: call `rateLimit(user, bucket)`.
-- Feedback docs: teachers may change only `status`, `handledBy`, `handledAt`.
+- Feedback docs: teachers may change only `status`, `handledBy`, `handledAt` and `reply` (string ≤ 300 or null; shown to
+  the student on a dismissed report; cleared on Reopen and when the student reports again).
 
 ## Adding a feature
 
@@ -77,7 +78,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 282 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 287 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

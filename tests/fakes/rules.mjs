@@ -39,7 +39,8 @@ export function checkWrite(path, data, op = "write", before) {
       case "questions": case "answerKeys": case "meta": case "classes": case "teachers": case "classRosters": return isTeacher();
       case "attempts": return isTeacher() && op === "delete";
       case "feedback": return isTeacher() && (op === "delete" || (op === "update" && before
-        && [...new Set([...Object.keys(before), ...Object.keys(data)])].every((k) => ["status", "handledBy", "handledAt"].includes(k) || JSON.stringify(before[k]) === JSON.stringify(data[k]))));
+        && [...new Set([...Object.keys(before), ...Object.keys(data)])].every((k) => ["status", "handledBy", "handledAt", "reply"].includes(k) || JSON.stringify(before[k]) === JSON.stringify(data[k]))
+        && (data.reply == null || (typeof data.reply === "string" && data.reply.length <= 300))));
       case "explainProgress": return isMember() && s[1] === me().uid && Object.keys(data || {}).every((k) => ["email", "name", "read", "topics", "today", "updatedAt"].includes(k)) && data.email === myEmail();
       default: return false;
     }
