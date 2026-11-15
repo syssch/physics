@@ -5,6 +5,10 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-15
 
+- **Circuit solution figures** (question data): 5 more tricky networks get the paper's circuit (key points labelled)
+  beside a rectangular redraw, with solutions rewritten around them — 2014-15 F5 E2 Q20 (one redraw per position of F),
+  2020-21 F5 E1 Q19, 2020-21 F5 E1 Q23, 2024-25 F5 E1 Q20, 2025-26 F5 E2 Q8. Script `draw_circuits_5.py` in
+  `question_bank/archive/backup_solfig_20261115/`. *Re-import the bundle.*
 - **Chat / Email shortcuts** on the teacher Feedback page: next to each student who asked "Explain in class" —
   *Chat* opens Google Chat in a new tab and copies the student's email (Chat has no link that opens a DM by email), then
   *Copy message* copies a ready message (question + their note); *Email* opens a Gmail draft to the student with that
