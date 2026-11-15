@@ -156,3 +156,8 @@ table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
 .fbk-dismiss textarea { width:100%; }
 .fbk-reply { margin-top:.3em; font-size:.92em; }
 .fbk-state .fbk-reply { font-style:italic; }
+
+.fbk-contact { margin-left:.6em; display:inline-flex; gap:.7em; }
+.fbk-contact .linkbtn { font-size:.9em; text-decoration:none; }
+.fbk-chat-help { margin:.35em 0; padding:.45em .6em; background:var(--bg); border:1px solid var(--line); border-radius:6px; font-size:.9em; }
+.fbk-chat-help .btn { margin-left:.4em; }

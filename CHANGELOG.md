@@ -3,8 +3,28 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-15
+
+- **Chat / Email shortcuts** on the teacher Feedback page: next to each student who asked "Explain in class" —
+  *Chat* opens Google Chat in a new tab and copies the student's email (Chat has no link that opens a DM by email), then
+  *Copy message* copies a ready message (question + their note); *Email* opens a Gmail draft to the student with that
+  message. `contactLinks()` in `js/feedback.js`. *Push.* Tests: 290.
+- **Solution figure** (question data): 2021-22 F5 E1 Q16 — the network (A₁, A₂, A₃ marked) beside a rectangular redraw:
+  inner wire triangle → one point M, two parallel pairs in series (R/2 + R/2 = R), top two resistors carry no current;
+  solution rewritten around it. Script and old figure in `question_bank/archive/backup_solfig_20261115/`. *Re-import the bundle.*
+- **Solution figure** (question data): 2013-14 F6 Mock 1A Q23 — the circuit (points P, Q, X marked) beside a rectangular
+  redraw showing two parallel groups in series (2 Ω + 1.5 Ω); solution rewritten around it. Drawing script in
+  `question_bank/archive/backup_solfig_20261115/`. *Re-import the bundle.*
+- **Answer key fixed** (question data): 2024-25 F4 E2 Q19 B → C (KE 2025 J ÷ 425 J per block = 4.8, so through 4
+  blocks). *Re-import the bundle.* Earlier results on this question are not re-marked automatically.
+- **Fact fix** (question data): 2018-19 F4 T1 Q10 — the hammer-and-feather drop was David Scott (Apollo 15) in 1971,
+  not Armstrong in 1969; statement (1) now "…independent of the massive object the astronaut is standing on";
+  solution explains each statement (answer C unchanged). *Re-import the bundle.*
+
 ## 2026-11-14
 
+- **Wording** (question data): 2014-15 F4 E2 Q1 statement (3) → "If the path taken is a straight line in a single
+  direction, …"; solution explains each statement (answer D unchanged). *Re-import the bundle.*
 - **Note when dismissing a problem report**: on the teacher Feedback page *Dismiss…* opens a box for an optional short
   note (≤ 300 characters, e.g. "The key is correct: …"); the student's review page then shows "Your teacher checked your
   report: “…”". Stored as `reply` on the feedback doc (cleared on Reopen or a new report). `js/feedback.js`,

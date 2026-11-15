@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611141944";
+import { db, auth, api } from "./fb.js?v=202611151713";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611141944";
-import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611141944";
-import { attachRosters, studentLabel } from "./roster.js?v=202611141944";
-import { setBadge } from "./chrome.js?v=202611141944";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611151713";
+import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611151713";
+import { attachRosters, studentLabel } from "./roster.js?v=202611151713";
+import { setBadge } from "./chrome.js?v=202611151713";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -151,6 +151,37 @@ async function loadKeys(ids) {
   }
 }
 
+/** Ready-made message to a student about their "Explain in class" request. */
+function contactText(f, q) {
+  const first = String(f.name || "").trim().split(/\s+/)[0] || "there";
+  const where = q ? sourceLabel(q) : f.qid;
+  return `Hi ${first}, about the question you asked me to explain: ${where}${f.title ? ` (${f.title}${f.qnum ? `, Q${f.qnum}` : ""})` : ""}.`
+    + (f.note ? ` You wrote: "${f.note}".` : "") + " ";
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
+}
+/** "Chat" (opens Google Chat in a new tab, copies the student's email; then copy the message) and "Email" (Gmail draft). */
+function contactLinks(user, f, q) {
+  const msg = contactText(f, q);
+  const auth = encodeURIComponent(user.email || "");
+  const box = el("div", { class: "fbk-chat-help", hidden: true });
+  const chat = el("button", { type: "button", class: "linkbtn", title: "Open Google Chat and copy the student's email" }, [icon("message-circle"), " Chat"]);
+  chat.addEventListener("click", async () => {
+    const ok = await copyText(f.email);
+    window.open(`https://mail.google.com/chat/u/0/?authuser=${auth}#chat/home`, "_blank", "noopener");
+    const copyMsg = el("button", { type: "button", class: "btn small" }, "Copy message");
+    copyMsg.addEventListener("click", async () => toast((await copyText(msg)) ? "Message copied — paste it into the chat." : "Copy the message above by hand."));
+    box.replaceChildren(el("span", {}, ok ? `Email copied (${f.email}). In Google Chat click New chat, paste, then: ` : `In Google Chat click New chat and enter ${f.email}, then: `),
+      copyMsg, el("div", { class: "muted small" }, msg));
+    box.hidden = false;
+  });
+  const mail = el("a", { class: "linkbtn", target: "_blank", rel: "noopener", title: "Open a Gmail draft to the student",
+    href: `https://mail.google.com/mail/?authuser=${auth}&view=cm&fs=1&to=${encodeURIComponent(f.email)}`
+      + `&su=${encodeURIComponent("Physics: the question you asked me to explain")}&body=${encodeURIComponent(msg)}` }, [icon("mail"), " Email"]);
+  return [el("span", { class: "fbk-contact" }, [chat, mail]), box];
+}
+
 function labelFor(f, classes, classId) {
   const cls = classes.find((c) => c.id === classId && (c.studentEmails || []).includes(f.email))
     || classes.find((c) => (f.classIds || []).includes(c.id) && (c.studentEmails || []).includes(f.email));
@@ -219,7 +250,7 @@ export async function feedbackView(user) {
         el("div", { class: "fbk-head" }, [el("strong", {}, `${list.length} student${list.length > 1 ? "s" : ""}`),
           el("span", { class: "muted" }, q ? `${q.topic} · ${sourceLabel(q)}` : qid), btn]),
         el("ul", { class: "fbk-who" }, list.map((f) => el("li", {}, [labelFor(f, classes, st.classId),
-          el("span", { class: "muted" }, ` · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`),
+          el("span", { class: "muted" }, ` · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`), ...contactLinks(user, f, q),
           f.note ? el("div", { class: "fbk-note" }, `“${f.note}”`) : null]))),
         q ? questionDetails(q) : null,
       ]);

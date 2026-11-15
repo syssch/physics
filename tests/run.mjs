@@ -643,6 +643,22 @@ console.log("9b. student feedback: report a problem / explain in class");
   ok($$(".fbk-item").length === 0, "class filter");
   set($(".fbk-filters select"), classId);
   ok($$(".fbk-item").length === 3, "the student's class shows their feedback");
+  { // Chat / Email shortcuts on an explain request
+    const it = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
+    const mail = [...it.querySelectorAll(".fbk-contact a")].find((a) => a.textContent.includes("Email"));
+    const href = mail && decodeURIComponent(mail.href);
+    ok(href && href.startsWith("https://mail.google.com/mail/") && href.includes("to=s001@syss.edu.hk") && href.includes("Why is the tension not mg?")
+      && href.includes(`authuser=${T.email}`), "Email opens a Gmail draft to the student with the question and their note");
+    let opened = "", copied = "";
+    w.open = (u) => { opened = u; return null; };
+    const clip = { writeText: async (t) => { copied = t; } };
+    for (const nav of new Set([w.navigator, globalThis.navigator])) Object.defineProperty(nav, "clipboard", { configurable: true, value: clip });
+    [...it.querySelectorAll(".fbk-contact button")].find((b) => b.textContent.includes("Chat")).click();
+    await waitFor(() => !it.querySelector(".fbk-chat-help").hidden, "chat help");
+    ok(opened.startsWith("https://mail.google.com/chat/") && copied === "s001@syss.edu.hk" && byText(".fbk-chat-help", "Email copied"), "Chat opens Google Chat and copies the student's email");
+    byText(".fbk-chat-help button", "Copy message").click(); await sleep(10);
+    ok(/^Hi Student, about the question you asked me to explain: .*Why is the tension not mg\?/.test(copied), "Copy message copies a ready message with the student's note");
+  }
   const exItem = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
   byText(".fbk-item button", "Mark as explained") && exItem.querySelector(".btn.primary").click();
   await waitFor(() => fake.store.get(exPath).status === "done", "marked explained");
