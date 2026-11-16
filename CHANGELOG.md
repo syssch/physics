@@ -3,6 +3,19 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-16
+
+- **Re-tagged** (question data): 2019-20 F6 Mock 1A Q11 (tennis ball hit horizontally over the net) → Projectile Motion
+  (Ch 10, was Kinematics Ch 5). *Re-import the bundle.*
+- **Book 3 re-tagged to match Shi's Ch 13 and Ch 16 notes** (question data + taxonomy): Ch 16 renamed **Light and
+  Sound**; subtopics Sound & Ultrasound (from Ch 13), Echoes (from Ch 14) and Sound Interference (from Ch 15) moved into
+  Ch 16; new Ch 16 subtopic Comparison of Light and Sound. 72 questions changed (38 on the platform): sound questions
+  now Ch 16; two-loudspeaker questions Ch 15 + 16; earthquake, energy-transfer and string wave-speed questions →
+  Wave Properties (Ch 13); ripple-tank / generic double-slit questions → Ch 15; prism dispersion → Ch 18 too.
+  Explain cards 2025-Q10bii and 2018-Q7bi → Ch 16. `question_bank/config/chapters.json` (+ topics.json), `js/syllabus.js`,
+  fixtures regenerated. Backups in `question_bank/archive/backup_ch13_16_retag_20261116/`. *Push, then re-import the
+  bundle and the Explain cards.* Tests: 290.
+
 ## 2026-11-15
 
 - **Circuit solution figures** (question data): 5 more tricky networks get the paper's circuit (key points labelled)

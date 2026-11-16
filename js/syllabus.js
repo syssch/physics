@@ -126,8 +126,7 @@ export const SYLLABUS = [
     "en": "Wave Motion",
     "subtopics": [
      "Wave Properties",
-     "Travelling Waves: Graphs & Particle Motion",
-     "Sound & Ultrasound"
+     "Travelling Waves: Graphs & Particle Motion"
     ]
    },
    {
@@ -135,8 +134,7 @@ export const SYLLABUS = [
     "no": 14,
     "en": "Reflection, Refraction and Diffraction",
     "subtopics": [
-     "Reflection, Refraction & Diffraction of Waves",
-     "Echoes"
+     "Reflection, Refraction & Diffraction of Waves"
     ]
    },
    {
@@ -145,17 +143,20 @@ export const SYLLABUS = [
     "en": "Interference and Stationary Waves",
     "subtopics": [
      "Interference of Waves",
-     "Stationary (Standing) Waves",
-     "Sound Interference"
+     "Stationary (Standing) Waves"
     ]
    },
    {
     "id": "16",
     "no": 16,
-    "en": "Light Waves",
+    "en": "Light and Sound",
     "subtopics": [
+     "Double-slit Interference and Diffraction Grating of Light",
      "EM Spectrum",
-     "Double-slit Interference and Diffraction Grating of Light"
+     "Sound & Ultrasound",
+     "Echoes",
+     "Sound Interference",
+     "Comparison of Light and Sound"
     ]
    },
    {
