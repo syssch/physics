@@ -657,7 +657,17 @@ console.log("9b. student feedback: report a problem / explain in class");
     await waitFor(() => !it.querySelector(".fbk-chat-help").hidden, "chat help");
     ok(opened.startsWith("https://mail.google.com/chat/") && copied === "s001@syss.edu.hk" && byText(".fbk-chat-help", "Email copied"), "Chat opens Google Chat and copies the student's email");
     byText(".fbk-chat-help button", "Copy message").click(); await sleep(10);
-    ok(/^Hi Student, about the question you asked me to explain: .*Why is the tension not mg\?/.test(copied), "Copy message copies a ready message with the student's note");
+    ok(/^Hi Student One, about the question you asked me to explain: .*Why is the tension not mg\?/.test(copied), "Copy message copies a ready message with the student's full name and note");
+    // with a class list, the message uses the full English name from it
+    const rp = `classRosters/${classId}`, savedRoster = fake.store.get(rp);
+    fake.store.set(rp, { roster: [{ email: "s001@syss.edu.hk", no: 12, name: "Chan Tai Man", cname: "陳大文" }] });
+    await go("#/t"); await go("#/t/feedback");
+    await waitFor(() => $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension")), "feedback page with roster");
+    const it2 = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
+    const mail2 = decodeURIComponent([...it2.querySelectorAll(".fbk-contact a")].find((a) => a.textContent.includes("Email")).href);
+    ok(mail2.includes("Hi Chan Tai Man, about the question"), "the default message uses the full name from the class list");
+    if (savedRoster) fake.store.set(rp, savedRoster); else fake.store.delete(rp);
+    await go("#/t"); await go("#/t/feedback"); await waitFor(() => $$(".fbk-item").length === 3, "feedback page restored");
   }
   const exItem = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
   byText(".fbk-item button", "Mark as explained") && exItem.querySelector(".btn.primary").click();

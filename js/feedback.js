@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611151713";
+import { db, auth, api } from "./fb.js?v=202611161054";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611151713";
-import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611151713";
-import { attachRosters, studentLabel } from "./roster.js?v=202611151713";
-import { setBadge } from "./chrome.js?v=202611151713";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611161054";
+import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611161054";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611161054";
+import { setBadge } from "./chrome.js?v=202611161054";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -151,9 +151,18 @@ async function loadKeys(ids) {
   }
 }
 
+/** The student's full name: the English name on a class list, else their Google name, else the email's user part. */
+function fullNameOf(f, classes = []) {
+  const mine = classes.filter((c) => !(f.classIds || []).length || (f.classIds || []).includes(c.id));
+  for (const c of mine.concat(classes)) {
+    const r = rosterOf(c).find((x) => x.email === f.email);
+    if (r && r.name) return r.name;
+  }
+  return String(f.name || "").trim() || String(f.email || "").split("@")[0] || "there";
+}
 /** Ready-made message to a student about their "Explain in class" request. */
-function contactText(f, q) {
-  const first = String(f.name || "").trim().split(/\s+/)[0] || "there";
+function contactText(f, q, classes) {
+  const first = fullNameOf(f, classes);
   const where = q ? sourceLabel(q) : f.qid;
   return `Hi ${first}, about the question you asked me to explain: ${where}${f.title ? ` (${f.title}${f.qnum ? `, Q${f.qnum}` : ""})` : ""}.`
     + (f.note ? ` You wrote: "${f.note}".` : "") + " ";
@@ -162,8 +171,8 @@ async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
 }
 /** "Chat" (opens Google Chat in a new tab, copies the student's email; then copy the message) and "Email" (Gmail draft). */
-function contactLinks(user, f, q) {
-  const msg = contactText(f, q);
+function contactLinks(user, f, q, classes) {
+  const msg = contactText(f, q, classes);
   const auth = encodeURIComponent(user.email || "");
   const box = el("div", { class: "fbk-chat-help", hidden: true });
   const chat = el("button", { type: "button", class: "linkbtn", title: "Open Google Chat and copy the student's email" }, [icon("message-circle"), " Chat"]);
@@ -250,7 +259,7 @@ export async function feedbackView(user) {
         el("div", { class: "fbk-head" }, [el("strong", {}, `${list.length} student${list.length > 1 ? "s" : ""}`),
           el("span", { class: "muted" }, q ? `${q.topic} · ${sourceLabel(q)}` : qid), btn]),
         el("ul", { class: "fbk-who" }, list.map((f) => el("li", {}, [labelFor(f, classes, st.classId),
-          el("span", { class: "muted" }, ` · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`), ...contactLinks(user, f, q),
+          el("span", { class: "muted" }, ` · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`), ...contactLinks(user, f, q, classes),
           f.note ? el("div", { class: "fbk-note" }, `“${f.note}”`) : null]))),
         q ? questionDetails(q) : null,
       ]);
