@@ -5,6 +5,14 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-16
 
+- **Solution figure** (question data): 2013-14 F4 T1 Q10 — v–t graphs of P and Q with the shaded area P gains
+  (48 m) and the equal-speed point at 8 s; solution rewritten around it. *Re-import the bundle.*
+- **Figures fixed from a report** (question data): 2020-21 F4 T1 Q6 — question figure re-cropped from the paper (v–t graph
+  label and the negative parts of the option graphs were cut off); its solution figure was the P/Q graph of Q7–8, so it
+  was moved to 2020-21 F4 T1 Q8 (whose solution now shows the working, 6 + 9 = 15 m); Q6 solution rewritten. Originals in
+  `question_bank/archive/backup_fig_reports_20261116/`. *Re-import the bundle (with its figures).*
+- **Re-tagged** (question data): 2023-24 F5 E3 Q4 (Joule's falling mass and paddle) → Ch 8 only, subtopic Work, Energy &
+  Power (book Force and Motion; was Change of State & Latent Heat, Ch 3). *Re-import the bundle.*
 - **Re-tagged** (question data): 2019-20 F6 Mock 1A Q11 (tennis ball hit horizontally over the net) → Projectile Motion
   (Ch 10, was Kinematics Ch 5). *Re-import the bundle.*
 - **Book 3 re-tagged to match Shi's Ch 13 and Ch 16 notes** (question data + taxonomy): Ch 16 renamed **Light and
