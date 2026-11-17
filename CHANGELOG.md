@@ -5,6 +5,30 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **Faster teacher dashboard**: classes are read without their class lists (only counts are shown), every class's
+  assignments are fetched in parallel instead of one class after another, each panel fills in as soon as its own
+  query returns, and the last result is kept in memory so returning to the dashboard draws at once, then refreshes.
+  `teacherHome()` in `js/teacher.js`. *Push.* Tests: 313.
+- **Solution figure added** (question data): 2024-25 F3 E1 Q5 — Shi's diagram (O moving left, O′ moving down).
+  Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2025-26 F3 E2 Q1 — Shi's diagram (images P′–S′; line OP′ crosses the
+  mirror's line lowest). Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2024-25 F3 E1 Q4 — Shi's field-of-view diagram (P′ inside, Q′ outside).
+  Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2023-24 F3 E3 Q9 — Shi's diagram (images A′–D′, lines through the mirror's
+  left end meeting the boy's path; B′ first). Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2023-24 F3 E2 Q1 — Shi's field-of-view diagram (R′ outside); solution text
+  follows it. Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2022-23 F6 T1 Q1 — Shi's diagram (X′, boundary line through the mirror's
+  right end, X moved 1 m West); solution text follows it. Teacher solution. *Re-import the bundle.*
+- **Solution updated** (question data): 2019-20 F6 T1 Q12 — rewritten with similar triangles (h/3 = 1.8/7.6). Teacher
+  solution. *Re-import the bundle.*
+- **Solution figure replaced** (question data): 2017-18 F6 T1 Q7 — Shi's diagram with a and b marked; solution finds
+  a = 1/2 m, b = 1/3 m and adds them (0.833 m). Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2014-15 F6 T1 Q11 — Shi's diagram (tree's image, similar triangles
+  h/0.35 = 7.9/1.2). Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2014-15 F6 T1 Q10 — Shi's field-of-view diagram (images of P, Q, R inside,
+  S outside); solution text follows it. Teacher solution. *Re-import the bundle.*
 - **Ch 17 split into 5 subtopics** (taxonomy + question data): the single "Reflection of Light" subtopic (61 questions) is
   now Light and Types of Reflection (5), Laws of Reflection (8), Image in a Plane Mirror (21), Field of View in a Plane
   Mirror (18), Two Mirrors and Periscopes (10); 2018-19 F5 E2 Q29 has two. `chapters.json` (+ topics.json,

@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611172044";
+import { db, storage, api } from "./fb.js?v=202611172313";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611172044";
-import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611172044";
-import { isSchoolEmail } from "./config.js?v=202611172044";
-import { importExplainBundle } from "./explain.js?v=202611172044";
-import { recordHref } from "./studentrecord.js?v=202611172044";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611172044";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611172044";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611172044";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611172313";
+import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611172313";
+import { isSchoolEmail } from "./config.js?v=202611172313";
+import { importExplainBundle } from "./explain.js?v=202611172313";
+import { recordHref } from "./studentrecord.js?v=202611172313";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611172313";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611172313";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611172313";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -23,9 +23,11 @@ async function listAssignments(classId) {
 }
 
 // ---------------------------------------------------------------- home
+// Fast dashboard: one read for the classes (no class lists — only the counts are shown), then every class's
+// assignments in parallel, each panel filled in as soon as its own query returns. The last result is kept in memory,
+// so coming back to the dashboard draws at once and then refreshes.
+const homeCache = { classes: null, asg: new Map() };
 export async function teacherHome(user) {
-  mount(loading());
-  const classes = await listClasses();
   const page = el("section", {}, [
     el("h1", {}, "Teacher dashboard"),
     el("div", { class: "row" }, [
@@ -34,29 +36,60 @@ export async function teacherHome(user) {
       el("a", { class: "btn", href: "#/t/feedback" }, "Student feedback"),
     ]),
   ]);
-  if (!classes.length) page.append(el("p", { class: "muted" }, "No classes yet. Create a class and add your students' school emails."));
-  for (const c of classes) {
-    const box = el("div", { class: "panel" }, [
-      el("div", { class: "panelhead" }, [
-        el("h2", {}, c.name),
-        el("span", { class: "muted" }, `${(c.studentEmails || []).length} students`),
-        el("a", { class: "btn small", href: `#/t/class/${c.id}` }, "Edit class"),
-        el("a", { class: "btn small", href: `#/t/assign/${c.id}` }, "Assign"),
-        el("a", { class: "btn small", href: `#/t/students/${c.id}` }, "Students"),
-      ]),
-    ]);
-    const asg = await listAssignments(c.id);
-    if (!asg.length) box.append(el("p", { class: "muted" }, "No assignments."));
+  const list = el("div", {}, homeCache.classes ? [] : loading());
+  page.append(list);
+  mount(page);
+  const fillTable = (box, asg, c) => {
+    box.querySelectorAll(".asg-body").forEach((n) => n.remove());
+    let body;
+    if (!asg) body = el("p", { class: "muted asg-body" }, "Loading assignments…");
+    else if (!asg.length) body = el("p", { class: "muted asg-body" }, "No assignments.");
     else {
-      const t = el("table", { class: "grid" }, [el("tr", {}, ["Assignment", "Questions", "Due", ""].map((h) => el("th", {}, h)))]);
-      asg.forEach((a) => t.append(el("tr", {}, [el("td", {}, a.title), el("td", {}, String(a.questionIds.length)),
+      body = el("table", { class: "grid asg-body" }, [el("tr", {}, ["Assignment", "Questions", "Due", ""].map((h) => el("th", {}, h)))]);
+      asg.forEach((a) => body.append(el("tr", {}, [el("td", {}, a.title), el("td", {}, String(a.questionIds.length)),
         el("td", {}, fmtDate(a.dueAt)), el("td", {}, [el("a", { href: `#/t/results/${c.id}/${a.id}` }, "Results"), " · ",
           el("a", { href: `#/t/paper/${c.id}/${a.id}`, title: "Make a printable paper from this assignment" }, "Print")])])));
-      box.append(t);
     }
-    page.append(box);
-  }
-  mount(page);
+    box.append(body);
+  };
+  const draw = (classes) => {
+    const boxes = new Map();
+    const kids = classes.length ? classes.map((c) => {
+      const box = el("div", { class: "panel" }, [
+        el("div", { class: "panelhead" }, [
+          el("h2", {}, c.name),
+          el("span", { class: "muted" }, `${(c.studentEmails || []).length} students`),
+          el("a", { class: "btn small", href: `#/t/class/${c.id}` }, "Edit class"),
+          el("a", { class: "btn small", href: `#/t/assign/${c.id}` }, "Assign"),
+          el("a", { class: "btn small", href: `#/t/students/${c.id}` }, "Students"),
+        ]),
+      ]);
+      fillTable(box, homeCache.asg.get(c.id), c);
+      boxes.set(c.id, box);
+      return box;
+    }) : [el("p", { class: "muted" }, "No classes yet. Create a class and add your students' school emails.")];
+    list.replaceChildren(...kids);
+    return boxes;
+  };
+  if (homeCache.classes) draw(homeCache.classes);
+  let classes;
+  try {
+    const snap = await getDocs(collection(db, "classes"));
+    classes = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e) { list.replaceChildren(el("p", { class: "error" }, errMsg(e))); return; }
+  if (!page.isConnected) return;
+  homeCache.classes = classes;
+  const boxes = draw(classes);
+  await Promise.all(classes.map(async (c) => {
+    try {
+      const asg = await listAssignments(c.id);
+      homeCache.asg.set(c.id, asg);
+      if (page.isConnected) fillTable(boxes.get(c.id), asg, c);
+    } catch (e) {
+      const box = boxes.get(c.id);
+      if (page.isConnected) { box.querySelectorAll(".asg-body").forEach((n) => n.remove()); box.append(el("p", { class: "error asg-body" }, errMsg(e))); }
+    }
+  }));
 }
 
 // ---------------------------------------------------------------- classes
@@ -487,7 +520,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611172044");
+      const { buildPaperDocx } = await import("./docx.js?v=202611172313");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {

@@ -158,6 +158,14 @@ await waitFor(() => byText("h1", "Teacher dashboard"), "dashboard");
 asg = [...fake.store.entries()].filter(([p]) => p.includes("/assignments/"));
 const a2 = asg.find(([, d]) => d.reveal === "after_due")[0].split("/").pop();
 ok(asg.length === 2, "second assignment saved");
+{ // dashboard: every class panel gets its assignments (fetched in parallel); coming back draws at once from memory
+  await waitFor(() => $$(".panel").length && !byText(".panel", "Loading assignments"), "dashboard filled");
+  const panel = $$(".panel").find((p) => p.textContent.includes("Quiz with hidden answers"));
+  ok(panel && panel.querySelectorAll("table.grid tr").length === 3 && $$(".panel").length === [...fake.store.keys()].filter((k) => /^classes\/[^/]+$/.test(k)).length,
+    "dashboard lists every class with its assignments");
+  await go("#/t/bank"); await go("#/t");
+  ok(byText("h1", "Teacher dashboard") && byText(".panel", "Quiz with hidden answers"), "returning to the dashboard shows the classes and assignments straight away");
+}
 
 console.log("4. student does an assignment");
 fake.setUser(S1);
