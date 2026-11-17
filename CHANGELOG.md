@@ -5,6 +5,20 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **New Ch 21 subtopic Terminal Voltage and Internal Resistance of a Battery** (taxonomy + question data): 37 Ch 21
+  questions where the battery's internal resistance is non-zero (e.m.f. − Ir, terminal voltage / lost volts, V–I graph
+  of a cell, finding r) moved there from Circuit Analysis (or Charge, Energy & Battery Capacity); 3 also keep Circuit
+  Fault-Finding. Questions saying "negligible / zero internal resistance" are unchanged. `chapters.json` (+ topics.json,
+  `js/syllabus.js`), fixtures regenerated. Backups in `question_bank/archive/backup_internal_resistance_20261117/`.
+  *Push, then re-import the bundle.* Tests: 311.
+- **Circuit solution figures: highlighter colours** (question data): the 7 redrawn-circuit figures (2013-14 F6 Mock 1A
+  Q23, 2014-15 F5 E2 Q20, 2020-21 F5 E1 Q19/Q23, 2021-22 F5 E1 Q16, 2024-25 F5 E1 Q20, 2025-26 F5 E2 Q8) now mark
+  points at the same potential with the same translucent colour, in both the paper's circuit and the redraw, with a
+  key "Same highlighter colour = same potential". Script + plain originals:
+  `question_bank/archive/backup_solfig_20261117/highlight/`. *Re-import the bundle* (solution figures are inlined in it).
+- **Solution figure added** (question data): 2023-24 F6 T1 Q1 — Shi's ray diagram (images P′Q′R′S′, rays through the
+  mirror's right end meeting Tommy's path in the order R, S, P, Q); solution text rewritten to follow it, marked as a
+  teacher solution. *Re-import the bundle.*
 - **Dark theme**: a moon / sun button on the top bar (left of the initials) switches between light and dark. Saved per
   device in `localStorage.theme` (`theme.js` also understands "auto" = follow the device, no button for it now); `js/theme.js` sets `html[data-theme]`, an inline script in
   `index.html` applies it before the first paint. Colours come from CSS variables: the dark values are the

@@ -207,7 +207,8 @@ export const SYLLABUS = [
      "Circuit Analysis: Current, Voltage, Power & Brightness",
      "Resistor Networks & Resistivity",
      "Circuit Fault-Finding & Troubleshooting",
-     "Charge, Energy & Battery Capacity"
+     "Charge, Energy & Battery Capacity",
+     "Terminal Voltage and Internal Resistance of a Battery"
     ]
    },
    {
