@@ -161,3 +161,18 @@ table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
 .fbk-contact .linkbtn { font-size:.9em; text-decoration:none; }
 .fbk-chat-help { margin:.35em 0; padding:.45em .6em; background:var(--bg); border:1px solid var(--line); border-radius:6px; font-size:.9em; }
 .fbk-chat-help .btn { margin-left:.4em; }
+
+/* usage statistics (Admin) */
+.panel .panelhead { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
+.panel .panelhead h2 { margin:0; }
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:.7rem; margin:1rem 0; }
+.stats-row .stat { background:#fff; border:1px solid var(--line); border-radius:10px; padding:.7rem .8rem; display:flex; flex-direction:column; gap:.15rem; }
+.stats-row .stat strong { font-size:1.6rem; color:var(--accent); line-height:1.1; }
+.usage-chart { width:100%; height:auto; }
+.usage-chart .bar { fill:var(--accent); opacity:.85; }
+.usage-chart .grid { stroke:var(--line); stroke-width:1; }
+.usage-chart text { font-size:11px; fill:#667085; }
+.usage-chart .val { fill:#333; font-size:10px; }
+.usage-table tr.form-row td { font-weight:600; background:#f4f7fc; }
+.pctbar { display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap; }
+.pctbar span { display:inline-block; height:.55rem; min-width:2px; background:var(--good, #2e7d32); border-radius:3px; max-width:60px; }

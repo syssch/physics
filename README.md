@@ -197,7 +197,8 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   their Practise menus, random sets, Redo my mistakes, "Practise 5" and Explain cards only use those chapters
   (questions tagged with nothing but those chapters, from any form's papers). Teachers' assignments are not limited.
   The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
-- *Practise*: choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
+- *Practise*: after marking, *Continue with another set* (beside *Back*) starts a new set with the same choices (book /
+  chapter / subtopic / skill and number, or the same Redo-my-mistakes choice). Choose a book, chapter (e.g. "Ch 9 Momentum"), subtopic and/or skill (e.g. "Graph & data analysis"), and the number of questions. Questions in assignments that
   are still open are never given as practice, so practice can't be used to find assignment
   answers.
 - *Redo my mistakes*: a practice set (3–20 questions; all, one book or one chapter — the menu lists each book and

@@ -195,7 +195,8 @@ export const SYLLABUS = [
     "no": 20,
     "en": "Electrostatics",
     "subtopics": [
-     "Electrostatics"
+     "Electrostatics",
+     "Electric Field"
     ]
    },
    {

@@ -3,6 +3,33 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-17
+
+- **Solution updated** (question data): 2025-26 F5 E3 Q19 — the solution now follows its figure (currents 3I splitting
+  2I / I in each parallel pair, P = I²R) as Method 1, with the voltage method as Method 2. *Re-import the bundle.*
+- **"Continue with another set"** beside *Back* after a practice set (random practice, Practise 5 or Redo my mistakes):
+  starts a new set with the same choices. `startSet()` in `js/student.js` (stores `session-opts-<id>`; falls back to the
+  session doc), `next` option of `showReview()` in `js/quiz.js`. *Push.* Tests: 293.
+- **New Ch 20 subtopic Electric Field** (taxonomy + question data): 80 Ch 20 questions about field lines, field
+  strength, zero-field points, uniform fields between plates, oil drops and charged particles in a field moved from
+  Electrostatics to Electric Field (90 stay in Electrostatics: charging, induction, Coulomb forces). Questions in other
+  chapters unchanged. `chapters.json` (+ topics.json, `js/syllabus.js`), fixtures regenerated. Backups in
+  `question_bank/archive/backup_electric_field_20261117/`. *Push, then re-import the bundle.* Tests: 291.
+- **Solution updated** (question data): 2025-26 F5 E1 Q19 — Method 1 (total resistance) kept, Method 2 (proportion: branch
+  currents 2 : 1, powers 18 + 18(2/3)² + 18(1/3)² + 18(1/3)² = 30 W) added; marked as a teacher solution. *Re-import the bundle.*
+- **In progress, on hold (Shi)**: Admin → Usage statistics (`js/usage.js`, route `#/t/usage`, panel at the top of Admin,
+  styles at the end of `css/style.css`): active students per day/week (7 / 30 / 90 days / all) and a by-form/class table
+  from `activity`, `users` and `classes`. Written but not yet covered by tests or the handoff docs — finish (add a test
+  section, docs, teacher guide) before relying on it.
+- **Question fixed** (question data): 2017-18 F5 E2 Q23 — with "L3 is short-circuited" the old statements made key D
+  wrong (L2 and L4 go out, L1 gets brighter). Statements now (1) L2 will go out, (2) L1 will go out, (3) L1 will be
+  brighter, so D is correct; solution rewritten. Earlier results on it are not re-marked. *Re-import the bundle.*
+- **Solution figures replaced** (question data): 2025-26 F6 Mock 1A Q17 now shows Shi's ray diagram (S → M2 → M1 → eye,
+  with the images of the room) and the view in M1 (image of the wall, image of M2); solution text follows both.
+  *Re-import the bundle.*
+- **Solution figure** (question data): 2025-26 F6 Mock 1A Q17 — Shi's drawing of the two images of the "ON AIR" sign in
+  mirror M1 (lower: laterally inverted; upper: turned through 180°); solution revised around it. *Re-import the bundle.*
+
 ## 2026-11-16
 
 - **Chat / Email message uses the full name**: "Hi Chan Tai Man, …" — the English name from the class list (else the

@@ -1,13 +1,14 @@
-import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611161054";
+import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611171331";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, toast, errMsg } from "./ui.js?v=202611161054";
-import { isSchoolEmail } from "./config.js?v=202611161054";
-import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611161054";
-import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611161054";
-import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611161054";
-import { studentsView, studentRecordView } from "./studentrecord.js?v=202611161054";
-import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611161054";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611161054";
+import { el, mount, toast, errMsg } from "./ui.js?v=202611171331";
+import { isSchoolEmail } from "./config.js?v=202611171331";
+import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611171331";
+import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611171331";
+import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611171331";
+import { studentsView, studentRecordView } from "./studentrecord.js?v=202611171331";
+import { usageView } from "./usage.js?v=202611171331";
+import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611171331";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611171331";
 
 let user = null;
 
@@ -67,6 +68,7 @@ const routes = [
   [/^#\/t\/leaderboard$/, () => leaderboardView(user), true],
   [/^#\/t\/paper(?:\/([\w-]+)\/([\w-]+))?$/, (m) => paperBuilder(user, m[1], m[2]), true],
   [/^#\/t\/admin$/, () => adminView(user), true],
+  [/^#\/t\/usage$/, () => usageView(user), true],
 ];
 
 async function route() {

@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611161054";
+import { db, api, auth } from "./fb.js?v=202611171331";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611161054";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611161054";
-import { runQuiz, showReview } from "./quiz.js?v=202611161054";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611161054";
-import { setDue, setChip } from "./chrome.js?v=202611161054";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611161054";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611171331";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611171331";
+import { runQuiz, showReview } from "./quiz.js?v=202611171331";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611171331";
+import { setDue, setChip } from "./chrome.js?v=202611171331";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611171331";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -76,15 +76,23 @@ async function practicePanel(limit = null) {
   go.addEventListener("click", async () => {
     go.disabled = true;
     try {
-      const r = await api.startPractice({ topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, skill: sk.skill || null, count: Number(countSel.value) });
-      sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
-      location.hash = `#/practice/${r.sessionId}`;
+      await startSet("practice", { topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, skill: sk.skill || null, count: Number(countSel.value) });
     } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
   });
   return el("div", { class: "panel" }, [el("h2", {}, "Random practice set"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     limit ? el("p", { class: "notice f3-limit" }, `${limit.form} practice covers ${limitText(limit)} — the chapters you learn in ${limit.form}.`) : null,
     el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
+}
+
+/** Start a practice set (kind "practice" or "mistakes") and open it; remembers the choices for "Continue with another set". */
+export async function startSet(kind, args) {
+  const r = kind === "mistakes" ? await api.startMistakes(args) : await api.startPractice(args);
+  sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
+  if (kind === "mistakes") sessionStorage.setItem(`session-title-${r.sessionId}`, "Redo my mistakes");
+  sessionStorage.setItem(`session-opts-${r.sessionId}`, JSON.stringify({ kind, args }));
+  location.hash = `#/practice/${r.sessionId}`;
+  return r;
 }
 
 /** Home: how leaderboard points are earned. */
@@ -218,10 +226,7 @@ function mistakesPanel(books = []) {
     go.disabled = true;
     try {
       const v = bookSel.value, pick = v.startsWith("ch:") ? { chapter: v.slice(3) } : v.startsWith("book:") ? { topic: v.slice(5) } : {};
-      const r = await api.startMistakes({ ...pick, count: Number(countSel.value) });
-      sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
-      sessionStorage.setItem(`session-title-${r.sessionId}`, "Redo my mistakes");
-      location.hash = `#/practice/${r.sessionId}`;
+      await startSet("mistakes", { ...pick, count: Number(countSel.value) });
     } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
   });
   return el("div", { class: "panel mistakes" }, [el("h2", {}, "Redo my mistakes"), info, row]);
@@ -229,17 +234,24 @@ function mistakesPanel(books = []) {
 
 export async function practiceView(user, sessionId) {
   mount(loading());
-  let ids = null, title = sessionStorage.getItem(`session-title-${sessionId}`) || "Practice";
-  try { ids = JSON.parse(sessionStorage.getItem(`session-${sessionId}`)); } catch {}
-  if (!ids) {
+  let ids = null, opts = null, title = sessionStorage.getItem(`session-title-${sessionId}`) || "Practice";
+  try { ids = JSON.parse(sessionStorage.getItem(`session-${sessionId}`)); opts = JSON.parse(sessionStorage.getItem(`session-opts-${sessionId}`)); } catch {}
+  if (!ids || !opts) {
     const s = await getDoc(doc(db, "sessions", sessionId));
     if (!s.exists()) return mount(el("p", { class: "error" }, "Practice set not found."));
-    if (s.data().submitted) { location.hash = `#/review/practice_${sessionId}`; return; }
-    ids = s.data().questionIds;
-    if (s.data().title) title = s.data().title;
+    const sd = s.data();
+    if (sd.submitted) { location.hash = `#/review/practice_${sessionId}`; return; }
+    ids = ids || sd.questionIds;
+    if (sd.title) title = sd.title;
+    const pick = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
+    opts = opts || (sd.mode === "mistakes"
+      ? { kind: "mistakes", args: pick({ topic: sd.topic, chapter: sd.chapter, count: ids.length }) }
+      : { kind: "practice", args: pick({ topic: sd.topic, subtopic: sd.subtopic, chapter: sd.chapter, skill: sd.skill, count: ids.length }) });
   }
+  // after marking: "Continue with another set" starts a new set with the same choices
+  const next = { label: "Continue with another set", run: () => startSet(opts.kind, opts.args) };
   await runQuiz({
-    title, questionIds: ids, saveKey: `resp-practice-${sessionId}`,
+    title, questionIds: ids, saveKey: `resp-practice-${sessionId}`, next,
     submit: async (responses) => { const r = await api.submitAnswers({ sessionId, responses }); if (!user.isTeacher) refreshStudentStatus(user); return r; },
   });
 }
@@ -327,9 +339,7 @@ async function progressPanel(user) {
       if (prac) prac.addEventListener("click", async () => {
         prac.disabled = true;
         try {
-          const r = await api.startPractice({ chapter: k, count: 5 });
-          sessionStorage.setItem(`session-${r.sessionId}`, JSON.stringify(r.questionIds));
-          location.hash = `#/practice/${r.sessionId}`;
+          await startSet("practice", { chapter: k, count: 5 });
         } catch (e) { toast(errMsg(e), "error"); prac.disabled = false; }
       });
       t.append(el("tr", {}, [el("td", {}, chapterIds ? chName.get(k) || `Ch ${k}` : k), el("td", {}, String(n)), el("td", {}, `${v}%`),

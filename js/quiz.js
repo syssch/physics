@@ -1,6 +1,6 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611161054";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611161054";
-import { attachFeedbackBars } from "./feedback.js?v=202611161054";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611171331";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611171331";
+import { attachFeedbackBars } from "./feedback.js?v=202611171331";
 
 /**
  * Run a set of questions.
@@ -43,7 +43,7 @@ export async function runQuiz(cfg) {
     try {
       const result = await cfg.submit(responses);
       store.del(cfg.saveKey);
-      showReview({ title: cfg.title, questions, responses, result, backHref: cfg.backHref });
+      showReview({ title: cfg.title, questions, responses, result, backHref: cfg.backHref, next: cfg.next });
     } catch (e) {
       toast(errMsg(e), "error");
       submitBtn.disabled = false;
@@ -54,7 +54,7 @@ export async function runQuiz(cfg) {
 }
 
 /** Show marked answers (or just the score when answers are not yet released). */
-export function showReview({ title, questions, responses, result, backHref = "#/", note }) {
+export function showReview({ title, questions, responses, result, backHref = "#/", note, next }) {
   const page = el("section", { class: "quiz" });
   page.append(el("h1", {}, title));
   page.append(el("div", { class: "scorebox" }, [
@@ -82,7 +82,12 @@ export function showReview({ title, questions, responses, result, backHref = "#/
     number: i + 1, selected: (responses || {})[q.id],
     review: result.revealed ? { answer: result.answers[q.id], correct: result.correct[q.id], solution: (result.solutions || {})[q.id] } : { answer: null },
   })));
-  page.append(el("p", {}, el("a", { class: "btn", href: backHref }, "Back")));
+  const nextBtn = next ? el("button", { type: "button", class: "btn primary next-set" }, next.label) : null;
+  if (nextBtn) nextBtn.addEventListener("click", async () => {
+    nextBtn.disabled = true;
+    try { await next.run(); } catch (e) { toast(errMsg(e), "error"); nextBtn.disabled = false; }
+  });
+  page.append(el("p", { class: "row" }, [el("a", { class: "btn", href: backHref }, "Back"), nextBtn]));
   mount(page);
   attachFeedbackBars(page, { attemptId: result.attemptId, revealed: !!result.revealed, questions });
 }

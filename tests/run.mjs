@@ -264,6 +264,16 @@ ok($$(".opt.right").length === 5, "practice shows answers");
 ok($$(".qcard .solution").length >= 4, "practice shows solutions");
 const pat = [...fake.store.entries()].find(([p, d]) => p.startsWith("attempts/practice_"));
 ok(pat && pat[1].total === 5 && pat[1].uid === "s1", "practice attempt stored");
+{ // "Continue with another set" next to "Back" starts a new set with the same choices
+  const nb = byText("button.next-set", "Continue with another set");
+  ok(nb && byText(".quiz a.btn", "Back") && nb.parentElement === byText(".quiz a.btn", "Back").parentElement, "after a practice set: \"Continue with another set\" beside \"Back\"");
+  const before = location.hash;
+  nb.click();
+  await waitFor(() => location.hash !== before && location.hash.startsWith("#/practice/") && $$(".qcard").length === 5 && !$(".scorebox"), "next practice set");
+  const sess = fake.store.get(`sessions/${location.hash.split("/").pop()}`);
+  ok(sess && sess.topic === "Wave Motion" && sess.questionIds.length === 5 && !sess.submitted && $$(".qsrc").every((e) => e.textContent.startsWith("Wave Motion")),
+    "the new set uses the same book and number of questions");
+}
 // practice excludes questions in open assignments
 fake.store.get(p2).dueAt = Timestamp.fromMillis(Date.now() + 86400000);
 const blockedIds = new Set(fake.store.get(p2).questionIds);
