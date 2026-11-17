@@ -5,6 +5,8 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **Practice / assignment bottom bar**: darker (`.submitbar` in `css/app.css`, #1d2939 with light text) and the "N of M
+  answered" count now sits just before the Submit button (both on the right). *Push.* Tests: 294.
 - **Solution updated** (question data): 2025-26 F5 E3 Q19 — the solution now follows its figure (currents 3I splitting
   2I / I in each parallel pair, P = I²R) as Method 1, with the voltage method as Method 2. *Re-import the bundle.*
 - **"Continue with another set"** beside *Back* after a practice set (random practice, Practise 5 or Redo my mistakes):

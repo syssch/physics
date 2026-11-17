@@ -184,6 +184,7 @@ for (let i = 0; i < 7; i++) {
 }
 function CSS_escape(s) { return s.replace(/\./g, "\\."); }
 ok(/7 of 8 answered/.test($(".submitbar").textContent), "answered counter");
+ok($(".submitbar .answered") && $(".submitbar .answered").nextElementSibling === byText(".submitbar button", "Submit answers"), "the answered count sits just beside the Submit button");
 ok(JSON.parse(w.localStorage.getItem(`resp-asg-${a1}`))[qids1[0]], "progress saved locally");
 byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "score");

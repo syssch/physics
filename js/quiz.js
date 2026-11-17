@@ -1,6 +1,6 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611171331";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611171331";
-import { attachFeedbackBars } from "./feedback.js?v=202611171331";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611171454";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611171454";
+import { attachFeedbackBars } from "./feedback.js?v=202611171454";
 
 /**
  * Run a set of questions.
@@ -11,7 +11,7 @@ export async function runQuiz(cfg) {
   const questions = await getQuestions(cfg.questionIds);
   const responses = store.get(cfg.saveKey) || {};
   const page = el("section", { class: "quiz" });
-  const counter = el("span", {});
+  const counter = el("span", { class: "answered" });   // shown just before the Submit button (dark bottom bar)
   const submitBtn = el("button", { class: "btn primary", type: "button" }, "Submit answers");
   const bar = el("div", { class: "submitbar" }, [counter, submitBtn]);
   const updateCounter = () => (counter.textContent = `${Object.keys(responses).length} of ${questions.length} answered`);
