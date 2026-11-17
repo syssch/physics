@@ -5,6 +5,15 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **Ch 17 split into 5 subtopics** (taxonomy + question data): the single "Reflection of Light" subtopic (61 questions) is
+  now Light and Types of Reflection (5), Laws of Reflection (8), Image in a Plane Mirror (21), Field of View in a Plane
+  Mirror (18), Two Mirrors and Periscopes (10); 2018-19 F5 E2 Q29 has two. `chapters.json` (+ topics.json,
+  `js/syllabus.js`), fixtures regenerated. Backups in `question_bank/archive/backup_ch17_subtopics_20261117/`.
+  *Push, then re-import the bundle.* Tests: 311.
+- **Solution figure added** (question data): 2021-22 F6 T1 Q11 — Shi's diagram (door's image, 15 cm / 45 cm); the ratio
+  is now written x/60 = 15/45. Teacher solution. *Re-import the bundle.*
+- **Solution figure added** (question data): 2023-24 F3 E1 Q4 — Shi's diagram (images P′Q′R′, field of view from O
+  through the ends of M); solution text follows it, marked as a teacher solution. *Re-import the bundle.*
 - **New Ch 21 subtopic Terminal Voltage and Internal Resistance of a Battery** (taxonomy + question data): 37 Ch 21
   questions where the battery's internal resistance is non-zero (e.m.f. − Ir, terminal voltage / lost volts, V–I graph
   of a cell, finding r) moved there from Circuit Analysis (or Charge, Energy & Battery Capacity); 3 also keep Circuit

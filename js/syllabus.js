@@ -164,7 +164,11 @@ export const SYLLABUS = [
     "no": 17,
     "en": "Reflection of Light",
     "subtopics": [
-     "Reflection of Light"
+     "Light and Types of Reflection",
+     "Laws of Reflection",
+     "Image in a Plane Mirror",
+     "Field of View in a Plane Mirror",
+     "Two Mirrors and Periscopes"
     ]
    },
    {
