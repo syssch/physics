@@ -1,7 +1,7 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { getTheme, setTheme } from "./theme.js?v=202611171521";
-import { el } from "./ui.js?v=202611171521";
+import { setTheme } from "./theme.js?v=202611171530";
+import { el } from "./ui.js?v=202611171530";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
@@ -93,12 +93,11 @@ function render() {
     el("div", { class: "dd-head" }, [el("strong", {}, user.name), el("span", { class: "muted" }, user.email)]),
     user.isTeacher ? el("a", { href: teacher ? "#/student" : "#/t" }, [icon(teacher ? "user" : "school"), teacher ? "Switch to student view" : "Switch to teacher view"]) : null,
     user.isTeacher ? el("a", { href: "#/t/admin" }, [icon("settings"), "Admin"]) : null,
-    themeRow(),
     el("button", { type: "button", class: "dd-item", onclick: () => state.onSignOut && state.onSignOut() }, [icon("logout"), "Sign out"]),
   ]);
   const ddUser = el("div", { class: "dd" }, [av, menu]);
   av.addEventListener("click", (e) => { e.stopPropagation(); closeMenus(ddUser); ddUser.classList.toggle("open"); });
-  right.push(ddUser);
+  right.push(themeButton(), ddUser);
   $("user").replaceChildren(...right);
   applyBadge();
   highlight();
@@ -122,15 +121,18 @@ function highlight() {
 }
 
 /** Draw the bar for a signed-in user. */
-/** Account menu row: Theme  [Light | Dark | Device]. */
-function themeRow() {
-  const opts = [["light", "Light"], ["dark", "Dark"], ["auto", "Device"]];
-  const seg = el("span", { class: "tseg", role: "group", "aria-label": "Theme" });
-  const paint = () => [...seg.children].forEach((b) => { b.classList.toggle("on", b.dataset.t === getTheme()); b.setAttribute("aria-pressed", b.dataset.t === getTheme() ? "true" : "false"); });
-  opts.forEach(([t, label]) => seg.append(el("button", { type: "button", "data-t": t, title: t === "auto" ? "Follow the device's light/dark setting" : `${label} theme`,
-    onclick: (e) => { e.stopPropagation(); setTheme(t); paint(); } }, label)));
+/** Top-bar button: moon = switch to dark, sun = switch to light. */
+function themeButton() {
+  const b = el("button", { type: "button", class: "theme-btn" });
+  const paint = () => {
+    const dark = document.documentElement.dataset.theme === "dark";
+    b.replaceChildren(icon(dark ? "sun" : "moon"));
+    b.title = dark ? "Switch to light theme" : "Switch to dark theme";
+    b.setAttribute("aria-label", b.title);
+  };
+  b.addEventListener("click", () => { setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); paint(); });
   paint();
-  return el("div", { class: "theme-row" }, [el("span", {}, [icon("moon"), " Theme"]), seg]);
+  return b;
 }
 
 export function drawChrome(user, onSignOut) {

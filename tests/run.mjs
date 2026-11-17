@@ -431,15 +431,17 @@ console.log("8c. leaderboard");
   ok($("#nav .dd.on"), "opening a teacher page switches back and highlights Questions");
   $(".avatar").click(); await sleep(10);
   ok($("#user .dd.open") && byText("#user .dd-menu", "Sign out") && byText("#user .dd-menu", "Admin"), "initials button opens the account menu");
-  { // theme switch in the account menu: Dark / Device / Light, remembered on this device, menu stays open
-    ok(w.document.documentElement.dataset.theme === "light" && byText("#user .theme-row .tseg button.on", "Light"), "theme starts light");
-    byText("#user .theme-row button", "Dark").click(); await sleep(10);
-    ok(w.document.documentElement.dataset.theme === "dark" && w.localStorage.getItem("theme") === "dark" && $("#user .dd.open")
-      && byText("#user .theme-row .tseg button.on", "Dark"), "Theme → Dark switches the page to dark, remembers it and keeps the menu open");
-    byText("#user .theme-row button", "Device").click(); await sleep(10);
-    ok(w.localStorage.getItem("theme") === "auto" && w.document.documentElement.dataset.theme === "light", "Theme → Device follows the device (light when it has no dark preference)");
-    byText("#user .theme-row button", "Light").click(); await sleep(10);
-    ok(w.document.documentElement.dataset.theme === "light" && w.localStorage.getItem("theme") === "light", "Theme → Light switches back");
+  { // theme button in the top bar: moon → dark (remembered on this device), sun → light
+    w.document.body.click(); await sleep(10);
+    const tb = () => $("#user .theme-btn");
+    ok(tb() && w.document.documentElement.dataset.theme === "light" && $("#user .theme-btn .ti-moon") && !byText("#user .dd-menu", "Theme"),
+      "theme button (moon) is on the top bar, not in the account menu");
+    tb().click(); await sleep(10);
+    ok(w.document.documentElement.dataset.theme === "dark" && w.localStorage.getItem("theme") === "dark" && $("#user .theme-btn .ti-sun"),
+      "theme button switches to dark, remembers it and shows a sun");
+    tb().click(); await sleep(10);
+    ok(w.document.documentElement.dataset.theme === "light" && w.localStorage.getItem("theme") === "light" && $("#user .theme-btn .ti-moon"), "pressing it again switches back to light");
+    $(".avatar").click(); await sleep(10);
   }
   w.document.body.click(); await sleep(10);
   ok(!$("#user .dd.open"), "clicking elsewhere closes it");
