@@ -5,6 +5,12 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **Dark theme**: account menu (initials button) → *Theme  Light | Dark | Device* ("Device" follows the phone/computer
+  setting). Saved per device in `localStorage.theme`; `js/theme.js` sets `html[data-theme]`, an inline script in
+  `index.html` applies it before the first paint. Colours come from CSS variables: the dark values are the
+  `:root[data-theme="dark"]` block at the end of `css/style.css`; `css/app.css` now uses `var(--card)` /
+  `var(--input-line)` instead of `#fff` / `#cfd4dc`. Question figures keep a white card; the printable paper and
+  printing stay light. *Push.* Tests: 312.
 - **Likes on questions**: students tap **Like** under any question on a review page (once each, tap again to undo; shows
   the count). Students can practise "Liked by students (1+)" or "Popular (3+ likes)"; teachers filter the question
   bank / assignment builder / printable paper by likes (1+ … 10+, Most liked first) and see a like badge in the bank.

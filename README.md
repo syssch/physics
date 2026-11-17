@@ -197,6 +197,8 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   their Practise menus, random sets, Redo my mistakes, "Practise 5" and Explain cards only use those chapters
   (questions tagged with nothing but those chapters, from any form's papers). Teachers' assignments are not limited.
   The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
+- *Dark theme*: anyone can pick **Theme → Light / Dark / Device** in the account menu (initials button, top right);
+  "Device" follows the phone or computer's own setting. The choice is remembered on that device.
 - *Likes*: on a review page students can tap **Like** under any question (students only; once each, tap again to undo;
   the button shows how many students like it). In *Practise* they can choose "Liked by students (1+ likes)" or "Popular
   (3+ likes)"; teachers can filter the question bank, assignment builder and printable paper by likes (1+ … 10+, or

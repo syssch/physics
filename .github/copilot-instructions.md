@@ -9,6 +9,8 @@ Follow `AGENTS.md` at the repository root. The essentials:
 - Student-facing callables call `rateLimit(user, bucket)`.
 - Out-of-syllabus questions are retired at import (`active: false`, removed from `meta/questionIndex`): anything that
   lists questions must use `active == true` or the index.
+- Colours: use the CSS variables (`--card`, `--bg`, `--fg`, `--line`, `--input-line`…), never hard-coded `#fff`; add a
+  dark override to the `:root[data-theme="dark"]` block at the end of `css/style.css` for any fixed colour.
 - After changing `js/` or `css/`, run `python3 tools/bump_version.py`.
 - Every change: add/extend a section in `tests/run.mjs`, run `cd tests && npm install && node run.mjs` (must pass with no
   console errors), update `README.md`, and say whether a Firebase deploy (`deploy.command`) is needed.

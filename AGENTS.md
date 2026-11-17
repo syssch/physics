@@ -31,7 +31,8 @@ Read `README.md` for the full feature description.
 | File | Role |
 |---|---|
 | `js/app.js` | auth gate + sign-in page (`COPYRIGHT_NOTICE`), hash router: `routes = [[regex, fn, teacherOnly]]` |
-| `js/chrome.js` | top bar + phone tab bar (`STUDENT_NAV`, `TEACHER_NAV`, `setBadge`; `external: true` = link to another site in a new tab, e.g. Simulations) |
+| `js/theme.js` | Light / Dark / Device theme (`localStorage.theme` → `html[data-theme]`) |
+| `js/chrome.js` | top bar + phone tab bar + account menu with Theme switch (`STUDENT_NAV`, `TEACHER_NAV`, `setBadge`; `external: true` = link to another site in a new tab, e.g. Simulations) |
 | `js/ui.js` | `el(tag, attrs, children)` (sanitises `html:`), `mount`, `toast`, `errMsg`, `fmtDate`, `pct`, `chunk`, `typeset`, `store` |
 | `js/fb.js` | Firebase init + `api.<callable>` wrappers (add every new callable here) |
 | `js/questions.js` | question loading, syllabus/skill filters, `renderQuestion`, `sourceLabel` |
@@ -64,6 +65,10 @@ by functions use `allow write: if false` with teacher read.
 - Likes: `toggleLike({attemptId, qid, like?})` (students only, question must be in their own attempt) writes
   `likes/{uid}_{qid}` and the counts in `meta/likes.data` (JSON text) in one transaction; `startPractice({minLikes})`
   filters by them; client `getLikeCounts()` / `likeCountOf()` in `questions.js`, filter in `questionFilters()`.
+- Theme: `js/theme.js` (`getTheme/setTheme/applyTheme`, `localStorage.theme` = light/dark/auto) sets `html[data-theme]`;
+  switch in the account menu (`themeRow()` in `chrome.js`). New CSS must use the variables (`--card`, `--bg`, `--fg`,
+  `--line`, `--input-line`, `--accent-soft`…), not hard-coded `#fff`; add dark overrides to the `:root[data-theme="dark"]`
+  block at the end of `css/style.css` for any fixed colour.
 - Feedback docs: teachers may change only `status`, `handledBy`, `handledAt` and `reply` (string ≤ 300 or null; shown to
   the student on a dismissed report; cleared on Reopen and when the student reports again).
 
@@ -81,7 +86,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 308 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 312 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

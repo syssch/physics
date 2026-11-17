@@ -1,6 +1,7 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { el } from "./ui.js?v=202611171510";
+import { getTheme, setTheme } from "./theme.js?v=202611171521";
+import { el } from "./ui.js?v=202611171521";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },
@@ -92,6 +93,7 @@ function render() {
     el("div", { class: "dd-head" }, [el("strong", {}, user.name), el("span", { class: "muted" }, user.email)]),
     user.isTeacher ? el("a", { href: teacher ? "#/student" : "#/t" }, [icon(teacher ? "user" : "school"), teacher ? "Switch to student view" : "Switch to teacher view"]) : null,
     user.isTeacher ? el("a", { href: "#/t/admin" }, [icon("settings"), "Admin"]) : null,
+    themeRow(),
     el("button", { type: "button", class: "dd-item", onclick: () => state.onSignOut && state.onSignOut() }, [icon("logout"), "Sign out"]),
   ]);
   const ddUser = el("div", { class: "dd" }, [av, menu]);
@@ -120,6 +122,17 @@ function highlight() {
 }
 
 /** Draw the bar for a signed-in user. */
+/** Account menu row: Theme  [Light | Dark | Device]. */
+function themeRow() {
+  const opts = [["light", "Light"], ["dark", "Dark"], ["auto", "Device"]];
+  const seg = el("span", { class: "tseg", role: "group", "aria-label": "Theme" });
+  const paint = () => [...seg.children].forEach((b) => { b.classList.toggle("on", b.dataset.t === getTheme()); b.setAttribute("aria-pressed", b.dataset.t === getTheme() ? "true" : "false"); });
+  opts.forEach(([t, label]) => seg.append(el("button", { type: "button", "data-t": t, title: t === "auto" ? "Follow the device's light/dark setting" : `${label} theme`,
+    onclick: (e) => { e.stopPropagation(); setTheme(t); paint(); } }, label)));
+  paint();
+  return el("div", { class: "theme-row" }, [el("span", {}, [icon("moon"), " Theme"]), seg]);
+}
+
 export function drawChrome(user, onSignOut) {
   state.user = user; state.onSignOut = onSignOut;
   document.body.classList.add("signed-in");

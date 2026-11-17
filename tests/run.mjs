@@ -431,6 +431,16 @@ console.log("8c. leaderboard");
   ok($("#nav .dd.on"), "opening a teacher page switches back and highlights Questions");
   $(".avatar").click(); await sleep(10);
   ok($("#user .dd.open") && byText("#user .dd-menu", "Sign out") && byText("#user .dd-menu", "Admin"), "initials button opens the account menu");
+  { // theme switch in the account menu: Dark / Device / Light, remembered on this device, menu stays open
+    ok(w.document.documentElement.dataset.theme === "light" && byText("#user .theme-row .tseg button.on", "Light"), "theme starts light");
+    byText("#user .theme-row button", "Dark").click(); await sleep(10);
+    ok(w.document.documentElement.dataset.theme === "dark" && w.localStorage.getItem("theme") === "dark" && $("#user .dd.open")
+      && byText("#user .theme-row .tseg button.on", "Dark"), "Theme → Dark switches the page to dark, remembers it and keeps the menu open");
+    byText("#user .theme-row button", "Device").click(); await sleep(10);
+    ok(w.localStorage.getItem("theme") === "auto" && w.document.documentElement.dataset.theme === "light", "Theme → Device follows the device (light when it has no dark preference)");
+    byText("#user .theme-row button", "Light").click(); await sleep(10);
+    ok(w.document.documentElement.dataset.theme === "light" && w.localStorage.getItem("theme") === "light", "Theme → Light switches back");
+  }
   w.document.body.click(); await sleep(10);
   ok(!$("#user .dd.open"), "clicking elsewhere closes it");
   fake.setUser(S1); await sleep(50);
