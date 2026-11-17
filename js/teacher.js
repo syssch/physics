@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611171454";
+import { db, storage, api } from "./fb.js?v=202611171510";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611171454";
-import { getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611171454";
-import { isSchoolEmail } from "./config.js?v=202611171454";
-import { importExplainBundle } from "./explain.js?v=202611171454";
-import { recordHref } from "./studentrecord.js?v=202611171454";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611171454";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611171454";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611171454";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611171510";
+import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611171510";
+import { isSchoolEmail } from "./config.js?v=202611171510";
+import { importExplainBundle } from "./explain.js?v=202611171510";
+import { recordHref } from "./studentrecord.js?v=202611171510";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611171510";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611171510";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611171510";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -123,14 +123,24 @@ function questionFilters(questions, topics, onChange, books = []) {
   const formSel = el("select", {}, [el("option", { value: "" }, "All forms")].concat(forms.map((f) => el("option", { value: f }, f))));
   const search = el("input", { type: "search", class: "qsearch", placeholder: "Search text or source, e.g. 2018-19 F4 E2 Q1",
     title: "Words from the question, or its source: year, form, paper and/or question number (e.g. 2018-19 F4 E2 Q1, F4 E2, Q12)" });
+  // students' likes (counts loaded by the caller with getLikeCounts())
+  const likeSel = el("select", { "aria-label": "Likes", class: "likes-filter" }, [["", "Any likes"], ["1", "1+ likes"], ["3", "3+ likes"], ["5", "5+ likes"],
+    ["10", "10+ likes"], ["top", "Most liked first"]].map(([v, l]) => el("option", { value: v }, l)));
   formSel.addEventListener("change", onChange);
   search.addEventListener("input", onChange);
+  likeSel.addEventListener("change", onChange);
   const strip = (h) => (h || "").replace(/<[^>]+>/g, " ").toLowerCase();
-  const apply = () => { const m = searchMatcher(search.value); return questions.filter((q) =>
-    syl.matches(q) && skill.matches(q) &&
-    (!formSel.value || q.form === formSel.value) &&
-    (!m || m(q, strip(q.textHtml)))); };
-  return { node: el("div", { class: "row" }, [...syl.nodes, skill.node, formSel, search]), apply };
+  const apply = () => {
+    const m = searchMatcher(search.value);
+    const minLikes = likeSel.value === "top" ? 1 : Number(likeSel.value || 0);
+    const out = questions.filter((q) =>
+      syl.matches(q) && skill.matches(q) &&
+      (!formSel.value || q.form === formSel.value) &&
+      (!minLikes || likeCountOf(q.id) >= minLikes) &&
+      (!m || m(q, strip(q.textHtml))));
+    return likeSel.value === "top" ? out.sort((a, b) => likeCountOf(b.id) - likeCountOf(a.id)) : out;
+  };
+  return { node: el("div", { class: "row" }, [...syl.nodes, skill.node, formSel, likeSel, search]), apply };
 }
 
 function snippet(q) {
@@ -156,7 +166,7 @@ function teacherReview(id) {
 
 export async function bankView(user) {
   mount(loading());
-  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks()]);
+  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks(), getLikeCounts(true)]);
   const listBox = el("div", {});
   const count = el("p", { class: "muted" });
   const f = questionFilters(questions, topics, () => draw(), books);
@@ -205,6 +215,8 @@ export async function bankView(user) {
     }
     listBox.replaceChildren(...page.map((q, i) => {
       const c = renderQuestion(q, { number: i + 1, review: showKeys.checked ? teacherReview(q.id) : null });
+      const nl = likeCountOf(q.id);
+      if (nl) c.insertBefore(el("div", { class: "like-badge", title: `${nl} student${nl > 1 ? "s" : ""} liked this question` }, [el("i", { class: "ti ti-thumb-up", "aria-hidden": "true" }), ` ${nl} like${nl > 1 ? "s" : ""}`]), c.children[1] || null);
       if (on) {
         const key = (keyCache.get(q.id) || {}).answer;
         c.insertBefore(statsLine(summarise(stats.firsts.get(q.id), emails, key, q.optionKeys), key), c.querySelector(".solution"));
@@ -224,7 +236,7 @@ export async function bankView(user) {
 /** All attempted questions with their first-attempt choice counts: sortable, filterable, CSV. */
 export async function questionStatsView(user, force = true) {   // always the latest results when opened
   mount(loading("Loading students' answers…"));
-  const [questions, topics, books, stats] = await Promise.all([getAllQuestions(), getTopics(), getBooks(), loadFirstAttempts(force)]);
+  const [questions, topics, books, stats] = await Promise.all([getAllQuestions(), getTopics(), getBooks(), loadFirstAttempts(force), getLikeCounts(true)]);
   const attempted = questions.filter((q) => stats.firsts.has(q.id));
   await loadKeys(attempted.map((q) => q.id));
   const body = el("div", {});
@@ -353,7 +365,7 @@ function questionPicker(questions, topics, books, selected) {
 // ---------------------------------------------------------------- assignment builder
 export async function assignmentBuilder(user, presetClassId) {
   mount(loading());
-  const [classes, questions, topics, books] = await Promise.all([listClasses(), getAllQuestions(), getTopics(), getBooks()]);
+  const [classes, questions, topics, books] = await Promise.all([listClasses(), getAllQuestions(), getTopics(), getBooks(), getLikeCounts(true)]);
   if (!classes.length) return mount(el("section", {}, [el("p", {}, "Create a class first."), el("a", { class: "btn", href: "#/t/class/new" }, "New class")]));
   const selected = [];
   const classSel = el("select", {}, classes.map((c) => el("option", { value: c.id, selected: c.id === presetClassId }, c.name)));
@@ -402,7 +414,7 @@ export async function assignmentBuilder(user, presetClassId) {
  */
 export async function paperBuilder(user, classId, assignmentId) {
   mount(loading());
-  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks()]);
+  const [questions, topics, books] = await Promise.all([getAllQuestions(), getTopics(), getBooks(), getLikeCounts(true)]);
   const selected = [];
   const title = el("input", { type: "text", placeholder: "e.g. F.5 Physics Quiz 1 — Electricity" });
   const subtitle = el("input", { type: "text", placeholder: "e.g. Multiple-choice questions (optional)" });
@@ -475,7 +487,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611171454");
+      const { buildPaperDocx } = await import("./docx.js?v=202611171510");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {

@@ -947,6 +947,54 @@ console.log("9h. search by source (e.g. 2018-19 F4 E2 Q1)");
   await go("#/t"); await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
 }
 
+console.log("9i. likes on questions + filter by likes");
+{
+  fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
+  await waitFor(() => $$(".qcard .fbk-like").length === qids1.length, "like buttons");
+  ok(true, "every question on the student's review page has a Like button");
+  const q = qids1[3];
+  const btn = () => $$(".qcard").find((c) => c.id === `q-${q}`).querySelector(".fbk-like");
+  btn().click();
+  await waitFor(() => fake.store.has(`likes/s1_${q}`) && btn().classList.contains("on"), "liked");
+  const counts = () => JSON.parse(fake.store.get("meta/likes").data);
+  ok(counts()[q] === 1 && /Liked/.test(btn().textContent) && /1/.test(btn().textContent), "liking stores the like and shows the count");
+  fake.setUser(S2); await sleep(30);
+  const r2 = await api.toggleLike({ attemptId: `${a1}_s2`, qid: q, like: true });
+  ok(r2.liked && r2.count === 2 && counts()[q] === 2, "a second student's like adds to the count");
+  ok((await api.toggleLike({ attemptId: `${a1}_s2`, qid: q, like: true })).count === 2, "liking twice counts once");
+  ok((await api.toggleLike({ attemptId: `${a1}_s2`, qid: q })).liked === false && counts()[q] === 1 && !fake.store.has(`likes/s2_${q}`), "toggling again removes the like");
+  await api.toggleLike({ attemptId: `${a1}_s2`, qid: q, like: true });
+  let msg = ""; try { await api.toggleLike({ attemptId: `${a1}_s1`, qid: q, like: true }); } catch (e) { msg = e.message; }
+  ok(/not found/i.test(msg), "cannot like through someone else's result");
+  msg = ""; try { await api.toggleLike({ attemptId: `${a1}_s2`, qid: "nope", like: true }); } catch (e) { msg = e.message; }
+  ok(/not in this set/.test(msg), "only questions in the student's own set");
+  let denied = false; try { await fs.setDoc(fs.doc({ __db: true }, "likes", `s2_${qids1[0]}`), { uid: "s2", qid: qids1[0] }); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "students cannot write likes directly");
+  denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "likes", `s1_${q}`)); } catch (e) { denied = /permission/.test(e.message); }
+  ok(denied, "students cannot read other students' likes");
+  // practice: only liked questions
+  let pr = null; msg = "";
+  try { pr = await api.startPractice({ minLikes: 2, count: 5 }); } catch (e) { msg = e.message; }
+  ok((pr && pr.questionIds.length && pr.questionIds.every((id) => (counts()[id] || 0) >= 2)) || /No questions with 2\+ likes/.test(msg), "practice with \"2+ likes\" only gives questions with at least 2 likes");
+  await go("#/history"); await go("#/practise");
+  await waitFor(() => $(".panel .likes-filter"), "practice likes menu");
+  ok([...$(".panel .likes-filter").options].some((o) => o.value === "3"), "students can choose popular questions when practising");
+  // teachers: cannot like; filter the bank by likes
+  fake.setUser(T); await sleep(50);
+  msg = ""; try { await api.toggleLike({ attemptId: `${a1}_s1`, qid: q, like: true }); } catch (e) { msg = e.message; }
+  ok(/Only students/.test(msg), "teachers cannot like questions");
+  await go("#/t"); await go("#/t/bank");
+  await waitFor(() => $(".likes-filter") && $$(".qcard").length, "bank with likes filter");
+  set($(".likes-filter"), "1");
+  await waitFor(() => $$(".qcard").length >= 1 && $$(".qcard").every((c) => c.querySelector(".like-badge")), "bank filtered by likes", 8000).catch(() => {});
+  ok($$(".qcard").length >= 1 && $$(".qcard").every((c) => c.querySelector(".like-badge")) && byText(".qcard .like-badge", "2 likes"), "question bank can be filtered by number of likes (badge shows the count)");
+  set($(".likes-filter"), "top");
+  await sleep(30);
+  ok($$(".qcard")[0] && $$(".qcard")[0].id === `q-${q}`, "\"Most liked first\" puts the most liked question on top");
+  set($(".likes-filter"), "");
+  await go("#/t");
+}
+
 console.log("10. admin");
 await go("#/t/admin");
 await waitFor(() => byText("h2", "Teachers"), "admin");

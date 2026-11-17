@@ -52,6 +52,7 @@ const RATE_LIMITS = {
   explain:     { what: "Explain cards marked",  perWindow: 20, windowMin: 10, perDay: 100 },
   feedback:    { what: "feedback messages",     perWindow: 30, windowMin: 10, perDay: 150 },
   progress:    { what: "progress summaries",    perWindow: 30, windowMin: 10, perDay: 300 },
+  like:        { what: "likes",                 perWindow: 60, windowMin: 10, perDay: 400 },
 };
 async function rateLimit(user, action, now = Date.now()) {
   if (user.isTeacher) return;
@@ -195,12 +196,21 @@ async function chapterLimit(user) {
 const withinLimit = (limit, chapters) => !limit || ((chapters || []).length > 0 && chapters.every((c) => limit.chapters.has(String(c))));
 const limitMessage = (limit) => `${limit.form} practice covers Ch ${[...limit.chapters].join(", ")} only.`;
 
-/** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic / skill. */
+/** Like counts per question: meta/likes.data = JSON {qid: n} (one text field, like meta/questionIndex). */
+async function likeCounts() {
+  const d = await db.doc("meta/likes").get();
+  if (!d.exists || typeof d.get("data") !== "string") return {};
+  try { return JSON.parse(d.get("data")) || {}; } catch (e) { return {}; }
+}
+
+/** Start a practice set: random questions, optionally limited to one textbook chapter / topic / subtopic / skill,
+ *  and to questions with at least `minLikes` likes from students. */
 exports.startPractice = onCall(async (request) => {
   const user = await requireMember(request);
   await rateLimit(user, "start");
   const { topic, subtopic, chapter, skill } = request.data || {};
   const count = Math.max(1, Math.min(MAX_PRACTICE, parseInt((request.data || {}).count, 10) || 10));
+  const minLikes = Math.max(0, Math.min(1000, parseInt((request.data || {}).minLikes, 10) || 0));
 
   // One read: meta/questionIndex lists every question's book/chapters/subtopics (written by the Admin import).
   // Older data without the index falls back to reading the question documents.
@@ -226,13 +236,18 @@ exports.startPractice = onCall(async (request) => {
     .filter((e) => !skill || e.skills.includes(String(skill)))
     .map((e) => e.id)
     .filter((id) => !blocked.has(id));
+  if (minLikes) {
+    const likes = await likeCounts();
+    pool = pool.filter((id) => (likes[id] || 0) >= minLikes);
+    if (!pool.length) throw new HttpsError("not-found", `No questions with ${minLikes}+ like${minLikes > 1 ? "s" : ""} match that choice yet — try "All questions".`);
+  }
   if (!pool.length) throw new HttpsError("not-found", "No questions match that choice yet.");
   const questionIds = shuffle(pool).slice(0, count);
 
   const ref = await db.collection("sessions").add({
     uid: user.uid, email: user.email, mode: "practice",
     topic: topic || null, subtopic: subtopic || null, chapter: chapter ? String(chapter) : null, skill: skill ? String(skill) : null,
-    questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
+    minLikes: minLikes || null, questionIds, submitted: false, createdAt: FieldValue.serverTimestamp(),
   });
   return { sessionId: ref.id, questionIds };
 });
@@ -636,6 +651,40 @@ exports.getReview = onCall(async (request) => {
  * teachers of the student's class (the assignment's class, or all their classes for practice sets).
  * data: { attemptId, qid, kind: "error"|"explain", type?, note?, remove? }
  */
+/**
+ * Like / unlike a question (students only), from the review page of one of their own results.
+ *   data: { attemptId, qid, like?: true|false }   (like omitted = toggle)   → { liked, count }
+ * likes/{uid}_{qid} records who liked what (student reads own, teachers read all); meta/likes.data holds the counts.
+ */
+exports.toggleLike = onCall(async (request) => {
+  const user = await requireMember(request);
+  if (user.isTeacher || !/@syss\.edu\.hk$/i.test(user.email)) throw new HttpsError("permission-denied", "Only students can like questions.");
+  await rateLimit(user, "like");
+  const d = request.data || {};
+  const qid = String(d.qid || "");
+  if (!d.attemptId || !/^[\w.\-]+$/.test(qid)) throw new HttpsError("invalid-argument", "Missing question.");
+  const at = await db.doc(`attempts/${String(d.attemptId)}`).get();
+  if (!at.exists || at.get("uid") !== user.uid) throw new HttpsError("not-found", "Result not found.");
+  if (!(at.get("questionIds") || []).includes(qid)) throw new HttpsError("invalid-argument", "That question is not in this set.");
+  const likeRef = db.doc(`likes/${user.uid}_${qid}`), cRef = db.doc("meta/likes");
+  return db.runTransaction(async (tx) => {
+    const [l, c] = await Promise.all([tx.get(likeRef), tx.get(cRef)]);
+    let counts = {};
+    if (c.exists && typeof c.get("data") === "string") { try { counts = JSON.parse(c.get("data")) || {}; } catch (e) { counts = {}; } }
+    const want = d.like === undefined ? !l.exists : !!d.like;
+    if (want && !l.exists) {
+      tx.set(likeRef, { uid: user.uid, email: user.email, qid, at: FieldValue.serverTimestamp() });
+      counts[qid] = (counts[qid] || 0) + 1;
+    } else if (!want && l.exists) {
+      tx.delete(likeRef);
+      counts[qid] = Math.max(0, (counts[qid] || 0) - 1);
+      if (!counts[qid]) delete counts[qid];
+    }
+    tx.set(cRef, { data: JSON.stringify(counts), updatedAt: FieldValue.serverTimestamp() });
+    return { liked: want, count: counts[qid] || 0 };
+  });
+});
+
 const FEEDBACK_TYPES = ["key", "wording", "figure", "solution", "other"];
 exports.sendFeedback = onCall(async (request) => {
   const user = await requireMember(request);

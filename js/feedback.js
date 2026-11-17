@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611171454";
+import { db, auth, api } from "./fb.js?v=202611171510";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611171454";
-import { getQuestions, renderQuestion, sourceLabel } from "./questions.js?v=202611171454";
-import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611171454";
-import { setBadge } from "./chrome.js?v=202611171454";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611171510";
+import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611171510";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611171510";
+import { setBadge } from "./chrome.js?v=202611171510";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -47,10 +47,50 @@ export async function attachFeedbackBars(page, ctx) {
     bars.set(q.id, bar);
     drawBar(bar, q.id, ctx, new Map());
   });
-  try {
-    const mine = await myFeedback([...bars.keys()]);
-    if (mine.size) bars.forEach((bar, qid) => drawBar(bar, qid, ctx, mine));
-  } catch (e) { console.warn("feedback", e); }
+  if (ctx.canLike) {
+    try { [ctx.counts, ctx.liked] = await Promise.all([getLikeCounts(true), myLikes([...bars.keys()])]); } catch (e) { console.warn("likes", e); }
+  }
+  let mine = new Map();
+  try { mine = await myFeedback([...bars.keys()]); } catch (e) { console.warn("feedback", e); }
+  bars.forEach((bar, qid) => drawBar(bar, qid, ctx, mine));
+}
+
+/** Questions this student has liked (of these): Set of qids. */
+async function myLikes(qids) {
+  const uid = auth.currentUser && auth.currentUser.uid;
+  const out = new Set();
+  if (!uid) return out;
+  for (const part of chunk([...new Set(qids)], 30)) {
+    const snap = await getDocs(query(collection(db, "likes"), where("uid", "==", uid), where("qid", "in", part)));
+    snap.forEach((d) => out.add(d.data().qid));
+  }
+  return out;
+}
+
+/** 👍 Like toggle for one question (students only). */
+function likeButton(qid, ctx) {
+  const liked = () => !!(ctx.liked && ctx.liked.has(qid));
+  const n = () => (ctx.counts && ctx.counts[qid]) || 0;
+  const b = el("button", { type: "button", class: "btn small fbk-like" });
+  const paint = () => {
+    b.classList.toggle("on", liked());
+    b.setAttribute("aria-pressed", liked() ? "true" : "false");
+    b.title = liked() ? "You like this question — click to undo" : "Like this question (a good one to practise)";
+    b.replaceChildren(icon("thumb-up"), liked() ? " Liked" : " Like", n() ? el("span", { class: "fbk-like-n" }, ` ${n()}`) : "");
+  };
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    try {
+      const r = await api.toggleLike({ attemptId: ctx.attemptId, qid, like: !liked() });
+      ctx.liked = ctx.liked || new Set(); ctx.counts = ctx.counts || {};
+      if (r.liked) ctx.liked.add(qid); else ctx.liked.delete(qid);
+      ctx.counts[qid] = r.count; setLikeCount(qid, r.count);
+      paint();
+    } catch (e) { toast(errMsg(e), "error"); }
+    b.disabled = false;
+  });
+  paint();
+  return b;
 }
 
 function drawBar(bar, qid, ctx, mine) {
@@ -64,6 +104,7 @@ function drawBar(bar, qid, ctx, mine) {
   };
   const row = el("div", { class: "fbk-row" });
   const panel = el("div", { class: "fbk-panel", hidden: true });
+  if (ctx.canLike) row.append(likeButton(qid, ctx));
 
   // Explain in class (only once the solutions are shown)
   if (ctx.revealed) {

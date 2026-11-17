@@ -1,9 +1,9 @@
-import { db, storage } from "./fb.js?v=202611171454";
+import { db, storage } from "./fb.js?v=202611171510";
 import { collection, getDocs, query, where, documentId, doc, getDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, chunk } from "./ui.js?v=202611171454";
-import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611171454";
+import { el, chunk } from "./ui.js?v=202611171510";
+import { SYLLABUS, SKILLS } from "./syllabus.js?v=202611171510";
 
 const cache = new Map();
 let allLoaded = false;
@@ -16,6 +16,21 @@ export async function getQuestions(ids) {
   }
   return ids.map((id) => cache.get(id)).filter(Boolean);
 }
+
+/** Students' like counts per question (meta/likes.data = JSON {qid: n}), cached for the page; force to reload. */
+let likesCache = null;
+export async function getLikeCounts(force = false) {
+  if (!likesCache || force) {
+    likesCache = {};
+    try {
+      const s = await getDoc(doc(db, "meta", "likes"));
+      if (s.exists() && typeof s.data().data === "string") likesCache = JSON.parse(s.data().data) || {};
+    } catch (e) { console.warn("likes", e); }
+  }
+  return likesCache;
+}
+export const likeCountOf = (qid) => (likesCache && likesCache[qid]) || 0;
+export function setLikeCount(qid, n) { if (likesCache) { if (n) likesCache[qid] = n; else delete likesCache[qid]; } }
 
 export async function getAllQuestions() {
   if (!allLoaded) {

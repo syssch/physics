@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611171454";
+import { db, api, auth } from "./fb.js?v=202611171510";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611171454";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611171454";
-import { runQuiz, showReview } from "./quiz.js?v=202611171454";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611171454";
-import { setDue, setChip } from "./chrome.js?v=202611171454";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611171454";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611171510";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611171510";
+import { runQuiz, showReview } from "./quiz.js?v=202611171510";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611171510";
+import { setDue, setChip } from "./chrome.js?v=202611171510";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611171510";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -72,17 +72,20 @@ async function practicePanel(limit = null) {
   const syl = syllabusFilters(limitBooks(await getBooks(), limit));
   const sk = skillFilter();
   const countSel = el("select", {}, [3, 5, 10, 15, 20].map((n) => el("option", { value: n, selected: n === 3 }, `${n} questions`)));
+  const likeSel = el("select", { "aria-label": "Likes", class: "likes-filter" }, [["", "All questions"], ["1", "Liked by students (1+ likes)"], ["3", "Popular (3+ likes)"]]
+    .map(([v, l]) => el("option", { value: v }, l)));
   const go = el("button", { class: "btn primary", type: "button" }, "Start practice");
   go.addEventListener("click", async () => {
     go.disabled = true;
     try {
-      await startSet("practice", { topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, skill: sk.skill || null, count: Number(countSel.value) });
+      await startSet("practice", { topic: syl.book || null, chapter: syl.chapter || null, subtopic: syl.subtopic || null, skill: sk.skill || null,
+        ...(likeSel.value ? { minLikes: Number(likeSel.value) } : {}), count: Number(countSel.value) });
     } catch (e) { toast(errMsg(e), "error"); go.disabled = false; }
   });
   return el("div", { class: "panel" }, [el("h2", {}, "Random practice set"),
     el("p", { class: "muted" }, "Pick a book, chapter, subtopic or skill (or leave them on \"All\") and get a random set of questions. You'll see the answers when you submit."),
     limit ? el("p", { class: "notice f3-limit" }, `${limit.form} practice covers ${limitText(limit)} — the chapters you learn in ${limit.form}.`) : null,
-    el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, go])]);
+    el("div", { class: "row" }, [...syl.nodes, sk.node, countSel, likeSel, go])]);
 }
 
 /** Start a practice set (kind "practice" or "mistakes") and open it; remembers the choices for "Continue with another set". */
@@ -246,12 +249,12 @@ export async function practiceView(user, sessionId) {
     const pick = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
     opts = opts || (sd.mode === "mistakes"
       ? { kind: "mistakes", args: pick({ topic: sd.topic, chapter: sd.chapter, count: ids.length }) }
-      : { kind: "practice", args: pick({ topic: sd.topic, subtopic: sd.subtopic, chapter: sd.chapter, skill: sd.skill, count: ids.length }) });
+      : { kind: "practice", args: pick({ topic: sd.topic, subtopic: sd.subtopic, chapter: sd.chapter, skill: sd.skill, minLikes: sd.minLikes, count: ids.length }) });
   }
   // after marking: "Continue with another set" starts a new set with the same choices
   const next = { label: "Continue with another set", run: () => startSet(opts.kind, opts.args) };
   await runQuiz({
-    title, questionIds: ids, saveKey: `resp-practice-${sessionId}`, next,
+    title, questionIds: ids, saveKey: `resp-practice-${sessionId}`, next, canLike: !user.isTeacher,
     submit: async (responses) => { const r = await api.submitAnswers({ sessionId, responses }); if (!user.isTeacher) refreshStudentStatus(user); return r; },
   });
 }
@@ -263,7 +266,7 @@ export async function doAssignment(user, classId, assignmentId) {
   const data = a.data();
   await runQuiz({
     title: data.title, subtitle: `Due ${fmtDate(data.dueAt)}`, questionIds: data.questionIds,
-    showSource: false, saveKey: `resp-asg-${assignmentId}`,
+    showSource: false, saveKey: `resp-asg-${assignmentId}`, canLike: !user.isTeacher,
     submit: async (responses) => { const r = { ...(await api.submitAnswers({ classId, assignmentId, responses })), dueAt: toDate(data.dueAt) }; if (!user.isTeacher) refreshStudentStatus(user); return r; },
   });
 }
@@ -273,7 +276,7 @@ export async function reviewView(user, attemptId) {
   try {
     const r = await api.getReview({ attemptId });
     const questions = await getQuestions(r.questionIds);
-    showReview({ title: r.title || "Review", questions, responses: r.responses, result: r });
+    showReview({ title: r.title || "Review", questions, responses: r.responses, result: r, canLike: !user.isTeacher });
   } catch (e) {
     mount(el("p", { class: "error" }, errMsg(e)));
   }

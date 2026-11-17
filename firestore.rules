@@ -51,6 +51,11 @@ service cloud.firestore {
     match /answerKeys/{qid} {
       allow read, write: if isTeacher();
     }
+    // Likes on questions (written by the toggleLike Cloud Function; counts in meta/likes).
+    match /likes/{id} {
+      allow read: if isTeacher() || (isSchool() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
     match /meta/{doc} {
       allow read: if isMember();
       allow write: if isTeacher();

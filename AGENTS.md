@@ -44,7 +44,7 @@ Read `README.md` for the full feature description.
 | `js/explain.js` | Explain cards; `readStats()` (cards read / this week / last) used by progress pages |
 | `js/forms.js` | `FORM_CHAPTERS` (F3 → Ch 1, 2, 17, 18, 19) and helpers; mirrored in `functions/index.js` — keep identical |
 | `js/docx.js`, `js/roster.js`, `js/syllabus.js` | Word export, class lists, syllabus data |
-| `functions/index.js` | callables: `startPractice`, `startMistakes`, `submitAnswers`, `getReview`, `getLeaderboard`, `rebuildLeaderboards`, `explainRead`, `figureData`, `sendFeedback`, `myProgress`, `rebuildMembers`; trigger `syncMembers` |
+| `functions/index.js` | callables: `startPractice`, `startMistakes`, `submitAnswers`, `getReview`, `getLeaderboard`, `rebuildLeaderboards`, `explainRead`, `figureData`, `sendFeedback`, `toggleLike`, `myProgress`, `rebuildMembers`; trigger `syncMembers` |
 
 Firestore collections and who can read them are listed in `README.md` ("Firestore layout"). Collections written only
 by functions use `allow write: if false` with teacher read.
@@ -61,6 +61,9 @@ by functions use `allow write: if false` with teacher read.
 - F3 students (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise, Redo my mistakes and Explain
   (`FORM_CHAPTERS` in `js/forms.js` and `functions/index.js`); teachers and assignments are not limited.
 - Rate limits (`RATE_LIMITS`, teachers exempt) on student-facing callables: call `rateLimit(user, bucket)`.
+- Likes: `toggleLike({attemptId, qid, like?})` (students only, question must be in their own attempt) writes
+  `likes/{uid}_{qid}` and the counts in `meta/likes.data` (JSON text) in one transaction; `startPractice({minLikes})`
+  filters by them; client `getLikeCounts()` / `likeCountOf()` in `questions.js`, filter in `questionFilters()`.
 - Feedback docs: teachers may change only `status`, `handledBy`, `handledAt` and `reply` (string ≤ 300 or null; shown to
   the student on a dismissed report; cleared on Reopen and when the student reports again).
 
@@ -78,7 +81,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 294 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 308 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

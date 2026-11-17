@@ -21,6 +21,7 @@ export function checkRead(path, data) {
         return isTeacher() || (isSchool() && (fake.store.get(`classes/${s[1]}`)?.studentEmails || []).includes(myEmail()));
       case "explainProgress": return isSchool() && (s[1] === me().uid || isTeacher());
       case "feedback": return isTeacher() || (isSchool() && data && data.uid === me().uid);
+      case "likes": return isTeacher() || (isSchool() && data && data.uid === me().uid);
       case "attempts": case "sessions": return isTeacher() && s[0] === "attempts" || (isSchool() && data && data.uid === me().uid);
       default: return false;
     }

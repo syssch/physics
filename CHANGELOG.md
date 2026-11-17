@@ -5,6 +5,11 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-17
 
+- **Likes on questions**: students tap **Like** under any question on a review page (once each, tap again to undo; shows
+  the count). Students can practise "Liked by students (1+)" or "Popular (3+ likes)"; teachers filter the question
+  bank / assignment builder / printable paper by likes (1+ … 10+, Most liked first) and see a like badge in the bank.
+  New callable `toggleLike` (rate bucket `like`), collection `likes/{uid}_{qid}`, counts in `meta/likes`,
+  `startPractice({minLikes})`; rules + `tests/fakes/rules.mjs`. *deploy.command + push.* Tests: 308.
 - **Practice / assignment bottom bar**: darker (`.submitbar` in `css/app.css`, #1d2939 with light text) and the "N of M
   answered" count now sits just before the Submit button (both on the right). *Push.* Tests: 294.
 - **Solution updated** (question data): 2025-26 F5 E3 Q19 — the solution now follows its figure (currents 3I splitting
