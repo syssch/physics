@@ -199,6 +199,7 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
 - *Dark theme*: the moon / sun button on the top bar (next to the initials) switches between light and dark. The
   choice is remembered on that device.
+- *Leaderboard*: the top 10 show 🥇 🥈 🥉 for 1st–3rd and 🏅 for 4th–10th.
 - *Likes*: on a review page students can tap **Like** under any question (students only; once each, tap again to undo;
   the button shows how many students like it). In *Practise* they can choose "Liked by students (1+ likes)" or "Popular
   (3+ likes)"; teachers can filter the question bank, assignment builder and printable paper by likes (1+ … 10+, or

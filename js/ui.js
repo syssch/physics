@@ -65,4 +65,10 @@ export const store = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 
+/** Leaderboard rank with an emoji for the top 10: 🥇 🥈 🥉, then 🏅 for 4–10. */
+export const RANK_EMOJI = ["🥇", "🥈", "🥉"];
+export function rankCell(rank) {
+  const e = rank >= 1 && rank <= 3 ? RANK_EMOJI[rank - 1] : rank >= 4 && rank <= 10 ? "🏅" : "";
+  return el("td", { class: "rank" }, e ? [el("span", { class: "rank-emoji", "aria-hidden": "true" }, e), " ", String(rank)] : String(rank));
+}
 export function chunk(arr, n) { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; }

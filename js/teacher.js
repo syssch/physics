@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611172313";
+import { db, storage, api } from "./fb.js?v=202611181904";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store } from "./ui.js?v=202611172313";
-import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611172313";
-import { isSchoolEmail } from "./config.js?v=202611172313";
-import { importExplainBundle } from "./explain.js?v=202611172313";
-import { recordHref } from "./studentrecord.js?v=202611172313";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611172313";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611172313";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611172313";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store, rankCell } from "./ui.js?v=202611181904";
+import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611181904";
+import { isSchoolEmail } from "./config.js?v=202611181904";
+import { importExplainBundle } from "./explain.js?v=202611181904";
+import { recordHref } from "./studentrecord.js?v=202611181904";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611181904";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611181904";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611181904";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -520,7 +520,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611172313");
+      const { buildPaperDocx } = await import("./docx.js?v=202611181904");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -602,7 +602,7 @@ export async function leaderboardView(user) {
       const r = await api.getLeaderboard({ form: formSel.value, period });
       if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, "No practice points in this period yet.")); return; }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points", "Practice sets", "Assignments", "Explain cards", "Check-in bonuses", "Email"].map((h) => el("th", {}, h)))]);
-      r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets || 0)), el("td", {}, String(x.asg || 0)), el("td", {}, String(x.cards || 0)), el("td", {}, String(x.bonus || 0)), el("td", { class: "muted" }, x.email || "")])));
+      r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [rankCell(x.rank), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets || 0)), el("td", {}, String(x.asg || 0)), el("td", {}, String(x.cards || 0)), el("td", {}, String(x.bonus || 0)), el("td", { class: "muted" }, x.email || "")])));
       body.replaceChildren(el("p", { class: "muted" }, `${r.form} · ${period === "all" ? "all time" : r.key} · ${r.rows.length} student(s) with points. Students see the top 10 and their own rank.`), t);
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }

@@ -3,6 +3,14 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-18
+
+- **Rank emoji on the leaderboard**: 🥇 🥈 🥉 for ranks 1–3 and 🏅 for 4–10, on the student board and the teacher's
+  full list (`rankCell()` in `js/ui.js`, `.rank-emoji` in `css/style.css`). *Push.* Tests: 314.
+- **Figure fixed** (question data): 2022-23 F4 T2 Q7 — re-cropped from the paper so it shows the velocity arrows
+  (P 5 m s⁻¹, Q 3 m s⁻¹, both to the right). Wording: "collide head on" → "move in the same direction, and P catches up and
+  collides with Q". *Re-import the bundle and select this figure.*
+
 ## 2026-11-17
 
 - **Faster teacher dashboard**: classes are read without their class lists (only counts are shown), every class's

@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611172313";
+import { db, api, auth } from "./fb.js?v=202611181904";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate } from "./ui.js?v=202611172313";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611172313";
-import { runQuiz, showReview } from "./quiz.js?v=202611172313";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611172313";
-import { setDue, setChip } from "./chrome.js?v=202611172313";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611172313";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, rankCell } from "./ui.js?v=202611181904";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611181904";
+import { runQuiz, showReview } from "./quiz.js?v=202611181904";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611181904";
+import { setDue, setChip } from "./chrome.js?v=202611181904";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611181904";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -189,7 +189,7 @@ function leaderboardPanel(user) {
         return;
       }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points"].map((h) => el("th", {}, h)))]);
-      rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [el("td", {}, String(x.rank)), el("td", {}, x.label), el("td", {}, String(x.pts))])));
+      rows.forEach((x) => t.append(el("tr", { class: x.me ? "me" : "" }, [rankCell(x.rank), el("td", {}, x.label), el("td", {}, String(x.pts))])));
       body.replaceChildren(...(formSel ? [] : [myRankLine(r)]), t);
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }

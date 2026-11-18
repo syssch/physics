@@ -406,6 +406,9 @@ console.log("8c. leaderboard");
   await waitFor(() => /4A · \d+ pts/.test($(".chip-pts")?.textContent || ""), "points chip");
   ok(true, "top bar shows the student's class and points");
   ok($(".leaderboard tr.me") && byText(".leaderboard tr.me", "4A"), "student sees the board with their own row highlighted");
+  { const cells = $$(".leaderboard table.board td.rank");
+    ok(cells.length && cells.every((td) => { const n = parseInt(td.textContent.replace(/\D+/g, ""), 10), e = td.querySelector(".rank-emoji")?.textContent;
+      return e === (n === 1 ? "🥇" : n === 2 ? "🥈" : n === 3 ? "🥉" : "🏅"); }), "top-10 ranks show 🥇 🥈 🥉 then 🏅"); }
   { const lbw = await api.getLeaderboard({ period: "week" }), line = $(".leaderboard .my-rank")?.textContent || "";
     ok(lbw.me && line === `You have ${lbw.me.pts.toLocaleString("en")} points, ranking ${lbw.me.rank} of ${lbw.total}`, "student sees \"You have N points, ranking R of T\" above the board"); }
   const lb = await api.getLeaderboard({ period: "all" });
