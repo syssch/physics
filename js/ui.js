@@ -65,6 +65,19 @@ export const store = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 
+/** Board picker values for teachers: "school", "F3".."F6", or "class:<id>". */
+export function boardChoice(v) {
+  if (v === "school") return { scope: "school" };
+  if (/^class:/.test(v)) return { scope: "class", classId: v.slice(6) };
+  return { scope: "form", form: v };
+}
+export function boardOptions(classes, selected) {
+  const opt = (v, l) => el("option", { value: v, selected: v === selected }, l);
+  return [opt("school", "Whole school"),
+    el("optgroup", { label: "Forms" }, ["F3", "F4", "F5", "F6"].map((f) => opt(f, f))),
+    el("optgroup", { label: "Classes" }, classes.map((c) => opt(`class:${c.id}`, c.name)))];
+}
+
 /** Leaderboard rank with an emoji for the top 10: 🥇 🥈 🥉, then 🏅 for 4–10. */
 export const RANK_EMOJI = ["🥇", "🥈", "🥉"];
 export function rankCell(rank) {

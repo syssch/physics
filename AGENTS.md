@@ -61,6 +61,8 @@ by functions use `allow write: if false` with teacher read.
   day; +500 weekly check-in on the 3rd active day; each assignment counts once. Hong Kong time.
 - F3 students (class name starting with 3) only get Ch 1, 2, 17, 18, 19 in Practise, Redo my mistakes and Explain
   (`FORM_CHAPTERS` in `js/forms.js` and `functions/index.js`); teachers and assignments are not limited.
+- Leaderboards: `addPoints()` writes every point to three boards — form `F4`, class `C_<classId>`, `SCHOOL` (`boardScopes()`,
+  ids `lbDocId(board, period, key)`); `getLeaderboard({period, scope: class|form|school, form?, classId?})`; recount rebuilds all three.
 - Rate limits (`RATE_LIMITS`, teachers exempt) on student-facing callables: call `rateLimit(user, bucket)`.
 - Likes: `toggleLike({attemptId, qid, like?})` (students only, question must be in their own attempt) writes
   `likes/{uid}_{qid}` and the counts in `meta/likes.data` (JSON text) in one transaction; `startPractice({minLikes})`
@@ -86,7 +88,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 314 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 319 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`

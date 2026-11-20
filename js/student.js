@@ -1,12 +1,12 @@
-import { db, api, auth } from "./fb.js?v=202611181904";
+import { db, api, auth } from "./fb.js?v=202611201833";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, rankCell } from "./ui.js?v=202611181904";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611181904";
-import { runQuiz, showReview } from "./quiz.js?v=202611181904";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611181904";
-import { setDue, setChip } from "./chrome.js?v=202611181904";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611181904";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611201833";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611201833";
+import { runQuiz, showReview } from "./quiz.js?v=202611201833";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611201833";
+import { setDue, setChip } from "./chrome.js?v=202611201833";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611201833";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));
@@ -156,35 +156,46 @@ function myRankLine(r) {
     : el("p", { class: "my-rank muted" }, ["You have ", el("strong", {}, "0"), " points — not ranked yet in this period."]);
 }
 
-/** Leaderboard for the student's form: top 10 and their own rank, for this week / this month / all time. */
+const SCOPES = [["class", "My class"], ["form", "My form"], ["school", "Whole school"]];
+/** Leaderboard: the student's class, form or the whole school — top 10 and their own rank, for this week / this month / all time. */
 function leaderboardPanel(user) {
   const head = el("h2", {}, "Leaderboard");
   const tabs = el("div", { class: "tabs" });
+  const scopeTabs = el("div", { class: "tabs scope-tabs" });
   const body = el("div", {}, el("p", { class: "muted" }, "Loading…"));
-  // teachers previewing the student view have no form of their own: let them pick one
-  const formSel = user && user.isTeacher
-    ? el("select", { "aria-label": "Form" }, ["F3", "F4", "F5", "F6"].map((f) => el("option", { value: f, selected: f === (localStorage.getItem("lbForm") || "F4") }, f)))
-    : null;
-  const panel = el("div", { class: "panel leaderboard" }, [head, el("div", { class: "row" }, [tabs, formSel]), body, el("p", { class: "muted small" }, POINTS_HELP)]);
+  // teachers previewing the student view have no class of their own: let them pick a board
+  const formSel = user && user.isTeacher ? el("select", { "aria-label": "Board" }) : null;
+  if (formSel) {
+    const cur = localStorage.getItem("lbForm") || "F4";
+    formSel.append(...boardOptions([], cur));
+    getDocs(collection(db, "classes")).then((s) => {
+      const cls = s.docs.map((d) => ({ id: d.id, name: d.data().name || d.id })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+      formSel.replaceChildren(...boardOptions(cls, localStorage.getItem("lbForm") || "F4"));
+    }).catch(() => {});
+  }
+  const panel = el("div", { class: "panel leaderboard" }, [head, el("div", { class: "row" }, formSel ? [tabs, formSel] : [scopeTabs, tabs]), body, el("p", { class: "muted small" }, POINTS_HELP)]);
   let period = "week";
+  let scope = (() => { try { return localStorage.getItem("lbScope") || "form"; } catch (e) { return "form"; } })();
   async function show(p) {
     period = p;
     [...tabs.children].forEach((b) => b.classList.toggle("on", b.dataset.p === period));
+    [...scopeTabs.children].forEach((b) => b.classList.toggle("on", b.dataset.s === scope));
     body.replaceChildren(el("p", { class: "muted" }, "Loading…"));
     try {
       if (formSel) { try { localStorage.setItem("lbForm", formSel.value); } catch (e) {} }
-      const r = await api.getLeaderboard(formSel ? { period, form: formSel.value } : { period });
-      if (!r.form) {
+      const r = await api.getLeaderboard(formSel ? { period, ...boardChoice(formSel.value) } : { period, scope });
+      if (!r.form && !(formSel && r.title)) {
         head.textContent = "Leaderboard";
-        body.replaceChildren(el("p", { class: "muted" }, "The leaderboard is by form (F3–F6), worked out from your class name — but none of your classes starts with a form number (like 4A). Ask your physics teacher to check your class."));
+        body.replaceChildren(el("p", { class: "muted" }, formSel ? "No board to show for this choice." : "The leaderboard is worked out from your class name (like 4A) — but none of your classes starts with a form number. Ask your physics teacher to check your class."));
         return;
       }
-      head.textContent = `${r.form} leaderboard` + (formSel ? " (teacher preview: what students see)" : "");
+      const title = r.title || r.form;
+      head.textContent = (title === "Whole school" ? "Whole-school leaderboard" : `${title} leaderboard`) + (formSel ? " (teacher preview: what students see)" : "");
       const rows = r.rows.slice(0, 10);
       if (!rows.length) {
         const when = period === "all" ? "yet" : period === "week" ? "this week" : "this month";
         body.replaceChildren(el("p", { class: "muted" }, formSel
-          ? `No ${r.form} student has practice points ${when}. Try another form or "All time". If students practised before the leaderboard was switched on, click "Recount from results" on the teacher Leaderboard page.`
+          ? `No student on this board has practice points ${when}. Try another board or "All time". If the class and school boards are new, click "Recount from results" on the teacher Leaderboard page.`
           : period === "all" ? "You have 0 points — finish a practice set to get on the board!" : `You have 0 points ${when} — no one has any yet. Be the first!`));
         return;
       }
@@ -194,6 +205,8 @@ function leaderboardPanel(user) {
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }
   PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => show(p) }, label)));
+  SCOPES.forEach(([s, label]) => scopeTabs.append(el("button", { class: "tab", type: "button", "data-s": s,
+    onclick: () => { scope = s; try { localStorage.setItem("lbScope", s); } catch (e) {} show(period); } }, label)));
   if (formSel) formSel.addEventListener("change", () => show(period));
   show("week");
   return panel;

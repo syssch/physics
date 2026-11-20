@@ -199,7 +199,7 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
 - *Dark theme*: the moon / sun button on the top bar (next to the initials) switches between light and dark. The
   choice is remembered on that device.
-- *Leaderboard*: the top 10 show 🥇 🥈 🥉 for 1st–3rd and 🏅 for 4th–10th.
+- *Leaderboard*: students switch between their class, their form and the whole school. The top 10 show 🥇 🥈 🥉 for 1st–3rd and 🏅 for 4th–10th.
 - *Likes*: on a review page students can tap **Like** under any question (students only; once each, tap again to undo;
   the button shows how many students like it). In *Practise* they can choose "Liked by students (1+ likes)" or "Popular
   (3+ likes)"; teachers can filter the question bank, assignment builder and printable paper by likes (1+ … 10+, or
@@ -214,14 +214,14 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   whose answers the student can already see count (an assignment with hidden answers adds nothing until it is released),
   and questions in open assignments are left out. Built by the `startMistakes` Cloud Function from the student's
   `attempts`; the redo attempt is saved like practice, titled "Redo my mistakes".
-- *Leaderboard* (home page): the student's form (from the class name, e.g. 4A → F4) for this week, this month and all
+- *Leaderboard* (home page): three boards — *My class*, *My form* (from the class name, e.g. 4A → F4) and *Whole school* — for this week, this month and all
   time (Hong Kong time; weeks start on Monday). Points: 100 per correct answer in practice and assignments (including Redo my mistakes; each assignment once;
   sets of 3, 5, 10, 15 or 20), +500 for 90%+ or +200 for 75–89% in sets of 5 or more; 300 for marking the Explain card of
   the day as read (once a day, `explainRead` function); +500 check-in bonus once a week on the 3rd day with any practice
   set, assignment or card of the day (`activity/{uid}_{day}`, `checkinBonus/{uid}_{week}`). Students see
-  "You have N points, ranking R of T" and the top 10 (class + name from the class list). Totals live in `leaderboards/{form}_all`, `{form}_week_{2026-W46}`,
-  `{form}_month_{2026-11}` (teacher-readable, written only by Cloud Functions). Teachers: *Leaderboard* on the dashboard
-  shows the full list for any form; *Recount from results* rebuilds the current totals from saved practice results.
+  "You have N points, ranking R of T" and the top 10 (class + name from the class list). Totals live in `leaderboards/{board}_all`, `{board}_week_{2026-W46}`,
+  `{board}_month_{2026-11}`, where board is a form (`F4`), a class (`C_<classId>`) or `SCHOOL` (teacher-readable, written only by Cloud Functions;
+  every point goes to all three). Teachers: *Leaderboard* on the dashboard shows the full list for any class, form or the whole school; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each. At the top, *My progress* (`myProgress` Cloud Function):
   sets done (practice / redo / assignments), questions answered, % correct, sets this week, Explain cards read, % correct by book and by
   chapter (weakest first; chapters with 3+ answers, each with *Practise 5*), and how many questions are waiting in Redo my

@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611181904";
+import { db, storage, api } from "./fb.js?v=202611201833";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store, rankCell } from "./ui.js?v=202611181904";
-import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611181904";
-import { isSchoolEmail } from "./config.js?v=202611181904";
-import { importExplainBundle } from "./explain.js?v=202611181904";
-import { recordHref } from "./studentrecord.js?v=202611181904";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611181904";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611181904";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611181904";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611201833";
+import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611201833";
+import { isSchoolEmail } from "./config.js?v=202611201833";
+import { importExplainBundle } from "./explain.js?v=202611201833";
+import { recordHref } from "./studentrecord.js?v=202611201833";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611201833";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611201833";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611201833";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -520,7 +520,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611181904");
+      const { buildPaperDocx } = await import("./docx.js?v=202611201833");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {
@@ -589,7 +589,10 @@ export function showPaper(cfg, onBack) {
 // ---------------------------------------------------------------- leaderboard
 const LB_PERIODS = [["week", "This week"], ["month", "This month"], ["all", "All time"]];
 export async function leaderboardView(user) {
-  const formSel = el("select", {}, ["F3", "F4", "F5", "F6"].map((f) => el("option", { value: f, selected: f === (store.get("lbForm") || "F4") }, f)));
+  mount(loading());
+  let classes = [];
+  try { classes = (await getDocs(collection(db, "classes"))).docs.map((d) => ({ id: d.id, name: d.data().name || d.id })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true })); } catch (e) {}
+  const formSel = el("select", { "aria-label": "Board" }, boardOptions(classes, store.get("lbForm") || "F4"));
   let period = "week";
   const tabs = el("div", { class: "tabs" });
   const body = el("div", {});
@@ -599,11 +602,11 @@ export async function leaderboardView(user) {
     [...tabs.children].forEach((b) => b.classList.toggle("on", b.dataset.p === period));
     body.replaceChildren(loading());
     try {
-      const r = await api.getLeaderboard({ form: formSel.value, period });
+      const r = await api.getLeaderboard({ ...boardChoice(formSel.value), period });
       if (!r.rows.length) { body.replaceChildren(el("p", { class: "muted" }, "No practice points in this period yet.")); return; }
       const t = el("table", { class: "grid board" }, [el("tr", {}, ["#", "Student", "Points", "Practice sets", "Assignments", "Explain cards", "Check-in bonuses", "Email"].map((h) => el("th", {}, h)))]);
       r.rows.forEach((x) => t.append(el("tr", { class: x.rank <= 10 ? "top" : "" }, [rankCell(x.rank), el("td", {}, x.label), el("td", {}, String(x.pts)), el("td", {}, String(x.sets || 0)), el("td", {}, String(x.asg || 0)), el("td", {}, String(x.cards || 0)), el("td", {}, String(x.bonus || 0)), el("td", { class: "muted" }, x.email || "")])));
-      body.replaceChildren(el("p", { class: "muted" }, `${r.form} · ${period === "all" ? "all time" : r.key} · ${r.rows.length} student(s) with points. Students see the top 10 and their own rank.`), t);
+      body.replaceChildren(el("p", { class: "muted" }, `${r.title || r.form} · ${period === "all" ? "all time" : r.key} · ${r.rows.length} student(s) with points. Students see the top 10 and their own rank.`), t);
     } catch (e) { body.replaceChildren(el("p", { class: "error" }, errMsg(e))); }
   }
   LB_PERIODS.forEach(([p, label]) => tabs.append(el("button", { class: "tab", type: "button", "data-p": p, onclick: () => { period = p; draw(); } }, label)));
@@ -616,8 +619,8 @@ export async function leaderboardView(user) {
     rebuild.disabled = false;
   });
   mount(el("section", {}, [el("h1", {}, "Leaderboard"),
-    el("p", { class: "muted" }, "Points: 100 per correct answer in practice (incl. Redo my mistakes) and assignments (each assignment once), +500 for 90%+ or +200 for 75–89% in sets of 5+ questions; 300 for the Explain card of the day (once a day); +500 once a week for activity on 3 different days. A student's form comes from their class name (e.g. 4A → F4)."),
-    el("div", { class: "row" }, [el("label", {}, ["Form ", formSel]), tabs, rebuild]), body]));
+    el("p", { class: "muted" }, "Points: 100 per correct answer in practice (incl. Redo my mistakes) and assignments (each assignment once), +500 for 90%+ or +200 for 75–89% in sets of 5+ questions; 300 for the Explain card of the day (once a day); +500 once a week for activity on 3 different days. A student's class and form come from their class name (e.g. 4A → F4). There are boards for each class, each form and the whole school; students see their own class, their own form and the whole school."),
+    el("div", { class: "row" }, [el("label", {}, ["Board ", formSel]), tabs, rebuild]), body]));
   draw();
 }
 

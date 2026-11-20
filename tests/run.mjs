@@ -371,7 +371,7 @@ console.log("8c. leaderboard");
   const aAtts = [...fake.store.entries()].filter(([p, d]) => !p.startsWith("attempts/practice_") && p.startsWith("attempts/") && d.uid === "s1").map(([, d]) => d);
   const expPts = [...pAtts, ...aAtts].reduce((t, a) => t + a.score * 100 + bonus(a), 0);
   const lbs = [...fake.store.entries()].filter(([p]) => p.startsWith("leaderboards/"));
-  ok(lbs.length === 3 && lbs.every(([, d]) => d.form === "F4"), "practice points go to the F4 week, month and all-time boards");
+  ok(lbs.filter(([, d]) => d.scope === "form").length === 3 && lbs.filter(([, d]) => d.scope === "form").every(([, d]) => d.form === "F4") && lbs.length === 9, "practice points go to the F4 week, month and all-time boards (and the class and school boards)");
   ok(aAtts.length >= 2 && fake.store.get("leaderboards/F4_all").scores.s1.pts === expPts, `all-time points match the practice and assignment results (${expPts})`);
   ok(lbs.every(([, d]) => d.scores.s1.sets === pAtts.length && d.scores.s1.asg === aAtts.length), "each practice set and each assignment counted once");
   const before = fake.store.get("leaderboards/F4_all").scores.s1.pts;
@@ -414,8 +414,28 @@ console.log("8c. leaderboard");
   const lb = await api.getLeaderboard({ period: "all" });
   ok(lb.rows.length <= 10 && lb.rows.every((x) => !("email" in x)) && lb.me && lb.me.pts === fake.store.get("leaderboards/F4_all").scores.s1.pts, "students get the top 10 and their own rank, without emails");
   ok((await api.getLeaderboard({ period: "all", form: "F5" })).form === "F4", "students only see their own form");
+  { // class and whole-school boards: the same points go to the student's class, form and school boards
+    const s1cls = [...fake.store.entries()].find(([k, d]) => /^classes\/[^/]+$/.test(k) && (d.studentEmails || []).includes("s001@syss.edu.hk") && /^\s*(?:F\.?\s*)?[1-6]/i.test(d.name || ""));
+    const cid = s1cls[0].split("/")[1];
+    const fAll = fake.store.get("leaderboards/F4_all").scores.s1.pts;
+    ok(fake.store.get(`leaderboards/C_${cid}_all`)?.scores.s1.pts === fAll && fake.store.get("leaderboards/SCHOOL_all")?.scores.s1.pts === fAll
+      && fake.store.get(`leaderboards/C_${cid}_all`).scope === "class" && fake.store.get("leaderboards/SCHOOL_all").scope === "school",
+      "points go to the class board and the whole-school board as well as the form board");
+    const lc = await api.getLeaderboard({ period: "all", scope: "class" }), ls = await api.getLeaderboard({ period: "all", scope: "school" });
+    ok(lc.title === s1cls[1].name.split(/\s+/)[0] && lc.me && lc.me.pts === fAll && ls.title === "Whole school" && ls.me && ls.me.pts === fAll && ls.rows.every((x) => !("email" in x)) && ls.rows.length <= 10,
+      "students see their own class board and the whole-school board (top 10 + own rank, no emails)");
+    const other = [...fake.store.keys()].find((k) => /^classes\/[^/]+$/.test(k) && k !== s1cls[0]);
+    if (other) { const lo = await api.getLeaderboard({ period: "all", scope: "class", classId: other.split("/")[1] }); ok(lo.classId === cid, "students cannot open another class's board"); }
+    byText(".leaderboard .scope-tabs .tab", "Whole school").click();
+    await waitFor(() => byText(".leaderboard h2", "Whole-school leaderboard") && $(".leaderboard table"), "school tab");
+    byText(".leaderboard .scope-tabs .tab", "My class").click();
+    await waitFor(() => byText(".leaderboard h2", `${lc.title} leaderboard`) && $(".leaderboard .my-rank"), "class tab");
+    ok(w.localStorage.getItem("lbScope") === "class", "My class / My form / Whole school tabs switch the board and are remembered");
+    byText(".leaderboard .scope-tabs .tab", "My form").click();
+    await waitFor(() => byText(".leaderboard h2", "F4 leaderboard"), "form tab again");
+  }
   byText(".leaderboard .tab", "This month").click();
-  await waitFor(() => $(".leaderboard .tab.on") && $(".leaderboard .tab.on").textContent === "This month" && $(".leaderboard table"), "month tab");
+  await waitFor(() => $(".leaderboard .tabs:not(.scope-tabs) .tab.on")?.textContent === "This month" && $(".leaderboard table"), "month tab");
   ok(true, "period tabs switch between week, month and all time");
   let denied = false; try { await fs.getDoc(fs.doc({ __db: true }, "leaderboards", "F4_all")); } catch (e) { denied = /permission/.test(e.message); }
   ok(denied, "students cannot read the raw leaderboard data");
@@ -428,6 +448,15 @@ console.log("8c. leaderboard");
   const rb = await api.rebuildLeaderboards({});
   const allSets = [...fake.store.entries()].filter(([p, d]) => p.startsWith("attempts/") && d.uid === "s1" && (d.mode === "practice" || d.mode === "assignment")).map(([, d]) => d);
   ok(rb.students >= 1 && fake.store.get("leaderboards/F4_all").scores.s1.pts === allSets.reduce((x, a) => x + a.score * 100 + bonus(a), 0), "recount rebuilds totals from saved practice and assignment results");
+  { const sc = fake.store.get("leaderboards/SCHOOL_all").scores, cb = [...fake.store.entries()].find(([k, d]) => /^leaderboards\/C_.+_all$/.test(k) && d.scores.s1);
+    ok(sc.s1.pts === fake.store.get("leaderboards/F4_all").scores.s1.pts && cb && cb[1].scores.s1.pts === sc.s1.pts, "recount also rebuilds the class and whole-school boards");
+    set($("select[aria-label=Board]"), "school");
+    await waitFor(() => $$("p.muted").some((x) => x.textContent.startsWith("Whole school ·")) && byText("table.board", "s001@syss.edu.hk"), "teacher school board");
+    const cbId = cb[0].slice("leaderboards/C_".length, -4), cbName = fake.store.get(`classes/${cbId}`).name.trim();
+    set($("select[aria-label=Board]"), "class:" + cbId);
+    await waitFor(() => $$("p.muted").some((x) => x.textContent.startsWith(cbName + " ·")) && byText("table.board", "s001@syss.edu.hk"), "teacher class board");
+    ok(true, "teacher can open any class board or the whole-school board (full list with emails)");
+    set($("select[aria-label=Board]"), "F4"); await sleep(50); }
   // teacher/student switch
   byText(".seg a", "Student").click(); await go("#/student");
   await waitFor(() => byText("#nav a", "Practise") && byText(".seg a.on", "Student"), "student view");

@@ -3,8 +3,35 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
-## 2026-11-18
+## 2026-11-20
 
+- **Leaderboards by class and for the whole school**: every point now also goes to a class board (`C_<classId>_…`) and a
+  whole-school board (`SCHOOL_…`) next to the form board. Students switch with *My class / My form / Whole school*; the
+  teacher Leaderboard has a board picker (whole school, F3–F6, any class). `addPoints()` / `boardScopes()` /
+  `getLeaderboard({scope, classId})` / `rebuildLeaderboards` in `functions/index.js`; `boardOptions()`/`boardChoice()` in
+  `js/ui.js`. *deploy.command + push, then click "Recount from results" once* (fills the new boards from past results). Tests: 319.
+- **F6 E2 figures re-cropped** from the DSE papers: 2013-14 1A Q6, 2017-18 1A Q15, 2025-26 E2-2 Q1.4 and Q1.8; 2014-15
+  1A Q16 option axes relabelled 1/u (the DSE 2015 paper printed 1/v). All review items are now fixed. *Re-import
+  bundle-f6e2.json with these 5 figures.*
+
+## 2026-11-19
+
+- **F6 E2 bundle: all review findings fixed** (question data, `bundle-f6e2.json`): 136 questions rewritten to match their
+  figures (numbers, labels, picture-option descriptions, circuits), 34 answer keys corrected, wrong solutions rewritten,
+  one more out-of-syllabus question left out (729 questions), 2022-23 1A Q18 figure lettered A–D. Details at the end of
+  `platform_prep/export/all_ready/F6E2_review_2026-11-19.md`. *Import bundle-f6e2.json with all files in "F6 E2 figures".*
+- **F6 E2 bundle checked and fixed** (`platform_prep/export/all_ready/bundle-f6e2.json`, 2011-12 → 2025-26 F6 E2-1A /
+  E2-2 paraphrased DSE questions; figures in `all_ready/F6 E2 figures/`): question ids renamed from
+  "2025-26 SYSS F6 E2-1A Q1" to `SYSS-2025-26-F6-E2-1A-Q1` (spaces broke likes, problem reports and in-page links);
+  chapter/subtopic list replaced by the main bundle's (its copy would have restored "Celestial Sphere & Apparent
+  Motion"); 4 retrograde/zodiac questions retagged to Geocentric & Heliocentric Models; 2 daily-motion questions
+  (2014-15 E2-2 Q1.2, 2012-13 E2-2 Q1.5) left out as out of syllabus (listed under `excludedOutOfSyllabus`); broken
+  `\varepsilon` in 2016-17 E2-1A Q28 fixed. 730 questions. Original kept in
+  `question_bank/archive/backup_f6e2_20261119/`. *Import: Admin → Import questions with bundle-f6e2.json and all files
+  in "F6 E2 figures".* Note: these questions exist only in the bundle, not in `question_bank/questions/`.
+
+- **Question fixed** (question data): 2013-14 F5 E2 Q31 — options now "(see fig. A)" … "(see fig. D)" (the old text
+  descriptions of C and D were swapped); solution rewritten step by step (size at t = 0, direction, shape). *Re-import the bundle.*
 - **Rank emoji on the leaderboard**: 🥇 🥈 🥉 for ranks 1–3 and 🏅 for 4–10, on the student board and the teacher's
   full list (`rankCell()` in `js/ui.js`, `.rank-emoji` in `css/style.css`). *Push.* Tests: 314.
 - **Figure fixed** (question data): 2022-23 F4 T2 Q7 — re-cropped from the paper so it shows the velocity arrows

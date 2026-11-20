@@ -426,7 +426,14 @@ function periodKeys(ms = Date.now()) {
   return { week: `${wy}-W${String(wk).padStart(2, "0")}`, month: `${y}-${String(m + 1).padStart(2, "0")}`, all: "all" };
 }
 function dayKey(ms = Date.now()) { return new Date(ms + 8 * 3600 * 1000).toISOString().slice(0, 10); }
-const lbDocId = (form, period, key) => period === "all" ? `${form}_all` : `${form}_${period}_${key}`;
+/** Board id prefix: a form ("F4"), a class ("C_<classId>") or the whole school ("SCHOOL"). */
+const lbDocId = (scope, period, key) => period === "all" ? `${scope}_all` : `${scope}_${period}_${key}`;
+/** The three boards a student's points go to: their class, their form and the whole school. */
+const boardScopes = (info) => [
+  { id: info.form, meta: { scope: "form", form: info.form } },
+  { id: `C_${info.classId}`, meta: { scope: "class", form: info.form, classId: info.classId, className: info.className } },
+  { id: "SCHOOL", meta: { scope: "school" } },
+];
 /** The student's form (F1–F6) and class, from the first class whose name starts with a form number ("4A", "F.4 Phy"). */
 async function studentForm(email) {
   const cls = await db.collection("classes").where("studentEmails", "array-contains", email).get();
@@ -443,7 +450,7 @@ async function boardLabel(info, email, fallback) {
   const cls = info.className.split(/\s+/)[0];
   return `${cls} ${(row && row.name) || fallback || email.split("@")[0]}`.trim();
 }
-/** Add points to the student's form boards (week, month, all time). counts: { sets, cards, bonus }. */
+/** Add points to the student's class, form and whole-school boards (week, month, all time). counts: { sets, cards, bonus }. */
 async function addPoints(user, pts, ms, counts = {}) {
   const info = await studentForm(user.email);
   if (!info) return null;
@@ -451,9 +458,11 @@ async function addPoints(user, pts, ms, counts = {}) {
   const entry = { pts: FieldValue.increment(pts), label, email: user.email };
   for (const k of ["sets", "asg", "cards", "bonus"]) if (counts[k]) entry[k] = FieldValue.increment(counts[k]);
   for (const [period, key] of Object.entries(periodKeys(ms))) {
-    await db.doc(`leaderboards/${lbDocId(info.form, period, key)}`).set({
-      form: info.form, period, key, updatedAt: FieldValue.serverTimestamp(), scores: { [user.uid]: entry },
-    }, { merge: true });
+    for (const b of boardScopes(info)) {
+      await db.doc(`leaderboards/${lbDocId(b.id, period, key)}`).set({
+        ...b.meta, period, key, updatedAt: FieldValue.serverTimestamp(), scores: { [user.uid]: entry },
+      }, { merge: true });
+    }
   }
   return info.form;
 }
@@ -502,8 +511,9 @@ function ranked(scores) {
 }
 
 /**
- * Leaderboard for one form and period ("week" | "month" | "all").
- * Students: their own form, top 10 plus their own rank. Teachers: any form, the full list (with email).
+ * Leaderboard for one board and period ("week" | "month" | "all").
+ * scope: "class" | "form" (default) | "school". Students: their own class / form, or the whole school — top 10 plus
+ * their own rank. Teachers: any class (classId), any form (form) or the whole school — the full list (with email).
  */
 exports.getLeaderboard = onCall(async (request) => {
   const user = await requireMember(request);
@@ -511,23 +521,37 @@ exports.getLeaderboard = onCall(async (request) => {
   const data = request.data || {};
   const period = ["week", "month", "all"].includes(data.period) ? data.period : "week";
   const teacher = await isTeacher(user.email);
-  let form;
-  if (teacher && data.form) form = /^F[1-6]$/.test(String(data.form)) ? String(data.form) : null;
-  else { const info = await studentForm(user.email); form = info && info.form; }
-  if (!form) return { form: null, period, rows: [], me: null };
+  const scope = ["class", "form", "school"].includes(data.scope) ? data.scope : "form";
+  let form = null, board = null, title = null, classId = null;
+  if (teacher && (data.form || data.classId || scope === "school")) {
+    if (scope === "school") { board = "SCHOOL"; title = "Whole school"; }
+    else if (scope === "class") {
+      classId = /^[\w-]{1,64}$/.test(String(data.classId || "")) ? String(data.classId) : null;
+      const c = classId ? await db.doc(`classes/${classId}`).get() : null;
+      if (c && c.exists) { board = `C_${classId}`; title = (c.get("name") || "").trim(); const m = /^\s*(?:F\.?\s*)?([1-6])/i.exec(title); form = m ? `F${m[1]}` : null; }
+    } else { form = /^F[1-6]$/.test(String(data.form)) ? String(data.form) : null; board = form; title = form; }
+    if (!board) return { form: null, scope, period, rows: [], me: null };
+  } else {
+    const info = await studentForm(user.email);
+    if (!info) return { form: null, scope, period, rows: [], me: null };
+    form = info.form;
+    if (scope === "school") { board = "SCHOOL"; title = "Whole school"; }
+    else if (scope === "class") { board = `C_${info.classId}`; classId = info.classId; title = info.className.split(/\s+/)[0]; }
+    else { board = form; title = form; }
+  }
   const keys = periodKeys();
-  const snap = await db.doc(`leaderboards/${lbDocId(form, period, keys[period])}`).get();
+  const snap = await db.doc(`leaderboards/${lbDocId(board, period, keys[period])}`).get();
   const all = ranked(snap.exists ? snap.get("scores") : {});
   const mine = all.find((r) => r.uid === user.uid) || null;
   const strip = (r) => ({ rank: r.rank, label: r.label, pts: r.pts, me: r.uid === user.uid });
   if (teacher) {
     const sc = snap.exists ? snap.get("scores") : {};
-    return { form, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, asg: r.asg, cards: r.cards, bonus: r.bonus, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
+    return { form, scope, title, classId, period, key: keys[period], rows: all.map((r) => ({ ...strip(r), sets: r.sets, asg: r.asg, cards: r.cards, bonus: r.bonus, email: (sc[r.uid] || {}).email })), me: null, total: all.length };
   }
-  return { form, period, key: keys[period], rows: all.slice(0, 10).map(strip), me: mine ? { rank: mine.rank, pts: mine.pts } : null, total: all.length };
+  return { form, scope, title, classId, period, key: keys[period], rows: all.slice(0, 10).map(strip), me: mine ? { rank: mine.rank, pts: mine.pts } : null, total: all.length };
 });
 
-/** Teachers: rebuild the current week's, month's and all-time boards from saved results (practice and assignments) and Explain activity. */
+/** Teachers: rebuild the current week's, month's and all-time boards (class, form and whole school) from saved results (practice and assignments) and Explain activity. */
 exports.rebuildLeaderboards = onCall(async (request) => {
   const user = requireSchoolUser(request);
   if (!(await isTeacher(user.email))) throw new HttpsError("permission-denied", "Teachers only.");
@@ -544,12 +568,14 @@ exports.rebuildLeaderboards = onCall(async (request) => {
     const keys = periodKeys(ms);
     for (const period of ["week", "month", "all"]) {
       if (period !== "all" && keys[period] !== now[period]) continue;      // only the current week / month
-      const id = lbDocId(f.info.form, period, keys[period]);
-      if (!docs.has(id)) docs.set(id, { form: f.info.form, period, key: keys[period], scores: {} });
-      const sc = docs.get(id).scores;
-      sc[uid] = sc[uid] || { pts: 0, sets: 0, asg: 0, cards: 0, bonus: 0, label: f.label, email };
-      sc[uid].pts += pts;
-      for (const k of Object.keys(counts)) sc[uid][k] += counts[k];
+      for (const b of boardScopes(f.info)) {
+        const id = lbDocId(b.id, period, keys[period]);
+        if (!docs.has(id)) docs.set(id, { ...b.meta, period, key: keys[period], scores: {} });
+        const sc = docs.get(id).scores;
+        sc[uid] = sc[uid] || { pts: 0, sets: 0, asg: 0, cards: 0, bonus: 0, label: f.label, email };
+        sc[uid].pts += pts;
+        for (const k of Object.keys(counts)) sc[uid][k] += counts[k];
+      }
     }
   };
   const active = (uid, email, ms) => {
