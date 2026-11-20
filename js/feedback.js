@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611201833";
+import { db, auth, api } from "./fb.js?v=202611201941";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611201833";
-import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611201833";
-import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611201833";
-import { setBadge } from "./chrome.js?v=202611201833";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611201941";
+import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611201941";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611201941";
+import { setBadge } from "./chrome.js?v=202611201941";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -29,6 +29,43 @@ async function myFeedback(qids) {
     snap.forEach((d) => { const f = d.data(); out.set(`${f.kind}_${f.qid}`, f); });
   }
   return out;
+}
+
+/**
+ * My results → "My reports and requests": every problem report and Explain-in-class request the student has sent,
+ * with its status and the teacher's note. Returns null when there are none.
+ */
+export async function myReportsPanel(user) {
+  const uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) return null;
+  const snap = await getDocs(query(collection(db, "feedback"), where("uid", "==", uid)));
+  const items = snap.docs.map((d) => d.data()).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  if (!items.length) return null;
+  const qs = new Map((await getQuestions([...new Set(items.map((f) => f.qid))]).catch(() => [])).map((q) => [q.id, q]));
+  const status = (f) => {
+    if (f.kind === "explain") return f.status === "done" ? el("span", { class: "fbk-state good" }, [icon("check"), "Explained in class"])
+      : el("span", { class: "fbk-state on" }, "Requested — waiting for the lesson");
+    if (f.status === "done") return el("span", { class: "fbk-state good" }, [icon("check"), "Fixed — thank you!"]);
+    if (f.status === "dismissed") return el("span", { class: "fbk-state" }, f.reply
+      ? [icon("message"), "Checked by your teacher: ", el("em", { class: "fbk-reply" }, `“${f.reply}”`)] : "Checked by your teacher (no change needed)");
+    return el("span", { class: "fbk-state on" }, "Waiting for your teacher");
+  };
+  const open = items.filter((f) => f.status === "open").length;
+  const t = el("table", { class: "grid my-reports" }, [el("tr", {}, ["Date", "Question", "What", "Your note", "Teacher's response"].map((h) => el("th", {}, h)))]
+    .concat(items.map((f) => {
+      const q = qs.get(f.qid);
+      const label = q ? sourceLabel(q) : `${f.title || "Practice"}${f.qnum ? ` · Q${f.qnum}` : ""}`;
+      return el("tr", { class: f.status === "open" ? "" : "handled" }, [
+        el("td", {}, fmtDate(f.createdAt)),
+        el("td", {}, f.attemptId ? el("a", { href: `#/review/${f.attemptId}`, title: "Open the result with this question" }, label) : label),
+        el("td", {}, f.kind === "explain" ? "Explain in class" : typeLabel(f.type)),
+        el("td", { class: "muted" }, f.note || "—"),
+        el("td", {}, status(f))]);
+    })));
+  return el("div", { class: "panel my-reports-panel" }, [
+    el("div", { class: "panelhead" }, [el("h2", {}, "My reports and requests"),
+      el("span", { class: "muted" }, `${items.length} sent · ${open} waiting`)]),
+    el("div", { class: "scroll" }, t)]);
 }
 
 /**

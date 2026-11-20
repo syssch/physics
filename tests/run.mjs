@@ -773,6 +773,11 @@ console.log("9b. student feedback: report a problem / explain in class");
     fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
     await waitFor(() => byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "checked your report"), "student sees dismissed");
     ok(byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "Label B is on the second figure."), "student sees the teacher's note on a dismissed report");
+    await go("#/practise"); await go("#/history");
+    await waitFor(() => $(".my-reports-panel table.my-reports"), "My reports and requests");
+    const mine = [...fake.store.entries()].filter(([k, d]) => k.startsWith("feedback/") && d.uid === "s1");
+    ok($$(".my-reports tr").length === mine.length + 1 && byText(".my-reports", "Label B is on the second figure.") && byText(".my-reports", "Checked by your teacher")
+      && $(".my-reports a[href^='#/review/']"), "My results lists the student's reports and requests with status, the teacher's note and a link to the result");
   }
   fake.setUser(T); await sleep(50); await go("#/t");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");

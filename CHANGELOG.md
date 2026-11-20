@@ -5,6 +5,15 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-20
 
+- **My reports and requests** (student My results page, below My progress): every problem report and Explain-in-class
+  request the student sent, with date, question (source label, links to the result), type, their note and the
+  teacher's response (waiting / fixed / checked + note / explained). `myReportsPanel()` in `js/feedback.js`. *Push.* Tests: 320.
+- **Solution updated** (question data): 2015-16 F5 T1 Q6 — full derivation ($P = kA$, $E = \rho A h l_f$, $t = E/P \propto h$).
+  Teacher solution. *Re-import the bundle.*
+- **New paper added** (question data): 2026-27 SYSS F5 E1 Q1–26 (`SYSS-2026-27-F5-E1-Q1`…`Q26`) from the uploaded PDF
+  (copied to `Sing Yin Phy Past Papers/F5/E1/`): text, options, 12 figures cropped from the PDF, tags, worked solutions.
+  The paper has no key — answers were worked out (check against the school key). All 26 ready; bundle now 3110 questions.
+  *Re-import the bundle with the 12 new figures.*
 - **Leaderboards by class and for the whole school**: every point now also goes to a class board (`C_<classId>_…`) and a
   whole-school board (`SCHOOL_…`) next to the form board. Students switch with *My class / My form / Whole school*; the
   teacher Leaderboard has a board picker (whole school, F3–F6, any class). `addPoints()` / `boardScopes()` /

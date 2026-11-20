@@ -215,3 +215,7 @@ table.qstats th.sortable { cursor:pointer; text-decoration:underline dotted; }
 /* leaderboard rank emoji (top 10) */
 table.board td.rank, td.rank { white-space:nowrap; }
 .rank-emoji { font-size:1.1em; }
+
+/* My results → My reports and requests */
+.my-reports td { vertical-align:top; }
+.my-reports tr.handled td:first-child { color:var(--muted); }

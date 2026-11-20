@@ -222,7 +222,9 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   "You have N points, ranking R of T" and the top 10 (class + name from the class list). Totals live in `leaderboards/{board}_all`, `{board}_week_{2026-W46}`,
   `{board}_month_{2026-11}`, where board is a form (`F4`), a class (`C_<classId>`) or `SCHOOL` (teacher-readable, written only by Cloud Functions;
   every point goes to all three). Teachers: *Leaderboard* on the dashboard shows the full list for any class, form or the whole school; *Recount from results* rebuilds the current totals from saved practice results.
-- *My results*: every past attempt, with a review page for each. At the top, *My progress* (`myProgress` Cloud Function):
+- *My results*: every past attempt, with a review page for each. Below My progress, *My reports and requests* lists every
+  problem report and Explain-in-class request the student sent, with its status (waiting / fixed / checked / explained),
+  the teacher's note and a link to the result. At the top, *My progress* (`myProgress` Cloud Function):
   sets done (practice / redo / assignments), questions answered, % correct, sets this week, Explain cards read, % correct by book and by
   chapter (weakest first; chapters with 3+ answers, each with *Practise 5*), and how many questions are waiting in Redo my
   mistakes. Assignments whose answers are still hidden count as sets but are not marked, so nothing is given away.
