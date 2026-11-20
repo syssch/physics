@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611201941";
+import { db, auth, api } from "./fb.js?v=202611201959";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611201941";
-import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611201941";
-import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611201941";
-import { setBadge } from "./chrome.js?v=202611201941";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611201959";
+import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611201959";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611201959";
+import { setBadge } from "./chrome.js?v=202611201959";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -35,12 +35,14 @@ async function myFeedback(qids) {
  * My results → "My reports and requests": every problem report and Explain-in-class request the student has sent,
  * with its status and the teacher's note. Returns null when there are none.
  */
-export async function myReportsPanel(user) {
+export async function myReportsPanel(user, { preview = false } = {}) {
   const uid = auth.currentUser && auth.currentUser.uid;
   if (!uid) return null;
   const snap = await getDocs(query(collection(db, "feedback"), where("uid", "==", uid)));
   const items = snap.docs.map((d) => d.data()).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-  if (!items.length) return null;
+  if (!items.length) return preview ? el("div", { class: "panel my-reports-panel" }, [
+    el("div", { class: "panelhead" }, [el("h2", {}, "My reports and requests"), el("span", { class: "muted" }, "0 sent")]),
+    el("p", { class: "muted" }, "Teacher preview: students see each problem report and Explain-in-class request they have sent here, with its status (waiting / fixed / checked / explained) and your note. You haven't sent any yourself — use Report a problem under a question in one of your results to try it.")]) : null;
   const qs = new Map((await getQuestions([...new Set(items.map((f) => f.qid))]).catch(() => [])).map((q) => [q.id, q]));
   const status = (f) => {
     if (f.kind === "explain") return f.status === "done" ? el("span", { class: "fbk-state good" }, [icon("check"), "Explained in class"])

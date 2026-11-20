@@ -5,6 +5,8 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-20
 
+- **My reports and requests in the teacher's student view**: the panel was hidden for teacher accounts; it now shows
+  for teachers too (their own reports, or a short preview text when they have none). *Push.* Tests: 321.
 - **My reports and requests** (student My results page, below My progress): every problem report and Explain-in-class
   request the student sent, with date, question (source label, links to the result), type, their note and the
   teacher's response (waiting / fixed / checked + note / explained). `myReportsPanel()` in `js/feedback.js`. *Push.* Tests: 320.

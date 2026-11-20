@@ -778,6 +778,10 @@ console.log("9b. student feedback: report a problem / explain in class");
     const mine = [...fake.store.entries()].filter(([k, d]) => k.startsWith("feedback/") && d.uid === "s1");
     ok($$(".my-reports tr").length === mine.length + 1 && byText(".my-reports", "Label B is on the second figure.") && byText(".my-reports", "Checked by your teacher")
       && $(".my-reports a[href^='#/review/']"), "My results lists the student's reports and requests with status, the teacher's note and a link to the result");
+    fake.setUser(T); await sleep(50); sessionStorage.setItem("asStudent", "1"); await go("#/practise"); await go("#/history");
+    await waitFor(() => $(".my-reports-panel"), "teacher preview of My reports");
+    ok(byText(".my-reports-panel", "My reports and requests"), "teacher in student view also sees the My reports and requests panel (preview text when empty)");
+    sessionStorage.removeItem("asStudent");
   }
   fake.setUser(T); await sleep(50); await go("#/t");
   await waitFor(() => byText("h1", "Teacher dashboard"), "teacher home");
