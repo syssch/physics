@@ -40,7 +40,7 @@ Read `README.md` for the full feature description.
 | `js/student.js` | Home, Practise, Redo my mistakes, Leaderboard, My results + My progress |
 | `js/teacher.js` | dashboard, classes, assignments (edit/delete/reset), Results, question bank, Question stats, printable paper, admin |
 | `js/studentrecord.js` | Students list per class, one student's record |
-| `js/feedback.js` | "Explain in class" / "Report a problem" (students) and the Feedback page (teachers) |
+| `js/feedback.js` | "Request further explanation" / "Report a problem" (students) and the Feedback page (teachers) |
 | `js/qstats.js` | first-attempt choice statistics |
 | `js/explain.js` | Explain cards; `readStats()` (cards read / this week / last) used by progress pages |
 | `js/forms.js` | `FORM_CHAPTERS` (F3 → Ch 1, 2, 17, 18, 19) and helpers; mirrored in `functions/index.js` — keep identical |

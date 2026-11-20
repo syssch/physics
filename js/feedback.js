@@ -1,12 +1,12 @@
-// Student feedback on questions: "Report a problem" and "Explain in class" buttons under each question in a marked
+// Student feedback on questions: "Report a problem" and "Request further explanation" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611201959";
+import { db, auth, api } from "./fb.js?v=202611202004";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611201959";
-import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611201959";
-import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611201959";
-import { setBadge } from "./chrome.js?v=202611201959";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611202004";
+import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611202004";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611202004";
+import { setBadge } from "./chrome.js?v=202611202004";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -32,7 +32,7 @@ async function myFeedback(qids) {
 }
 
 /**
- * My results → "My reports and requests": every problem report and Explain-in-class request the student has sent,
+ * My results → "My reports and requests": every problem report and further-explanation request the student has sent,
  * with its status and the teacher's note. Returns null when there are none.
  */
 export async function myReportsPanel(user, { preview = false } = {}) {
@@ -42,11 +42,11 @@ export async function myReportsPanel(user, { preview = false } = {}) {
   const items = snap.docs.map((d) => d.data()).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   if (!items.length) return preview ? el("div", { class: "panel my-reports-panel" }, [
     el("div", { class: "panelhead" }, [el("h2", {}, "My reports and requests"), el("span", { class: "muted" }, "0 sent")]),
-    el("p", { class: "muted" }, "Teacher preview: students see each problem report and Explain-in-class request they have sent here, with its status (waiting / fixed / checked / explained) and your note. You haven't sent any yourself — use Report a problem under a question in one of your results to try it.")]) : null;
+    el("p", { class: "muted" }, "Teacher preview: students see each problem report and further-explanation request they have sent here, with its status (waiting / fixed / checked / further explained) and your note. You haven't sent any yourself — use Report a problem under a question in one of your results to try it.")]) : null;
   const qs = new Map((await getQuestions([...new Set(items.map((f) => f.qid))]).catch(() => [])).map((q) => [q.id, q]));
   const status = (f) => {
-    if (f.kind === "explain") return f.status === "done" ? el("span", { class: "fbk-state good" }, [icon("check"), "Explained in class"])
-      : el("span", { class: "fbk-state on" }, "Requested — waiting for the lesson");
+    if (f.kind === "explain") return f.status === "done" ? el("span", { class: "fbk-state good" }, [icon("check"), "Further explained"])
+      : el("span", { class: "fbk-state on" }, "Requested — waiting for your teacher");
     if (f.status === "done") return el("span", { class: "fbk-state good" }, [icon("check"), "Fixed — thank you!"]);
     if (f.status === "dismissed") return el("span", { class: "fbk-state" }, f.reply
       ? [icon("message"), "Checked by your teacher: ", el("em", { class: "fbk-reply" }, `“${f.reply}”`)] : "Checked by your teacher (no change needed)");
@@ -60,7 +60,7 @@ export async function myReportsPanel(user, { preview = false } = {}) {
       return el("tr", { class: f.status === "open" ? "" : "handled" }, [
         el("td", {}, fmtDate(f.createdAt)),
         el("td", {}, f.attemptId ? el("a", { href: `#/review/${f.attemptId}`, title: "Open the result with this question" }, label) : label),
-        el("td", {}, f.kind === "explain" ? "Explain in class" : typeLabel(f.type)),
+        el("td", {}, f.kind === "explain" ? "Further explanation" : typeLabel(f.type)),
         el("td", { class: "muted" }, f.note || "—"),
         el("td", {}, status(f))]);
     })));
@@ -145,25 +145,25 @@ function drawBar(bar, qid, ctx, mine) {
   const panel = el("div", { class: "fbk-panel", hidden: true });
   if (ctx.canLike) row.append(likeButton(qid, ctx));
 
-  // Explain in class (only once the solutions are shown)
+  // Request further explanation (only once the solutions are shown)
   if (ctx.revealed) {
     if (!ex) {
-      const b = el("button", { type: "button", class: "btn small fbk-explain" }, [icon("hand-stop"), "Explain in class"]);
-      b.title = "Ask your teacher to go through this question in the next lesson";
+      const b = el("button", { type: "button", class: "btn small fbk-explain" }, [icon("hand-stop"), "Request further explanation"]);
+      b.title = "Ask your teacher to explain this question further (in class or by email)";
       b.addEventListener("click", async () => {
         b.disabled = true;
-        try { await send({ kind: "explain" }); toast("Request sent — your teacher will see it before the lesson."); }
+        try { await send({ kind: "explain" }); toast("Request sent — your teacher will explain it further."); }
         catch (e) { toast(errMsg(e), "error"); b.disabled = false; }
       });
       row.append(b);
     } else if (ex.status === "done") {
-      row.append(el("span", { class: "fbk-state good" }, [icon("check"), "Explained in class"]),
+      row.append(el("span", { class: "fbk-state good" }, [icon("check"), "Further explained"]),
         el("button", { type: "button", class: "linkbtn", onclick: () => send({ kind: "explain", note: "" }).catch((e) => toast(errMsg(e), "error")) }, "Ask again"));
     } else {
       const noteBtn = el("button", { type: "button", class: "linkbtn" }, ex.note ? "Edit note" : "Add a note");
       noteBtn.addEventListener("click", () => openNote(panel, ex.note || "", "Which part should your teacher explain? (optional)",
         async (note) => { await send({ kind: "explain", note }); toast("Note saved."); }));
-      row.append(el("span", { class: "fbk-state on" }, [icon("hand-stop"), "Explain in class: requested"]), noteBtn,
+      row.append(el("span", { class: "fbk-state on" }, [icon("hand-stop"), "Further explanation: requested"]), noteBtn,
         el("button", { type: "button", class: "linkbtn", onclick: () => send({ kind: "explain", remove: true }).catch((e) => toast(errMsg(e), "error")) }, "Undo"));
     }
   }
@@ -240,11 +240,11 @@ function fullNameOf(f, classes = []) {
   }
   return String(f.name || "").trim() || String(f.email || "").split("@")[0] || "there";
 }
-/** Ready-made message to a student about their "Explain in class" request. */
+/** Ready-made message to a student about their "Request further explanation". */
 function contactText(f, q, classes) {
   const first = fullNameOf(f, classes);
   const where = q ? sourceLabel(q) : f.qid;
-  return `Hi ${first}, about the question you asked me to explain: ${where}${f.title ? ` (${f.title}${f.qnum ? `, Q${f.qnum}` : ""})` : ""}.`
+  return `Hi ${first}, about the question you asked me to explain further: ${where}${f.title ? ` (${f.title}${f.qnum ? `, Q${f.qnum}` : ""})` : ""}.`
     + (f.note ? ` You wrote: "${f.note}".` : "") + " ";
 }
 async function copyText(t) {
@@ -267,7 +267,7 @@ function contactLinks(user, f, q, classes) {
   });
   const mail = el("a", { class: "linkbtn", target: "_blank", rel: "noopener", title: "Open a Gmail draft to the student",
     href: `https://mail.google.com/mail/?authuser=${auth}&view=cm&fs=1&to=${encodeURIComponent(f.email)}`
-      + `&su=${encodeURIComponent("Physics: the question you asked me to explain")}&body=${encodeURIComponent(msg)}` }, [icon("mail"), " Email"]);
+      + `&su=${encodeURIComponent("Physics: the question you asked me to explain further")}&body=${encodeURIComponent(msg)}` }, [icon("mail"), " Email"]);
   return [el("span", { class: "fbk-contact" }, [chat, mail]), box];
 }
 
@@ -321,18 +321,18 @@ export async function feedbackView(user) {
     const explains = shown.filter((f) => f.kind === "explain"), errors = shown.filter((f) => f.kind === "error");
     body.replaceChildren();
 
-    // Explain in class, grouped by question (most requested first)
+    // Further-explanation requests, grouped by question (most requested first)
     const groups = new Map();
     explains.forEach((f) => { if (!groups.has(f.qid)) groups.set(f.qid, []); groups.get(f.qid).push(f); });
-    const exBox = el("div", { class: "panel" }, [el("h2", {}, [icon("hand-stop"), ` Explain in class (${explains.length})`])]);
+    const exBox = el("div", { class: "panel" }, [el("h2", {}, [icon("hand-stop"), ` Further explanation requests (${explains.length})`])]);
     if (!groups.size) exBox.append(el("p", { class: "muted" }, "No requests."));
     [...groups.entries()].sort((a, b) => b[1].length - a[1].length).forEach(([qid, list]) => {
       const q = qmap.get(qid);
       const open = list.filter((f) => f.status === "open");
       const btn = open.length
         ? el("button", { type: "button", class: "btn small primary", onclick: async () => {
-            try { await setStatus(user, open, "done"); open.forEach((f) => { f.status = "done"; }); toast("Marked as explained. Students will see it."); draw(); }
-            catch (e) { toast(errMsg(e), "error"); } } }, [icon("check"), " Mark as explained"])
+            try { await setStatus(user, open, "done"); open.forEach((f) => { f.status = "done"; }); toast("Marked as further explained. Students will see it."); draw(); }
+            catch (e) { toast(errMsg(e), "error"); } } }, [icon("check"), " Mark as further explained"])
         : el("button", { type: "button", class: "btn small", onclick: async () => {
             try { await setStatus(user, list, "open"); list.forEach((f) => { f.status = "open"; }); draw(); } catch (e) { toast(errMsg(e), "error"); } } }, "Reopen");
       const item = el("div", { class: "fbk-item" }, [
@@ -386,7 +386,7 @@ export async function feedbackView(user) {
   draw();
   mount(el("section", {}, [
     el("h1", {}, "Student feedback"),
-    el("p", { class: "muted" }, "After seeing the solutions, students can ask for a question to be explained in class, or report a problem with a question. Practice-set feedback is shown under all of the student's classes."),
+    el("p", { class: "muted" }, "After seeing the solutions, students can request further explanation of a question (in class or by email), or report a problem with a question. Practice-set feedback is shown under all of the student's classes."),
     el("div", { class: "filters fbk-filters" }, [el("label", {}, ["Class", clsSel]), el("label", {}, ["Show", stSel])]),
     body,
   ]));
@@ -404,9 +404,9 @@ export async function assignmentFeedback(assignmentId) {
 export function feedbackSummary(list, cls) {
   if (!list || !list.length) return null;
   const ex = list.filter((f) => f.kind === "explain"), er = list.filter((f) => f.kind === "error");
-  const who = (f) => [studentLabel(cls, f.email, f.name), f.note ? ` — “${f.note}”` : "", f.status !== "open" ? ` (${f.status === "done" ? (f.kind === "explain" ? "explained" : "fixed") : "dismissed"})` : ""].join("");
+  const who = (f) => [studentLabel(cls, f.email, f.name), f.note ? ` — “${f.note}”` : "", f.status !== "open" ? ` (${f.status === "done" ? (f.kind === "explain" ? "further explained" : "fixed") : "dismissed"})` : ""].join("");
   return el("div", { class: "fbk-sum" }, [
-    ex.length ? el("div", {}, [icon("hand-stop"), el("strong", {}, ` ${ex.length} asked to explain in class: `), ex.map(who).join("; ")]) : null,
+    ex.length ? el("div", {}, [icon("hand-stop"), el("strong", {}, ` ${ex.length} requested further explanation: `), ex.map(who).join("; ")]) : null,
     er.length ? el("div", {}, [icon("flag"), el("strong", {}, ` ${er.length} problem report${er.length > 1 ? "s" : ""}: `), er.map((f) => `${typeLabel(f.type)} · ${who(f)}`).join("; ")]) : null,
     el("a", { href: "#/t/feedback" }, "Deal with it on the Student feedback page"),
   ]);

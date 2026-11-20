@@ -172,13 +172,13 @@ updates itself whenever a class is saved or deleted.
   answer keys), every practice set, Redo my mistakes and assignment with *View* (each question with the student's answer,
   the key and solution), questions whose latest answer is wrong, overdue assignments and the student's feedback. CSV of the
   sets list. Reads `attempts` by email (no extra index needed).
-- *Student feedback* (*Feedback* in the top bar, with the number not yet dealt with): students' "Explain in class"
+- *Student feedback* (*Feedback* in the top bar, with the number not yet dealt with): students' "Request further explanation"
   requests, grouped by question with how many asked, who, and their notes (most requested first) — each student has
   *Chat* (opens Google Chat in a new tab and copies their email; Chat has no link that opens a DM by email, so click New
   chat and paste, then *Copy message* for a ready-made message addressed by the student's full name — the English
   name on the class list, else their Google name) and *Email* (a Gmail draft to them) — and their problem
   reports (type, note, student, where they saw it). Filter by class (practice-set feedback appears under all of the
-  student's classes). Open any item's question with its answer and solution. *Mark as explained* / *Mark fixed* /
+  student's classes). Open any item's question with its answer and solution. *Mark as further explained* / *Mark fixed* /
   *Dismiss* (with an optional note of up to 300 characters, e.g. why the key is right) and *Reopen*; the student sees the
   outcome (and the note) on their review page. Fix a reported question in the question
   bank app, re-export and import it as usual. Each assignment's *Results* page also counts requests and reports per
@@ -223,14 +223,14 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   `{board}_month_{2026-11}`, where board is a form (`F4`), a class (`C_<classId>`) or `SCHOOL` (teacher-readable, written only by Cloud Functions;
   every point goes to all three). Teachers: *Leaderboard* on the dashboard shows the full list for any class, form or the whole school; *Recount from results* rebuilds the current totals from saved practice results.
 - *My results*: every past attempt, with a review page for each. Below My progress, *My reports and requests* lists every
-  problem report and Explain-in-class request the student sent, with its status (waiting / fixed / checked / explained),
+  problem report and further-explanation request the student sent, with its status (waiting / fixed / checked / further explained),
   the teacher's note and a link to the result. At the top, *My progress* (`myProgress` Cloud Function):
   sets done (practice / redo / assignments), questions answered, % correct, sets this week, Explain cards read, % correct by book and by
   chapter (weakest first; chapters with 3+ answers, each with *Practise 5*), and how many questions are waiting in Redo my
   mistakes. Assignments whose answers are still hidden count as sets but are not marked, so nothing is given away.
 - *Feedback on a question* (review page, under each question): *Report a problem* (answer key may be wrong, typo or unclear
   wording, figure missing or wrong, solution wrong or unclear, something else, plus an optional note) at any time;
-  *Explain in class* (one tap, optional note, *Undo*) once the solutions are shown. Sent by the `sendFeedback` Cloud
+  *Request further explanation* (one tap, optional note, *Undo*) once the solutions are shown. Sent by the `sendFeedback` Cloud
   Function, which checks the result is the student's and the question is in it; one request and one report per student
   per question (sending again replaces it).
 - *Explain*: the 134 Paper 1B explanation questions, each with the marking scheme, teaching notes and examiners'

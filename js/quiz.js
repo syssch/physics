@@ -1,6 +1,6 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611201959";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611201959";
-import { attachFeedbackBars } from "./feedback.js?v=202611201959";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611202004";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611202004";
+import { attachFeedbackBars } from "./feedback.js?v=202611202004";
 
 /**
  * Run a set of questions.
@@ -75,7 +75,7 @@ export function showReview({ title, questions, responses, result, backHref = "#/
   }
   if (result.attemptId) {
     page.append(el("p", { class: "muted small fbk-help" }, result.revealed
-      ? "Not sure about a question after reading the solution? Tap \"Explain in class\" and your teacher will go through it. Spotted a mistake? Tap \"Report a problem\"."
+      ? "Not sure about a question after reading the solution? Tap \"Request further explanation\" and your teacher will explain it further. Spotted a mistake? Tap \"Report a problem\"."
       : "Spotted a mistake in a question? Tap \"Report a problem\"."));
   }
   questions.forEach((q, i) => page.append(renderQuestion(q, {

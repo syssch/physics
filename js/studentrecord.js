@@ -1,15 +1,15 @@
 // Teacher pages for individual students: a class's student list with a short summary each (#/t/students/<classId>)
 // and one student's full record (#/t/student/<classId>/<email>): every attempt (practice, Redo my mistakes,
 // assignments) with a review of each, % correct by book and chapter, questions currently wrong, and their feedback.
-import { db } from "./fb.js?v=202611201959";
+import { db } from "./fb.js?v=202611202004";
 import { collection, doc, getDoc, getDocs, query, where, orderBy, documentId }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, fmtDate, toDate, pct, chunk, typeset } from "./ui.js?v=202611201959";
-import { getQuestions, getBooks, renderQuestion, sourceLabel } from "./questions.js?v=202611201959";
-import { attachRoster, attachRosters, studentLabel, sortByRoster } from "./roster.js?v=202611201959";
-import { ERROR_TYPES } from "./feedback.js?v=202611201959";
-import { getCards, readStats } from "./explain.js?v=202611201959";
-import { limitForClasses } from "./forms.js?v=202611201959";
+import { el, mount, loading, fmtDate, toDate, pct, chunk, typeset } from "./ui.js?v=202611202004";
+import { getQuestions, getBooks, renderQuestion, sourceLabel } from "./questions.js?v=202611202004";
+import { attachRoster, attachRosters, studentLabel, sortByRoster } from "./roster.js?v=202611202004";
+import { ERROR_TYPES } from "./feedback.js?v=202611202004";
+import { getCards, readStats } from "./explain.js?v=202611202004";
+import { limitForClasses } from "./forms.js?v=202611202004";
 
 const ms = (ts) => (!ts ? 0 : ts.toMillis ? ts.toMillis() : +toDate(ts));
 const DAY = 86400000;
@@ -247,8 +247,8 @@ export async function studentRecordView(user, classId, emailEnc) {
     const tl = (t) => (ERROR_TYPES.find(([k]) => k === t) || [null, "Other"])[1];
     page.append(el("div", { class: "panel" }, [el("h2", {}, "Feedback sent"), el("ul", {}, fbs.map((f) => {
       const q = qmap.get(f.qid);
-      return el("li", {}, [el("strong", {}, f.kind === "explain" ? "Explain in class" : `Problem: ${tl(f.type)}`),
-        ` · ${q ? sourceLabel(q) : f.qid} · ${f.status === "open" ? "open" : f.status === "done" ? (f.kind === "explain" ? "explained" : "fixed") : "dismissed"}`,
+      return el("li", {}, [el("strong", {}, f.kind === "explain" ? "Further explanation" : `Problem: ${tl(f.type)}`),
+        ` · ${q ? sourceLabel(q) : f.qid} · ${f.status === "open" ? "open" : f.status === "done" ? (f.kind === "explain" ? "further explained" : "fixed") : "dismissed"}`,
         f.note ? el("span", { class: "fbk-note" }, ` “${f.note}”`) : null, el("span", { class: "muted" }, ` · ${fmtDate(f.createdAt)}`)]);
     })), el("a", { href: "#/t/feedback" }, "Student feedback page")]));
   }

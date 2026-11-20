@@ -5,6 +5,13 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-20
 
+- **Solution updated** (question data): 2013-14 F5 E1 Q8 — statement (3) now explains that both containers have the same
+  number of molecules in the same volume, but hydrogen's higher r.m.s. speed gives more frequent collisions with the walls
+  (teacher solution). *Re-import `all_ready/bundle.json`.*
+- **Renamed** "Explain in class" → **"Request further explanation"** and "Explained in class" → **"Further explained"**
+  (the teacher may explain in class or by email). Also "Mark as further explained", the Feedback page heading, results-page
+  counts, student record, My reports and the Chat/Email message ("…the question you asked me to explain further"). Data
+  unchanged (`kind: "explain"`). *Push.* Tests: 321.
 - **My reports and requests in the teacher's student view**: the panel was hidden for teacher accounts; it now shows
   for teachers too (their own reports, or a short preview text when they have none). *Push.* Tests: 321.
 - **My reports and requests** (student My results page, below My progress): every problem report and Explain-in-class

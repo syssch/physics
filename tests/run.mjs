@@ -628,7 +628,7 @@ console.log("9b. student feedback: report a problem / explain in class");
   const card = (id) => $$(".qcard").find((c) => c.id === `q-${id}`);
   fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
   await waitFor(() => $$(".qcard .fbk").length === 8, "feedback rows under each question");
-  ok($$(".fbk-explain").length === 8 && $$(".fbk-report").length === 8 && $(".fbk-help"), "revealed set: Explain in class + Report a problem on every question");
+  ok($$(".fbk-explain").length === 8 && $$(".fbk-report").length === 8 && $(".fbk-help"), "revealed set: Request further explanation + Report a problem on every question");
   card(qids1[0]).querySelector(".fbk-explain").click();
   const exPath = `feedback/explain_s1_${qids1[0]}`;
   await waitFor(() => fake.store.has(exPath), "explain request stored");
@@ -691,8 +691,8 @@ console.log("9b. student feedback: report a problem / explain in class");
   ok(true, "Feedback in the teacher bar shows the number of open items");
   await go(`#/t/results/${classId}/${a1}`);
   await waitFor(() => $("table.results"), "results");
-  ok($$("td.fbk-hot").length === 2 && byText("tr.fbk-row-count", "Explain in class"), "results grid counts requests and reports per question");
-  ok(byText(".fbk-sum", "asked to explain") && byText(".fbk-sum", "Why is the tension not mg?") && byText(".fbk-sum", "Figure missing or wrong"), "results page lists the requests and reports under each question");
+  ok($$("td.fbk-hot").length === 2 && byText("tr.fbk-row-count", "Further explanation"), "results grid counts requests and reports per question");
+  ok(byText(".fbk-sum", "requested further explanation") && byText(".fbk-sum", "Why is the tension not mg?") && byText(".fbk-sum", "Figure missing or wrong"), "results page lists the requests and reports under each question");
   await go("#/t/feedback");
   await waitFor(() => byText("h1", "Student feedback") && $$(".fbk-item").length, "feedback page");
   ok($$(".fbk-item").length === 3 && byText(".fbk-item", "Why is the tension not mg?") && byText(".fbk-item", "Label B is missing"), "page lists explain requests and problem reports");
@@ -720,7 +720,7 @@ console.log("9b. student feedback: report a problem / explain in class");
     await waitFor(() => !it.querySelector(".fbk-chat-help").hidden, "chat help");
     ok(opened.startsWith("https://mail.google.com/chat/") && copied === "s001@syss.edu.hk" && byText(".fbk-chat-help", "Email copied"), "Chat opens Google Chat and copies the student's email");
     byText(".fbk-chat-help button", "Copy message").click(); await sleep(10);
-    ok(/^Hi Student One, about the question you asked me to explain: .*Why is the tension not mg\?/.test(copied), "Copy message copies a ready message with the student's full name and note");
+    ok(/^Hi Student One, about the question you asked me to explain further: .*Why is the tension not mg\?/.test(copied), "Copy message copies a ready message with the student's full name and note");
     // with a class list, the message uses the full English name from it
     const rp = `classRosters/${classId}`, savedRoster = fake.store.get(rp);
     fake.store.set(rp, { roster: [{ email: "s001@syss.edu.hk", no: 12, name: "Chan Tai Man", cname: "陳大文" }] });
@@ -733,9 +733,9 @@ console.log("9b. student feedback: report a problem / explain in class");
     await go("#/t"); await go("#/t/feedback"); await waitFor(() => $$(".fbk-item").length === 3, "feedback page restored");
   }
   const exItem = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension"));
-  byText(".fbk-item button", "Mark as explained") && exItem.querySelector(".btn.primary").click();
+  byText(".fbk-item button", "Mark as further explained") && exItem.querySelector(".btn.primary").click();
   await waitFor(() => fake.store.get(exPath).status === "done", "marked explained");
-  ok(fake.store.get(exPath).handledBy === T.email, "Mark as explained records the teacher");
+  ok(fake.store.get(exPath).handledBy === T.email, "Mark as further explained records the teacher");
   const erItem = $$(".fbk-item").find((i) => i.textContent.includes("Label B"));
   byText(`.fbk-item button`, "Mark fixed") && [...erItem.querySelectorAll("button")].find((b) => b.textContent === "Mark fixed").click();
   await waitFor(() => fake.store.get(erPath).status === "done", "fixed");
@@ -748,7 +748,7 @@ console.log("9b. student feedback: report a problem / explain in class");
   set($(".fbk-filters select"), "");
   // the student sees the outcome
   fake.setUser(S1); await sleep(50); await go("#/history"); await go(`#/review/${a1}_s1`);
-  await waitFor(() => byText(`#q-${CSS_escape(qids1[0])} .fbk-state`, "Explained in class"), "student sees explained");
+  await waitFor(() => byText(`#q-${CSS_escape(qids1[0])} .fbk-state`, "Further explained"), "student sees explained");
   ok(byText(`#q-${CSS_escape(qids1[1])} .fbk-state`, "fixed"), "student sees the report was fixed");
   { // teacher reopens the report and dismisses it with a short note; the student sees the note
     fake.setUser(T); await sleep(50); await go("#/t"); await go("#/t/feedback");
@@ -849,7 +849,7 @@ console.log("9d. student record (teacher)");
   const wrongPanel = $$(".panel").find((p) => /Currently wrong/.test(p.textContent));
   const n = Number((wrongPanel.querySelector("h2").textContent.match(/\((\d+)\)/) || [])[1]);
   ok(n > 0 && wrongPanel.querySelectorAll("tr").length === n + 1, "questions currently wrong are listed");
-  ok(byText(".panel h2", "Feedback sent") && byText(".panel li", "Explain in class"), "the student's feedback is shown");
+  ok(byText(".panel h2", "Feedback sent") && byText(".panel li", "Further explanation"), "the student's feedback is shown");
   // students cannot open it
   fake.setUser(S1); await sleep(50); await go(link.getAttribute("href"));
   await waitFor(() => byText("p.error", "Teachers only"), "refused");
