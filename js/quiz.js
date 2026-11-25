@@ -1,7 +1,7 @@
-import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611252304";
-import { getQuestions, renderQuestion } from "./questions.js?v=202611252304";
-import { attachFeedbackBars } from "./feedback.js?v=202611252304";
-import { constantsPullout } from "./constants.js?v=202611252304";
+import { el, mount, toast, errMsg, store, typeset, fmtDate } from "./ui.js?v=202611252309";
+import { getQuestions, renderQuestion } from "./questions.js?v=202611252309";
+import { attachFeedbackBars } from "./feedback.js?v=202611252309";
+import { constantsPullout } from "./constants.js?v=202611252309";
 
 /**
  * Run a set of questions.
@@ -20,7 +20,7 @@ export async function runQuiz(cfg) {
   page.append(el("h1", {}, cfg.title));
   if (cfg.subtitle) page.append(el("p", { class: "muted" }, cfg.subtitle));
   const list = el("div", {});
-  page.append(list, bar, constantsPullout());   // pull-out data sheet (right edge)
+  page.append(list, bar, constantsPullout());   // pull-out data sheet (vertical tab on the right edge)
 
   const draw = (q, i) => renderQuestion(q, {
     number: i + 1, selected: responses[q.id], showSource: cfg.showSource !== false,

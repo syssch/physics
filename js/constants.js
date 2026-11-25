@@ -1,6 +1,6 @@
 // Pull-out "Constants" data sheet shown on every quiz screen (practice, assignments, Redo my mistakes).
 // Content = the HKDSE Physics data sheet, exactly as Shi supplied it (Nov 2026). Plain HTML, no MathJax needed.
-import { el, store } from "./ui.js?v=202611252304";
+import { el, store } from "./ui.js?v=202611252309";
 
 export const CONSTANTS = [
   ["molar gas constant", "<i>R</i> = 8.31 J mol<sup>−1</sup> K<sup>−1</sup>"],
@@ -22,7 +22,9 @@ export const CONSTANTS = [
 
 const KEY = "constantsOpen";
 
-/** Returns the tab + panel (fixed to the right edge). Append it inside the quiz page so it goes away with it. */
+/** Returns the tab + panel (fixed to the right edge). Append it inside the quiz page so it goes away with it.
+ *  The tab label is rotated with a CSS transform (not writing-mode: some phone browsers draw a vertical-writing
+ *  button with zero width, leaving only its border). */
 export function constantsPullout() {
   const wrap = el("div", { class: "cst" });
   const table = el("table", { class: "cst-table" });
@@ -35,16 +37,17 @@ export function constantsPullout() {
   const panel = el("aside", { class: "cst-panel", "aria-label": "Constants" }, [
     el("div", { class: "cst-head" }, [el("strong", {}, "Constants"), close]),
     el("div", { class: "cst-body" }, table)]);   // only the list scrolls; the header (× button) stays put
-  // vertical text lives in a span: some browsers size a vertical-writing <button> wrongly
   const tab = el("button", { class: "cst-tab", type: "button", "aria-expanded": "false" }, el("span", {}, "Constants"));
-  const set = (open) => {
+  const set = (open, remember = true) => {
     wrap.classList.toggle("open", open);
     tab.setAttribute("aria-expanded", String(open));
-    store.set(KEY, open);
+    if (remember) store.set(KEY, open);
   };
   tab.addEventListener("click", () => set(!wrap.classList.contains("open")));
   close.addEventListener("click", () => set(false));
   wrap.append(tab, panel);
-  if (store.get(KEY)) { wrap.classList.add("open"); tab.setAttribute("aria-expanded", "true"); }
+  // reopen if it was open last time — but not on phones, where the sheet would cover the question
+  const phone = window.matchMedia ? window.matchMedia("(max-width: 760px)").matches : false;
+  if (store.get(KEY) && !phone) set(true, false);
   return wrap;
 }

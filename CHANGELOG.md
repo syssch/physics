@@ -5,8 +5,10 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-25
 
-- **Constants tab on phones**: the vertical label was invisible on some mobile browsers (only the border showed); on
-  screens ≤ 760 px the tab is now a horizontal blue pill at the bottom right. *Push.*
+- **Constants tab on phones**: back to the vertical pull-out tab (Shi prefers it; the submit-bar button is gone). The
+  label is now rotated with a CSS transform instead of `writing-mode`, which some phone browsers drew with zero width
+  (only the border showed). Narrower tab on phones; it hides while the sheet is open; the sheet doesn't reopen by
+  itself on phones. *Push.* Tests: 331.
 - **Explain cards**: section heading "Teaching notes" renamed **"Points to note"** (display only; card data unchanged). *Push.*
 - **Constants tab** is now a solid accent-blue button with white text (dark text in dark theme) so it stands out. *Push.*
 - **Constants panel**: the header with the × close button stays fixed; only the list scrolls (`.cst-body`). *Push.*
