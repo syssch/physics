@@ -236,7 +236,9 @@ table.board td.rank, td.rank { white-space:nowrap; }
 .cst-val { font-family:"Times New Roman", Times, serif; font-size:1.02rem; }
 .cst-note { display:block; font-size:.85em; color:var(--muted); }
 @media (max-width: 760px) {
-  .cst-tab { top:auto; bottom:9rem; padding:.6rem .3rem; }
+  /* phones: horizontal label (some mobile browsers collapse vertical text in a fixed button to zero width) */
+  .cst-tab { top:auto; bottom:9rem; padding:.5rem .8rem .5rem .9rem; border-radius:999px 0 0 999px; font-size:.95rem; line-height:1.2; }
+  .cst-tab > span { writing-mode:horizontal-tb; }
   .cst-panel { top:auto; left:0; width:auto; max-height:60vh; border-left:none; border-top:1px solid var(--line); border-radius:12px 12px 0 0; transform:translateY(105%); }
   .cst.open .cst-panel { transform:none; }
   .cst.open .cst-tab { display:none; }

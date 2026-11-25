@@ -5,6 +5,8 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-25
 
+- **Constants tab on phones**: the vertical label was invisible on some mobile browsers (only the border showed); on
+  screens ≤ 760 px the tab is now a horizontal blue pill at the bottom right. *Push.*
 - **Explain cards**: section heading "Teaching notes" renamed **"Points to note"** (display only; card data unchanged). *Push.*
 - **Constants tab** is now a solid accent-blue button with white text (dark text in dark theme) so it stands out. *Push.*
 - **Constants panel**: the header with the × close button stays fixed; only the list scrolls (`.cst-body`). *Push.*
