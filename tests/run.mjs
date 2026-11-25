@@ -198,6 +198,7 @@ ok(JSON.parse(w.localStorage.getItem(`resp-asg-${a1}`))[qids1[0]], "progress sav
   const tab = byText(".cst-tab", "Constants"), rows = $$(".cst-table tr");
   ok(tab && $(".cst-panel") && !$(".cst").classList.contains("open"), "Constants tab on the quiz page, panel closed by default");
   ok(rows.length === 15, "data sheet lists all 15 constants");
+  ok($(".cst-panel > .cst-head .cst-close") && $(".cst-panel > .cst-body > .cst-table"), "close button sits in a fixed header; only the list (.cst-body) scrolls");
   const txt = $(".cst-table").textContent;
   ok(/molar gas constant\s*R = 8\.31 J mol−1 K−1/.test(txt) && /Planck constant\s*h = 6\.63 × 10−34 J s/.test(txt), "first and last constants match the data sheet");
   ok(/u = 1\.661 × 10−27 kg\s*\(1 u is equivalent to 931 MeV\)/.test(txt), "atomic mass unit line includes 931 MeV");
@@ -1129,7 +1130,7 @@ const first = explain.cards[0];
 ok(byText(".panel strong", `${first.year} ${first.qref}`), "today's card is the first card");
 byText("a.btn", "Read today's card").click(); await go(`#/explain/${first.id}`);
 await waitFor(() => byText("button", "Mark as read"), "card page");
-ok(byText(".xsec h3", "Marking-scheme answer") && byText(".xsec h3", "Teaching notes") && byText(".xsec h3", "Examiners"), "card shows all sections");
+ok(byText(".xsec h3", "Marking-scheme answer") && byText(".xsec h3", "Points to note") && !byText(".xsec h3", "Teaching notes") && byText(".xsec h3", "Examiners"), "card shows all sections");
 ok(/Book 1 Heat and Gases › Ch 1 Temperature and Heat Transfer(?! *\p{Script=Han})/u.test(w.document.body.textContent), "card shows its book and chapter");
 byText("button", "Mark as read").click();
 await waitFor(() => byText("button", "Read — tap to undo"), "marked");

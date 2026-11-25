@@ -5,6 +5,17 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-25
 
+- **Explain cards**: section heading "Teaching notes" renamed **"Points to note"** (display only; card data unchanged). *Push.*
+- **Constants tab** is now a solid accent-blue button with white text (dark text in dark theme) so it stands out. *Push.*
+- **Constants panel**: the header with the × close button stays fixed; only the list scrolls (`.cst-body`). *Push.*
+  Tests: 331.
+- **F6 E2 figures** now live in `all_ready/figures/` with the main figures (Shi moved them; all 395 present, incl. the
+  6 re-cropped ones). `export_for_platform.py` now deletes only `SYSS-*` files there, so they survive every export.
+  Import `bundle-f6e2.json` when ready.
+- **Missing data added** (question data): 33 heat questions used the specific heat capacity of water/ice or the specific
+  latent heat of fusion/vaporization in the solution without giving it. Each now ends with a "Given: …" line (4200,
+  2100, 3.34 × 10⁵, 2.26 × 10⁶). Backups in `question_bank/archive/backup_given_data_20261125/`. *Re-import
+  `all_ready/bundle.json`.*
 - **Constants pull-out** on every quiz screen (practice, assignments, Redo my mistakes): a "Constants" tab on the right
   edge (bottom right on phones) slides out the HKDSE data sheet — 15 constants exactly as Shi supplied, including
   "(1 u is equivalent to 931 MeV)" and "pc = 3.09 × 10¹⁶ m = 3.26 ly = 206265 AU". Stays open until closed;

@@ -1,6 +1,6 @@
 // Pull-out "Constants" data sheet shown on every quiz screen (practice, assignments, Redo my mistakes).
 // Content = the HKDSE Physics data sheet, exactly as Shi supplied it (Nov 2026). Plain HTML, no MathJax needed.
-import { el, store } from "./ui.js?v=202611252235";
+import { el, store } from "./ui.js?v=202611252259";
 
 export const CONSTANTS = [
   ["molar gas constant", "<i>R</i> = 8.31 J mol<sup>−1</sup> K<sup>−1</sup>"],
@@ -33,8 +33,10 @@ export function constantsPullout() {
   }
   const close = el("button", { class: "cst-close", type: "button", "aria-label": "Close constants" }, "×");
   const panel = el("aside", { class: "cst-panel", "aria-label": "Constants" }, [
-    el("div", { class: "cst-head" }, [el("strong", {}, "Constants"), close]), table]);
-  const tab = el("button", { class: "cst-tab", type: "button", "aria-expanded": "false" }, "Constants");
+    el("div", { class: "cst-head" }, [el("strong", {}, "Constants"), close]),
+    el("div", { class: "cst-body" }, table)]);   // only the list scrolls; the header (× button) stays put
+  // vertical text lives in a span: some browsers size a vertical-writing <button> wrongly
+  const tab = el("button", { class: "cst-tab", type: "button", "aria-expanded": "false" }, el("span", {}, "Constants"));
   const set = (open) => {
     wrap.classList.toggle("open", open);
     tab.setAttribute("aria-expanded", String(open));

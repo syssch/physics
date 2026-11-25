@@ -3,9 +3,9 @@
 //   users/{uid}           written at sign-in (email, name, lastLogin)
 //   classes/{id}          class lists (studentEmails)
 // Staff accounts (@singyin.edu.hk) are left out. No new tracking.
-import { db } from "./fb.js?v=202611252235";
+import { db } from "./fb.js?v=202611252259";
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, errMsg, toDate } from "./ui.js?v=202611252235";
+import { el, mount, loading, errMsg, toDate } from "./ui.js?v=202611252259";
 
 const isStudent = (email) => /@syss\.edu\.hk$/i.test(email || "");
 const formOf = (name) => { const m = /^\s*(?:F\.?\s*)?([1-6])/i.exec(name || ""); return m ? `F${m[1]}` : null; };
