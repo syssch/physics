@@ -199,6 +199,9 @@ Questions (question bank, printable paper, question stats), Leaderboard, Explain
   The list is `FORM_CHAPTERS` in `js/forms.js` and `functions/index.js` — change both together.
 - *Dark theme*: the moon / sun button on the top bar (next to the initials) switches between light and dark. The
   choice is remembered on that device.
+- *Constants*: every quiz screen (practice, assignments, Redo my mistakes) has a **Constants** tab on the right edge
+  (bottom right on phones) that slides out the HKDSE data sheet (`js/constants.js`). It stays open until closed and is
+  remembered on that device. Not shown on review pages or printouts.
 - *Leaderboard*: students switch between their class, their form and the whole school. The top 10 show 🥇 🥈 🥉 for 1st–3rd and 🏅 for 4th–10th.
 - *Likes*: on a review page students can tap **Like** under any question (students only; once each, tap again to undo;
   the button shows how many students like it). In *Practise* they can choose "Liked by students (1+ likes)" or "Popular

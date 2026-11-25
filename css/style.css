@@ -219,3 +219,23 @@ table.board td.rank, td.rank { white-space:nowrap; }
 /* My results → My reports and requests */
 .my-reports td { vertical-align:top; }
 .my-reports tr.handled td:first-child { color:var(--muted); }
+/* pull-out Constants data sheet on quiz screens (js/constants.js) */
+.cst-tab { position:fixed; right:0; top:38%; z-index:25; writing-mode:vertical-rl; padding:.8rem .4rem; background:var(--card); color:var(--accent); border:1px solid var(--line); border-right:none; border-radius:8px 0 0 8px; font:inherit; font-weight:600; cursor:pointer; box-shadow:-2px 2px 8px rgba(16,24,40,.08); transition:right .25s; }
+.cst-tab:hover { background:var(--accent-soft); }
+.cst-panel { position:fixed; top:0; right:0; bottom:0; width:min(400px, 92vw); z-index:26; background:var(--card); color:var(--fg); border-left:1px solid var(--line); box-shadow:-6px 0 18px rgba(16,24,40,.12); padding:.8rem 1rem; overflow:auto; transform:translateX(105%); transition:transform .25s; }
+.cst.open .cst-panel { transform:none; }
+.cst.open .cst-tab { right:min(400px, 92vw); }
+.cst-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
+.cst-close { background:none; border:none; font-size:1.5rem; line-height:1; cursor:pointer; color:var(--muted); padding:0 .2rem; }
+.cst-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+.cst-table td { padding:.3rem 0; border-bottom:1px solid var(--line); vertical-align:top; }
+.cst-name { color:var(--muted); padding-right:.6rem !important; }
+.cst-val { font-family:"Times New Roman", Times, serif; font-size:1.02rem; }
+.cst-note { display:block; font-size:.85em; color:var(--muted); }
+@media (max-width: 760px) {
+  .cst-tab { top:auto; bottom:9rem; padding:.6rem .3rem; }
+  .cst-panel { top:auto; left:0; width:auto; max-height:60vh; border-left:none; border-top:1px solid var(--line); border-radius:12px 12px 0 0; transform:translateY(105%); }
+  .cst.open .cst-panel { transform:none; }
+  .cst.open .cst-tab { display:none; }
+}
+@media print { .cst { display:none; } }

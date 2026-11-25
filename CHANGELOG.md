@@ -3,8 +3,24 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-25
+
+- **Constants pull-out** on every quiz screen (practice, assignments, Redo my mistakes): a "Constants" tab on the right
+  edge (bottom right on phones) slides out the HKDSE data sheet — 15 constants exactly as Shi supplied, including
+  "(1 u is equivalent to 931 MeV)" and "pc = 3.09 × 10¹⁶ m = 3.26 ly = 206265 AU". Stays open until closed;
+  remembered per device (`localStorage.constantsOpen`). New `js/constants.js`; CSS `.cst-*`; hidden on review and print.
+  Teacher guide updated. *Push.* Tests: 330.
+
 ## 2026-11-20
 
+- **No Boltzmann constant** (question data; not in HKDSE): solutions now use $pV = nRT$, $N = nN_A$, average KE
+  $= 3RT/(2N_A)$ and $c_{rms} = \sqrt{3RT/(N_A m)}$. Main bank: 2013-14 F5 E1 Q8, 2016-17 F5 T1 Q8, 2017-18 F6 MOCK 1A Q4,
+  2019-20 F5 T1 Q8, 2020-21 F5 E1 Q11, 2020-21 F5 E2 Q4, 2022-23 F5 E2 Q4, 2025-26 F5 E1 Q4, 2025-26 F5 E2 Q4.
+  bundle-f6e2: 2023-24 1A Q3, 2018-19 1A Q3. *Re-import both bundles.*
+- **Export script fix**: `export_for_platform.py --all-ready` used to delete the whole `export/all_ready/` folder, which
+  wiped `bundle-f6e2.json` and `F6 E2 figures/`. It now only replaces `bundle.json` and `figures/`. `bundle-f6e2.json` was
+  rebuilt (backup + all fixes); only 6 of 395 F6 E2 figures could be restored — the rest are listed in
+  `all_ready/F6E2_missing_figures.txt` and must be copied back from the original source before importing that bundle.
 - **Solution updated** (question data): 2013-14 F5 E1 Q8 — statement (3) now explains that both containers have the same
   number of molecules in the same volume, but hydrogen's higher r.m.s. speed gives more frequent collisions with the walls
   (teacher solution). *Re-import `all_ready/bundle.json`.*

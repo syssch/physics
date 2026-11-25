@@ -194,9 +194,24 @@ function CSS_escape(s) { return s.replace(/\./g, "\\."); }
 ok(/7 of 8 answered/.test($(".submitbar").textContent), "answered counter");
 ok($(".submitbar .answered") && $(".submitbar .answered").nextElementSibling === byText(".submitbar button", "Submit answers"), "the answered count sits just beside the Submit button");
 ok(JSON.parse(w.localStorage.getItem(`resp-asg-${a1}`))[qids1[0]], "progress saved locally");
+{ // pull-out Constants data sheet
+  const tab = byText(".cst-tab", "Constants"), rows = $$(".cst-table tr");
+  ok(tab && $(".cst-panel") && !$(".cst").classList.contains("open"), "Constants tab on the quiz page, panel closed by default");
+  ok(rows.length === 15, "data sheet lists all 15 constants");
+  const txt = $(".cst-table").textContent;
+  ok(/molar gas constant\s*R = 8\.31 J mol−1 K−1/.test(txt) && /Planck constant\s*h = 6\.63 × 10−34 J s/.test(txt), "first and last constants match the data sheet");
+  ok(/u = 1\.661 × 10−27 kg\s*\(1 u is equivalent to 931 MeV\)/.test(txt), "atomic mass unit line includes 931 MeV");
+  ok(/pc = 3\.09 × 1016 m = 3\.26 ly = 206265 AU/.test(txt), "parsec line includes ly and AU");
+  ok(/g = 9\.81 m s−2 \(close to the Earth\)/.test(txt), "g line includes (close to the Earth)");
+  tab.click();
+  ok($(".cst").classList.contains("open") && tab.getAttribute("aria-expanded") === "true" && w.localStorage.getItem("constantsOpen") === "true", "clicking the tab opens the panel and remembers it");
+  $(".cst-close").click();
+  ok(!$(".cst").classList.contains("open") && w.localStorage.getItem("constantsOpen") === "false", "close button hides it");
+}
 byText("button", "Submit answers").click();
 await waitFor(() => $(".scorebox"), "score");
 ok($(".score").textContent === "4 / 8", "score 4/8");
+ok(!$(".cst-tab"), "Constants tab is not on the review page");
 ok($$(".opt.right").length === 8 && $$(".opt.wrong").length === 3, "review highlights right/wrong");
 ok($$(".qcard .solution").length === qids1.filter((id) => id !== noSol).length && byText(".solution", "worked solution for " + qids1.find((id) => id !== noSol)), "solutions shown after submitting");
 ok($$(".qcard .solution .sol-fig img").length === $$(".qcard .solution").length && $(".qcard .solution .sol-fig img").getAttribute("src").startsWith("data:image/png"), "solution figures (data: images) survive sanitising");

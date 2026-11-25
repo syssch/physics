@@ -32,6 +32,7 @@ Read `README.md` for the full feature description.
 |---|---|
 | `js/app.js` | auth gate + sign-in page (`COPYRIGHT_NOTICE`), hash router: `routes = [[regex, fn, teacherOnly]]` |
 | `js/theme.js` | Light / Dark / Device theme (`localStorage.theme` → `html[data-theme]`) |
+| `js/constants.js` | Pull-out **Constants** data sheet on quiz screens (`constantsPullout()`, `CONSTANTS` = HKDSE data sheet exactly as Shi gave it; `localStorage.constantsOpen`) |
 | `js/chrome.js` | top bar + phone tab bar + theme button (`STUDENT_NAV`, `TEACHER_NAV`, `setBadge`; `external: true` = link to another site in a new tab, e.g. Simulations) |
 | `js/ui.js` | `el(tag, attrs, children)` (sanitises `html:`), `mount`, `toast`, `errMsg`, `fmtDate`, `pct`, `chunk`, `typeset`, `store` |
 | `js/fb.js` | Firebase init + `api.<callable>` wrappers (add every new callable here) |
@@ -88,7 +89,7 @@ by functions use `allow write: if false` with teacher read.
 ## Tests
 
 ```bash
-cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 321 checks
+cd tests && npm install && node run.mjs      # jsdom + in-memory Firebase fakes; synthetic fixtures; 330 checks
 ```
 - Fakes in `tests/fakes/`: `core.mjs` (store, queries), `firestore.mjs` (client SDK + rules), `functions.mjs`
   (callables in-process; rate-limit counters cleared per call unless `fake.keepRateLimits`), `admin.cjs`
