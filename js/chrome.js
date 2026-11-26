@@ -1,7 +1,7 @@
 // Top bar (and the bottom tab bar on phones): highlights the current page, teacher/student switch,
 // a Questions drop-down for teachers and an initials button with the account menu.
-import { setTheme } from "./theme.js?v=202611252309";
-import { el } from "./ui.js?v=202611252309";
+import { setTheme } from "./theme.js?v=202611260917";
+import { el } from "./ui.js?v=202611260917";
 
 const STUDENT_NAV = [
   { href: "#/", icon: "home", label: "Home", match: /^(#?\/?|#\/student|#\/do\/.*)$/, badge: "due" },

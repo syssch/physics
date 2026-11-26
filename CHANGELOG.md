@@ -3,6 +3,11 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-26
+
+- **Constants on phones** now slides in from the right like on computers (no bottom sheet); the tab moves with the
+  panel's edge and closes it when tapped again. *Push.*
+
 ## 2026-11-25
 
 - **Constants tab on phones**: back to the vertical pull-out tab (Shi prefers it; the submit-bar button is gone). The
