@@ -3,6 +3,13 @@
 Newest first. Each entry says whether the maintainer only needs to **push** (site files) or also run
 **`deploy.command`** (Cloud Functions, security rules or indexes changed). Agents: add an entry after every change.
 
+## 2026-11-27
+
+- **Student feedback page shows the student's answer**: each further-explanation request and problem report now shows
+  what the student chose for that question — "Answered C ✓", "Answered B ✗ (key C)" or "No answer" — read from their
+  result (`attempts/{attemptId}`; teachers may already read results, so no rules or functions change). Works for old
+  feedback too. *Push.* Tests: 333.
+
 ## 2026-11-26
 
 - **Constants on phones** now slides in from the right like on computers (no bottom sheet); the tab moves with the

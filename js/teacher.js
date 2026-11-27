@@ -1,15 +1,15 @@
-import { db, storage, api } from "./fb.js?v=202611260917";
+import { db, storage, api } from "./fb.js?v=202611270813";
 import { collection, doc, getDoc, getDocs, addDoc, setDoc, deleteDoc, updateDoc, query, where, orderBy,
   documentId, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611260917";
-import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611260917";
-import { isSchoolEmail } from "./config.js?v=202611260917";
-import { importExplainBundle } from "./explain.js?v=202611260917";
-import { recordHref } from "./studentrecord.js?v=202611260917";
-import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611260917";
-import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611260917";
-import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611260917";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, pct, chunk, typeset, store, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611270813";
+import { getLikeCounts, likeCountOf, getAllQuestions, getQuestions, getTopics, getBooks, syllabusFilters, skillFilter, readQuestionIndex, chapterShort, booksFromQuestions, renderQuestion, renderPrintQuestion, sourceLabel } from "./questions.js?v=202611270813";
+import { isSchoolEmail } from "./config.js?v=202611270813";
+import { importExplainBundle } from "./explain.js?v=202611270813";
+import { recordHref } from "./studentrecord.js?v=202611270813";
+import { loadFirstAttempts, studentFilter, summarise, statsLine } from "./qstats.js?v=202611270813";
+import { assignmentFeedback, feedbackSummary } from "./feedback.js?v=202611270813";
+import { parseRow, rosterOf, studentLabel, sortByRoster, mergeRoster, attachRosters, attachRoster, saveClass, deleteClass } from "./roster.js?v=202611270813";
 
 const emailRe = { test: (e) => /^[^@\s]+@[^@\s]+$/.test(e) && isSchoolEmail(e) };
 
@@ -520,7 +520,7 @@ export function showPaper(cfg, onBack) {
   wordBtn.addEventListener("click", async () => {
     wordBtn.disabled = true; wordBtn.textContent = "Preparing Word file…";
     try {
-      const { buildPaperDocx } = await import("./docx.js?v=202611260917");
+      const { buildPaperDocx } = await import("./docx.js?v=202611270813");
       const names = [...new Set(qs.flatMap((q) => q.figures || []))];
       const figures = new Map();
       for (const part of chunk(names, 25)) {

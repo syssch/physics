@@ -1,14 +1,14 @@
-import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611260917";
+import { auth, db, signIn, signOut, onAuthStateChanged } from "./fb.js?v=202611270813";
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, toast, errMsg } from "./ui.js?v=202611260917";
-import { isSchoolEmail } from "./config.js?v=202611260917";
-import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611260917";
-import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611260917";
-import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611260917";
-import { studentsView, studentRecordView } from "./studentrecord.js?v=202611260917";
-import { usageView } from "./usage.js?v=202611260917";
-import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611260917";
-import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611260917";
+import { el, mount, toast, errMsg } from "./ui.js?v=202611270813";
+import { isSchoolEmail } from "./config.js?v=202611270813";
+import { studentHome, practiceView, doAssignment, reviewView, historyView, practisePage, leaderboardPage, refreshStudentStatus } from "./student.js?v=202611270813";
+import { drawChrome, updateChrome, clearChrome, isTeacherMode } from "./chrome.js?v=202611270813";
+import { explainLibrary, explainCard, explainProgressView } from "./explain.js?v=202611270813";
+import { studentsView, studentRecordView } from "./studentrecord.js?v=202611270813";
+import { usageView } from "./usage.js?v=202611270813";
+import { feedbackView, refreshFeedbackBadge } from "./feedback.js?v=202611270813";
+import { teacherHome, classEditor, assignmentBuilder, resultsView, adminView, bankView, paperBuilder, leaderboardView, questionStatsView } from "./teacher.js?v=202611270813";
 
 let user = null;
 

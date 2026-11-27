@@ -1,13 +1,13 @@
-import { db, api, auth } from "./fb.js?v=202611260917";
+import { db, api, auth } from "./fb.js?v=202611270813";
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, toDate, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611260917";
-import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611260917";
-import { runQuiz, showReview } from "./quiz.js?v=202611260917";
-import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611260917";
-import { setDue, setChip } from "./chrome.js?v=202611260917";
-import { myReportsPanel } from "./feedback.js?v=202611260917";
-import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611260917";
+import { el, mount, loading, toast, errMsg, fmtDate, toDate, rankCell, boardChoice, boardOptions } from "./ui.js?v=202611270813";
+import { getQuestions, getBooks, syllabusFilters, skillFilter } from "./questions.js?v=202611270813";
+import { runQuiz, showReview } from "./quiz.js?v=202611270813";
+import { explainPanel, cardsFor, readStats } from "./explain.js?v=202611270813";
+import { setDue, setChip } from "./chrome.js?v=202611270813";
+import { myReportsPanel } from "./feedback.js?v=202611270813";
+import { chapterLimit, limitBooks, limitText } from "./forms.js?v=202611270813";
 
 async function myClasses(user) {
   const snap = await getDocs(query(collection(db, "classes"), where("studentEmails", "array-contains", user.email)));

@@ -173,11 +173,12 @@ updates itself whenever a class is saved or deleted.
   the key and solution), questions whose latest answer is wrong, overdue assignments and the student's feedback. CSV of the
   sets list. Reads `attempts` by email (no extra index needed).
 - *Student feedback* (*Feedback* in the top bar, with the number not yet dealt with): students' "Request further explanation"
-  requests, grouped by question with how many asked, who, and their notes (most requested first) — each student has
+  requests, grouped by question with how many asked, who, their answer to that question ("Answered B ✗ (key C)", read
+  from the student's result) and their notes (most requested first) — each student has
   *Chat* (opens Google Chat in a new tab and copies their email; Chat has no link that opens a DM by email, so click New
   chat and paste, then *Copy message* for a ready-made message addressed by the student's full name — the English
   name on the class list, else their Google name) and *Email* (a Gmail draft to them) — and their problem
-  reports (type, note, student, where they saw it). Filter by class (practice-set feedback appears under all of the
+  reports (type, note, student, their answer, where they saw it). Filter by class (practice-set feedback appears under all of the
   student's classes). Open any item's question with its answer and solution. *Mark as further explained* / *Mark fixed* /
   *Dismiss* (with an optional note of up to 300 characters, e.g. why the key is right) and *Reopen*; the student sees the
   outcome (and the note) on their review page. Fix a reported question in the question

@@ -712,6 +712,9 @@ console.log("9b. student feedback: report a problem / explain in class");
   await go("#/t/feedback");
   await waitFor(() => byText("h1", "Student feedback") && $$(".fbk-item").length, "feedback page");
   ok($$(".fbk-item").length === 3 && byText(".fbk-item", "Why is the tension not mg?") && byText(".fbk-item", "Label B is missing"), "page lists explain requests and problem reports");
+  { const exIt = $$(".fbk-item").find((i) => i.textContent.includes("Why is the tension")), erIt = $$(".fbk-item").find((i) => i.textContent.includes("Label B is missing"));
+    ok(exIt.querySelector(".fbk-ans.right") && exIt.querySelector(".fbk-ans").textContent === `Answered ${key[qids1[0]]} ✓`, "explain request shows the student's answer (right)");
+    ok(erIt.querySelector(".fbk-ans") && erIt.querySelector(".fbk-ans").textContent.startsWith(`Answered ${key[qids1[1]]}`), "problem report shows the student's answer"); }
   const det = $(".fbk-item details.fbk-q"); det.open = true; det.dispatchEvent(new w.Event("toggle")); await sleep(5);
   ok(det.querySelector(".qcard") && det.querySelector(".keyline"), "question preview with its answer");
   // class filter: a class the student is not in shows nothing

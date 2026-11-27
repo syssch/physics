@@ -1,12 +1,12 @@
 // Student feedback on questions: "Report a problem" and "Request further explanation" buttons under each question in a marked
 // set, and the teacher's Student feedback page (also summarised on each assignment's Results page).
-import { db, auth, api } from "./fb.js?v=202611260917";
+import { db, auth, api } from "./fb.js?v=202611270813";
 import { collection, doc, getDocs, updateDoc, query, where, orderBy, limit, documentId, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
-import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611260917";
-import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611260917";
-import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611260917";
-import { setBadge } from "./chrome.js?v=202611260917";
+import { el, mount, loading, toast, errMsg, fmtDate, chunk, typeset } from "./ui.js?v=202611270813";
+import { getQuestions, renderQuestion, sourceLabel, getLikeCounts, setLikeCount } from "./questions.js?v=202611270813";
+import { attachRosters, studentLabel, rosterOf } from "./roster.js?v=202611270813";
+import { setBadge } from "./chrome.js?v=202611270813";
 
 export const ERROR_TYPES = [
   ["key", "Answer key may be wrong"],
@@ -299,6 +299,29 @@ function questionDetails(q) {
   return d;
 }
 
+/** The student's chosen option for each feedback item, read from its attempt (teachers may read attempts).
+ *  Map attemptId -> responses. A deleted attempt simply has no entry. */
+async function loadAttemptResponses(fbs) {
+  const ids = [...new Set(fbs.map((f) => f.attemptId).filter(Boolean))];
+  const out = new Map();
+  await Promise.all(chunk(ids, 30).map(async (part) => {
+    const snap = await getDocs(query(collection(db, "attempts"), where(documentId(), "in", part)));
+    snap.forEach((d) => out.set(d.id, d.data().responses || {}));
+  }));
+  return out;
+}
+
+/** "Answered B ✗ (key C)" / "Answered C ✓" / "No answer" for one feedback item. */
+function answerTag(f, responses) {
+  const r = responses.get(f.attemptId);
+  if (!r) return null;
+  const a = r[f.qid] || "", key = (keyCache.get(f.qid) || {}).answer;
+  if (!a) return el("span", { class: "fbk-ans none" }, "No answer");
+  if (!key) return el("span", { class: "fbk-ans" }, `Answered ${a}`);
+  return a === key ? el("span", { class: "fbk-ans right" }, `Answered ${a} ✓`)
+    : el("span", { class: "fbk-ans wrong" }, `Answered ${a} ✗ (key ${key})`);
+}
+
 export async function feedbackView(user) {
   mount(loading());
   const [classSnap, fbSnap] = await Promise.all([
@@ -307,7 +330,8 @@ export async function feedbackView(user) {
   ]);
   const classes = await attachRosters(classSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name)));
   const all = fbSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  const qmap = new Map((await getQuestions([...new Set(all.map((f) => f.qid))])).map((q) => [q.id, q]));
+  const [qs, responses] = await Promise.all([getQuestions([...new Set(all.map((f) => f.qid))]), loadAttemptResponses(all)]);
+  const qmap = new Map(qs.map((q) => [q.id, q]));
   await loadKeys([...qmap.keys()]);
 
   const st = { classId: sessionStorage.getItem("fbkClass") || "", status: "open" };
@@ -338,7 +362,7 @@ export async function feedbackView(user) {
       const item = el("div", { class: "fbk-item" }, [
         el("div", { class: "fbk-head" }, [el("strong", {}, `${list.length} student${list.length > 1 ? "s" : ""}`),
           el("span", { class: "muted" }, q ? `${q.topic} · ${sourceLabel(q)}` : qid), btn]),
-        el("ul", { class: "fbk-who" }, list.map((f) => el("li", {}, [labelFor(f, classes, st.classId),
+        el("ul", { class: "fbk-who" }, list.map((f) => el("li", {}, [labelFor(f, classes, st.classId), answerTag(f, responses),
           el("span", { class: "muted" }, ` · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`), ...contactLinks(user, f, q, classes),
           f.note ? el("div", { class: "fbk-note" }, `“${f.note}”`) : null]))),
         q ? questionDetails(q) : null,
@@ -375,7 +399,7 @@ export async function feedbackView(user) {
         f.note ? el("div", { class: "fbk-note" }, `“${f.note}”`) : null,
         f.status === "open" ? dismissForm : null,
         f.status === "dismissed" && f.reply ? el("div", { class: "fbk-reply" }, [el("strong", {}, "Your note: "), f.reply]) : null,
-        el("div", { class: "muted small" }, `${labelFor(f, classes, st.classId)} · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`),
+        el("div", { class: "muted small" }, [`${labelFor(f, classes, st.classId)} · ${whereFrom(f)} · ${fmtDate(f.createdAt)}`, answerTag(f, responses)]),
         q ? questionDetails(q) : null,
       ]));
     });
