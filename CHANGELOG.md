@@ -5,6 +5,14 @@ Newest first. Each entry says whether the maintainer only needs to **push** (sit
 
 ## 2026-11-27
 
+- **New paper: 2026-27 F4 E1** (question data): MC Q1–15 added (`SYSS-2026-27-F4-E1-Q1..15`), key and working from the
+  school solutions (ADDAB CCDAB CBCCA); 5 figures (Q5, 7, 12, 14, 15) cropped from the PDF; Q6 states $l_f$ (from the
+  paper's data list). Papers copied to `Sing Yin Phy Past Papers/F4/E1/`, recorded in `figure_checks.json`. Bundle now
+  3125 questions. *Re-import `all_ready/bundle.json`.*
+- **Statement-question solutions expanded** (question data): 417 three-statement questions whose solutions gave a bare
+  "(1) ✓." or only a few words now explain every statement in one or two sentences, ending "⇒ (X)". Each ✓/✗ was
+  checked against the answer key's option; TeX checked. Teacher-written solutions untouched. Backups in
+  `question_bank/archive/backup_statements_20261127/`. *Re-import `all_ready/bundle.json`.* Tests: 333.
 - **Student feedback page shows the student's answer**: each further-explanation request and problem report now shows
   what the student chose for that question — "Answered C ✓", "Answered B ✗ (key C)" or "No answer" — read from their
   result (`attempts/{attemptId}`; teachers may already read results, so no rules or functions change). Works for old
